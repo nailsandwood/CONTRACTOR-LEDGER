@@ -327,6 +327,11 @@
 
       <div class="toolbar no-print" style="margin-bottom:14px;">
         <div class="search-bar"><input id="summarySearch" placeholder="Search name, mobile, address, Section, ID…" oninput="renderSummary()"></div>
+        <select class="select-sm" id="summaryMarkFilter" onchange="renderSummary()">
+          <option value="all">Mark: All</option>
+          <option value="marked">Mark: Marked only</option>
+          <option value="unmarked">Mark: Unmarked only</option>
+        </select>
         <select class="select-sm" id="summarySortField" onchange="renderSummary()">
           <option value="ranking">Sort: Ranking</option>
           <option value="name">Sort: Name</option>
@@ -347,6 +352,7 @@
       <div class="table-wrap">
         <table>
           <thead><tr>
+            <th class="no-print" title="Manual mark">✓</th>
             <th onclick="quickSort('ranking')">Rank</th>
             <th onclick="quickSort('id')">ID</th>
             <th onclick="quickSort('name')">Name</th>
@@ -479,6 +485,12 @@
       <div class="card">
         <div class="toolbar no-print" style="margin-bottom:14px;">
           <div class="search-bar"><input id="reportSearch" placeholder="Search contractors…" oninput="renderReports()"></div>
+          <select class="select-sm" id="reportMarkFilter" onchange="renderReports()">
+            <option value="all">Mark: All</option>
+            <option value="marked">Mark: Marked only</option>
+            <option value="unmarked">Mark: Unmarked only</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="clearAllMarks()">Clear all marks</button>
           <select class="select-sm" id="reportSortField" onchange="renderReports()">
             <option value="ranking">Sort: Ranking</option>
             <option value="id">Sort: ID</option>
@@ -497,6 +509,7 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
+              <th class="no-print" title="Manual mark">✓</th>
               <th onclick="reportSort('ranking')">Rank</th>
               <th onclick="reportSort('id')">ID</th>
               <th onclick="reportSort('name')">Name</th>
@@ -506,6 +519,7 @@
               <th onclick="reportSort('entries')">Entries</th>
               <th onclick="reportSort('totalAmount')">Total Amount</th>
               <th onclick="reportSort('status')">Status</th>
+              <th class="no-print">WA</th>
             </tr></thead>
             <tbody id="reportTbody"></tbody>
           </table>
@@ -706,7 +720,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '5.1-Drive';
+const APP_VERSION = '5.3-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -721,6 +735,8 @@ let driveFolderId = null;
 let currentUserEmail = '';
 let saveTimer = null;
 let isSyncing = false;
+let tokenRefreshTimer = null;
+let tokenObtainedAt = 0;
 
 function defaultDB(){
   return {
@@ -762,8 +778,11 @@ function applyMigrations(){
 function setDriveStatus(text, cls){
   const el = document.getElementById('driveStatus');
   if(!el) return;
-  el.textContent = text;
-  el.className = 'drive-status' + (cls ? ' '+cls : '');
+  el.textContent = text || 'Drive';
+  el.className = 'drive-status' + (cls ? ' ' + cls : '');
+  el.title = 'Click to reconnect Google Drive';
+  el.style.cursor = 'pointer';
+  el.onclick = reconnectDrive;
 }
 
 function updateSavedIndicator(ok, err){
@@ -807,15 +826,71 @@ function initGis(){
     scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
     callback: async (tokenResponse)=>{
       if(tokenResponse.error){
-        document.getElementById('loginError').textContent = 'Google sign-in failed: ' + tokenResponse.error;
+        const errEl = document.getElementById('loginError');
+        if(errEl) errEl.textContent = 'Google sign-in failed: ' + tokenResponse.error;
+        // If already inside app, just show toast
+        if(document.getElementById('app') && document.getElementById('app').style.display !== 'none'){
+          toast('Drive session expired — reconnecting…');
+          setDriveStatus('Drive: need re-login', 'offline');
+        }
         return;
       }
       accessToken = tokenResponse.access_token;
+      tokenObtainedAt = Date.now();
       gapi.client.setToken({access_token: accessToken});
+      scheduleTokenRefresh();
+      // If already logged into app UI, just update status
+      const appEl = document.getElementById('app');
+      if(appEl && appEl.style.display !== 'none' && DB){
+        setDriveStatus('Drive: connected');
+        toast('Drive reconnected');
+        return;
+      }
       await afterGoogleLogin();
     }
   });
   gisLoaded = true;
+}
+
+function scheduleTokenRefresh(){
+  if(tokenRefreshTimer) clearInterval(tokenRefreshTimer);
+  // Access tokens last ~60 min; refresh silently every 45 min
+  tokenRefreshTimer = setInterval(()=>{
+    silentRefreshToken();
+  }, 45 * 60 * 1000);
+}
+
+function silentRefreshToken(){
+  return new Promise((resolve)=>{
+    if(!tokenClient){ resolve(false); return; }
+    const prev = tokenClient.callback;
+    let settled = false;
+    const finish = (ok)=>{
+      if(settled) return;
+      settled = true;
+      tokenClient.callback = prev;
+      resolve(ok);
+    };
+    tokenClient.callback = async (tokenResponse)=>{
+      if(tokenResponse && tokenResponse.access_token && !tokenResponse.error){
+        accessToken = tokenResponse.access_token;
+        tokenObtainedAt = Date.now();
+        gapi.client.setToken({access_token: accessToken});
+        setDriveStatus('Drive: connected');
+        finish(true);
+      } else {
+        setDriveStatus('Drive: session expired', 'offline');
+        finish(false);
+      }
+    };
+    try{
+      tokenClient.requestAccessToken({prompt: ''});
+      // safety timeout
+      setTimeout(()=>finish(false), 15000);
+    }catch(e){
+      finish(false);
+    }
+  });
 }
 
 async function afterGoogleLogin(){
@@ -849,15 +924,30 @@ function requestGoogleLogin(){
   }
   tokenClient.requestAccessToken({prompt: 'consent'});
 }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && accessToken && tokenObtainedAt){
+    const ageMin = (Date.now() - tokenObtainedAt) / 60000;
+    if(ageMin > 50) silentRefreshToken();
+  }
+});
+
+function reconnectDrive(){
+  if(!tokenClient){ toast('Google client not ready.'); return; }
+  toast('Reconnecting to Google Drive…');
+  silentRefreshToken().then(ok=>{
+    if(!ok) tokenClient.requestAccessToken({prompt: 'consent'});
+  });
+}
 
 // Override the Google button click to use our token client
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Wait for GIS to load, then make the button use our flow
+  // Wait for GIS + gapi, then wire login + auto-resume session
   const check = setInterval(()=>{
-    if(window.google && google.accounts){
+    if(window.google && google.accounts && window.gapi){
       clearInterval(check);
       initGis();
-      // Replace the rendered button click
+      initGapi().catch(()=>{});
+
       const btn = document.querySelector('.g_id_signin');
       if(btn){
         btn.addEventListener('click', (e)=>{
@@ -866,16 +956,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
           requestGoogleLogin();
         }, true);
       }
-      // Also make the whole login card button-like
       const card = document.querySelector('.login-card');
-      if(card){
-        // add a clear button
+      if(card && !document.getElementById('manualSignInBtn')){
         const extra = document.createElement('button');
+        extra.id = 'manualSignInBtn';
         extra.className = 'btn btn-accent btn-block';
         extra.style.marginTop = '16px';
         extra.textContent = 'Sign in with Google Drive';
         extra.onclick = requestGoogleLogin;
         document.getElementById('loginError').before(extra);
+      }
+
+      // Auto login if previously signed in this browser
+      if(sessionStorage.getItem('nw_logged_in') === '1'){
+        const errEl = document.getElementById('loginError');
+        if(errEl) errEl.textContent = 'Reconnecting to Google Drive…';
+        setTimeout(()=>{
+          silentRefreshToken().then(ok=>{
+            if(!ok){
+              // try once with consent if silent failed
+              if(errEl) errEl.textContent = 'Please sign in again.';
+            }
+          });
+        }, 400);
       }
     }
   }, 200);
@@ -956,6 +1059,10 @@ async function loadDBFromDrive(){
   setDriveStatus('Drive: connected');
 }
 
+function refreshGoogleTokenSilent(){
+  return silentRefreshToken();
+}
+
 async function persistDBNow(){
   if(!driveFileId || !accessToken){
     updateSavedIndicator(false, new Error('Not connected to Drive'));
@@ -966,7 +1073,7 @@ async function persistDBNow(){
   setDriveStatus('Drive: saving…', 'syncing');
   try{
     const content = JSON.stringify(DB, null, 2);
-    const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+    let res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
       method: 'PATCH',
       headers: {
         Authorization: 'Bearer ' + accessToken,
@@ -974,6 +1081,20 @@ async function persistDBNow(){
       },
       body: content
     });
+    if(res.status === 401 || res.status === 403){
+      setDriveStatus('Drive: re-connecting…', 'syncing');
+      const ok = await refreshGoogleTokenSilent();
+      if(ok){
+        res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+          },
+          body: content
+        });
+      }
+    }
     if(!res.ok) throw new Error('HTTP ' + res.status);
     updateSavedIndicator(true);
     setDriveStatus('Drive: connected');
@@ -982,7 +1103,7 @@ async function persistDBNow(){
   }catch(err){
     console.error('Drive save failed', err);
     updateSavedIndicator(false, err);
-    setDriveStatus('Drive: save failed', 'offline');
+    setDriveStatus('Drive: save failed — tap status to re-login', 'offline');
     isSyncing = false;
     return false;
   }
@@ -1133,21 +1254,38 @@ function lastActivityDate(c){
   const sorted = [...entries].sort((a,b)=> new Date(a.date)-new Date(b.date));
   return sorted[sorted.length-1].date;
 }
+function daysSinceLastActivity(c){
+  const last = lastActivityDate(c);
+  if(!last) return null;
+  const d = new Date(last);
+  if(isNaN(d)) return null;
+  const now = new Date();
+  const diff = Math.floor((now - d) / (1000*60*60*24));
+  return diff < 0 ? 0 : diff;
+}
 function contactStatusDetail(c){
   const total = Number(c.totalAmount)||0;
-  const {green, yellow} = sectionStatusThresholds(c.nid);
   const last = lastActivityDate(c);
+  const days = daysSinceLastActivity(c);
   let status, label;
-  if(total<=0){ status='red'; label="Didn't Active"; }
-  else if(total>=green){ status='green'; label='Active'; }
-  else if(total>=yellow){ status='yellow'; label='Active'; }
-  else { status='red'; label='Active'; }
-  return {status, label, lastActivityDate:last, total};
+  // Based on last work date (contractors often work 2–3 months after taking materials)
+  // Active: 0–120 days | Idle: 121–240 days | Inactive: 241+ or never
+  if(days === null){
+    status = 'red'; label = "Inactive";
+  } else if(days <= 120){
+    status = 'green'; label = 'Active';
+  } else if(days <= 240){
+    status = 'yellow'; label = 'Idle';
+  } else {
+    status = 'red'; label = 'Inactive';
+  }
+  return {status, label, lastActivityDate:last, total, daysSince: days};
 }
 function contactStatus(c){ return contactStatusDetail(c).status; }
 function statusDetailTooltip(d){
   const parts = [];
   parts.push(d.lastActivityDate ? `Last activity: ${d.lastActivityDate}` : 'Last activity: never');
+  if(d.daysSince != null) parts.push(d.daysSince + ' day' + (d.daysSince===1?'':'s') + ' ago');
   parts.push(`Total Amount: ${fmtMoney(d.total)}`);
   return parts.join(' · ');
 }
@@ -1413,13 +1551,65 @@ document.addEventListener('click', e=>{
   if(!e.target.closest('.msel')) msCloseAll();
 });
 
+
+function toggleMark(id){
+  const c = DB.contacts.find(x=>x.id===id);
+  if(!c) return;
+  c.marked = !c.marked;
+  saveDB(true);
+  renderSummary();
+  renderReports();
+}
+function clearAllMarks(){
+  const n = DB.contacts.filter(c=>c.marked).length;
+  if(!n){ toast('No marks to clear.'); return; }
+  if(!confirm('Clear marks on ' + n + ' contractor(s)?')) return;
+  DB.contacts.forEach(c=>{ c.marked = false; });
+  saveDB(true);
+  renderSummary();
+  renderReports();
+  toast('All marks cleared.');
+}
+function normalizeBdMobile(mobile){
+  let m = String(mobile||'').replace(/[^0-9+]/g,'');
+  if(!m) return '';
+  if(m.startsWith('+')) m = m.slice(1);
+  if(m.startsWith('0') && m.length===11) m = '88' + m;
+  if(m.length===10 && m.startsWith('1')) m = '880' + m;
+  if(m.length===11 && m.startsWith('01')) m = '88' + m;
+  return m;
+}
+function openWhatsAppToContact(contactId, customText){
+  const c = DB.contacts.find(x=>x.id===contactId);
+  if(!c){ toast('Contractor not found.'); return; }
+  const phone = normalizeBdMobile(c.mobile);
+  if(!phone){ toast('No mobile number for this contractor.'); return; }
+  const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ, 😊');
+  const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+function openWhatsAppAfterEntries(contactId, count){
+  const c = DB.contacts.find(x=>x.id===contactId);
+  if(!c || !c.mobile) return;
+  const msg = count > 1
+    ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ, 😊`)
+    : ('মেমো জমা হয়েছে ধন্যবাদ, 😊');
+  // small confirm so user controls when WA opens
+  if(confirm('WhatsApp-এ মেসেজ পাঠাবেন?\n\n' + (c.name||'') + ' — ' + (c.mobile||'') + '\n\n"' + msg + '"')){
+    openWhatsAppToContact(contactId, msg);
+  }
+}
+
 function renderSummary(){
   ensureMselMounted('summary','summaryFilterRow');
   const list = rankedContacts().filter(c=>!c.died);
   const q = (document.getElementById('summarySearch').value||'').toLowerCase().trim();
   const F = msFilterState.summary;
+  const markF = (document.getElementById('summaryMarkFilter')||{}).value || 'all';
   let filtered = list.filter(c=>{
     if(q && ![c.id,c.name,c.mobile,c.address,c.nid].join(' ').toLowerCase().includes(q)) return false;
+    if(markF==='marked' && !c.marked) return false;
+    if(markF==='unmarked' && c.marked) return false;
     if(F.ranking.size && !F.ranking.has(String(c.ranking))) return false;
     if(F.name.size && !F.name.has(c.name)) return false;
     if(F.id.size && !F.id.has(c.id)) return false;
@@ -1449,10 +1639,12 @@ function renderSummary(){
   filtered.forEach(c=>{
     const tr = document.createElement('tr');
     if(c.ranking<=3) tr.classList.add('rank-1');
+    if(c.marked) tr.style.background = 'var(--amber-200)';
     tr.innerHTML = `
+      <td class="no-print"><input type="checkbox" ${c.marked?'checked':''} onchange="toggleMark('${c.id}')" title="Mark"></td>
       <td>${c.ranking===1?'🥇 ':c.ranking===2?'🥈 ':c.ranking===3?'🥉 ':''}${c.ranking}</td>
       <td class="mono">${escapeHtml(c.id)}</td>
-      <td>${escapeHtml(c.name)} ${c.died? '<span class="pill pill-dark">Dead</span>':''}</td>
+      <td>${escapeHtml(c.name)} ${c.died? '<span class="pill pill-dark">Dead</span>':''} ${c.marked? '<span class="pill pill-yellow">Marked</span>':''}</td>
       <td class="mono">${escapeHtml(c.mobile||'')}</td>
       <td>${escapeHtml(c.address||'')}</td>
       <td class="mono">${escapeHtml(c.nid||'')}</td>
@@ -1460,6 +1652,7 @@ function renderSummary(){
       <td class="no-print"><div class="row-actions">
         <button class="icon-btn" onclick="jumpToAccount('${c.id}')">Open</button>
         <button class="icon-btn" onclick="openEditContactModal('${c.id}')">Edit</button>
+        <button class="icon-btn" onclick="openWhatsAppToContact('${c.id}')" title="WhatsApp">WA</button>
         <button class="icon-btn" onclick="toggleDied('${c.id}')">${c.died? 'Unmark Dead':'Mark Dead'}</button>
         <button class="icon-btn danger" onclick="deleteContact('${c.id}')">Delete</button>
       </div></td>`;
@@ -1805,15 +1998,21 @@ function renderStagedList(){
   empty.style.display='none';
   countBadge.textContent = stagedEntries.length + (stagedEntries.length===1 ? ' item' : ' items');
   wrap.innerHTML = stagedEntries.map((s,i)=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i>0?'border-top:1px solid var(--ring-line);':''}">
-      <span class="mono" style="min-width:96px;">${escapeHtml(s.date||'—')}</span>
-      <span class="mono" style="flex:1;">${escapeHtml(s.memo||'—')}</span>
-      <span class="mono" style="min-width:90px;text-align:right;">${fmtMoney(s.amount)}</span>
-      <span style="min-width:90px;color:var(--ink-soft);">${escapeHtml(s.inCharge||'—')}</span>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;${i>0?'border-top:1px solid var(--ring-line);':''}">
+      <input type="date" class="input-sm" style="width:130px;" value="${escapeHtml(s.date||'')}" onchange="updateStagedEntry(${i},'date',this.value)">
+      <input type="text" class="input-sm mono" style="width:110px;" value="${escapeHtml(s.memo||'')}" onchange="updateStagedEntry(${i},'memo',this.value)" placeholder="Memo #">
+      <input type="number" class="input-sm mono" style="width:100px;" value="${s.amount||0}" onchange="updateStagedEntry(${i},'amount',this.value)" placeholder="Amount">
+      <select class="input-sm" style="width:110px;" onchange="updateStagedEntry(${i},'inCharge',this.value)">${inChargeOptionsHtml(s.inCharge||'')}</select>
       <button class="btn btn-ghost btn-sm" onclick="removeStagedEntry(${i})" title="Remove" style="padding:2px 8px;">✕</button>
     </div>
   `).join('');
 }
+function updateStagedEntry(i, field, value){
+  if(!stagedEntries[i]) return;
+  if(field==='amount') stagedEntries[i].amount = Number(value)||0;
+  else stagedEntries[i][field] = value;
+}
+
 
 function removeStagedEntry(i){
   stagedEntries.splice(i,1);
@@ -1843,6 +2042,7 @@ function commitStagedEntries(){
   const inCharge = document.getElementById('aeInCharge').value;
   if(memo){ stagedEntries.push({date, memo, amount, inCharge}); }
   if(stagedEntries.length===0){ toast('Add at least one entry first.'); return; }
+  const contactId = currentAccountId;
   stagedEntries.forEach(s=>{
     acc.entries.push({uid:generateUid(), date:s.date, memo:s.memo, amount:s.amount, inCharge:s.inCharge||'', remark:''});
   });
@@ -1852,6 +2052,8 @@ function commitStagedEntries(){
   renderEntries();
   saveDB(true);
   toast(count + (count===1 ? ' entry added.' : ' entries added.'));
+  // Offer WhatsApp confirmation message
+  setTimeout(()=> openWhatsAppAfterEntries(contactId, count), 300);
 }
 
 document.getElementById('addEntryModalOverlay').addEventListener('keydown', e=>{
@@ -1991,8 +2193,11 @@ function renderReports(){
     field: document.getElementById('reportSortField').value,
     dir: document.getElementById('reportSortDir').value
   };
+  const markF = (document.getElementById('reportMarkFilter')||{}).value || 'all';
   let filtered = list.filter(c=>{
     if(q && ![c.id,c.name,c.mobile,c.address,c.nid].join(' ').toLowerCase().includes(q)) return false;
+    if(markF==='marked' && !c.marked) return false;
+    if(markF==='unmarked' && c.marked) return false;
     if(F.ranking.size && !F.ranking.has(String(c.ranking))) return false;
     if(F.name.size && !F.name.has(c.name)) return false;
     if(F.id.size && !F.id.has(c.id)) return false;
@@ -2024,12 +2229,16 @@ function renderReports(){
   tbody.innerHTML = '';
   filtered.forEach(c=>{
     const tr = document.createElement('tr');
+    if(c.marked) tr.style.background = 'var(--amber-200)';
     tr.innerHTML = `
-      <td>${c.ranking}</td><td class="mono">${escapeHtml(c.id)}</td><td>${escapeHtml(c.name)}</td>
+      <td class="no-print"><input type="checkbox" ${c.marked?'checked':''} onchange="toggleMark('${c.id}')" title="Mark"></td>
+      <td>${c.ranking}</td><td class="mono">${escapeHtml(c.id)}</td>
+      <td>${escapeHtml(c.name)} ${c.marked? '<span class="pill pill-yellow">Marked</span>':''}</td>
       <td class="mono">${escapeHtml(c.mobile||'')}</td><td>${escapeHtml(c.address||'')}</td>
       <td class="mono">${escapeHtml(c.nid||'')}</td><td class="mono">${c.entries}</td>
       <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
-      <td>${statusPillHtml(c.status, c.statusDetail)}</td>`;
+      <td>${statusPillHtml(c.status, c.statusDetail)}</td>
+      <td class="no-print"><button class="icon-btn" onclick="openWhatsAppToContact('${c.id}')" title="WhatsApp">WA</button></td>`;
     tbody.appendChild(tr);
   });
   window.__lastReportFiltered = filtered;
