@@ -720,7 +720,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '5.3-Drive';
+const APP_VERSION = '5.3.1-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1581,12 +1581,23 @@ function normalizeBdMobile(mobile){
 }
 function openWhatsAppToContact(contactId, customText){
   const c = DB.contacts.find(x=>x.id===contactId);
-  if(!c){ toast('Contractor not found.'); return; }
+  if(!c){ toast('Contractor not found.'); return false; }
   const phone = normalizeBdMobile(c.mobile);
-  if(!phone){ toast('No mobile number for this contractor.'); return; }
+  if(!phone){ toast('No mobile number for this contractor.'); return false; }
   const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ, 😊');
   const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
-  window.open(url, '_blank');
+  // Direct navigation-style open reduces popup block rate
+  const w = window.open(url, '_blank');
+  if(!w || w.closed || typeof w.closed === 'undefined'){
+    // Fallback: same-tab redirect prompt
+    if(confirm('Popup blocked. Open WhatsApp in this tab?\n\n(You can press Back to return)')){
+      window.location.href = url;
+    } else {
+      toast('Browser blocked popup. Allow popups for this site, or use the WA button.');
+    }
+    return false;
+  }
+  return true;
 }
 function openWhatsAppAfterEntries(contactId, count){
   const c = DB.contacts.find(x=>x.id===contactId);
@@ -1594,10 +1605,38 @@ function openWhatsAppAfterEntries(contactId, count){
   const msg = count > 1
     ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ, 😊`)
     : ('মেমো জমা হয়েছে ধন্যবাদ, 😊');
-  // small confirm so user controls when WA opens
-  if(confirm('WhatsApp-এ মেসেজ পাঠাবেন?\n\n' + (c.name||'') + ' — ' + (c.mobile||'') + '\n\n"' + msg + '"')){
-    openWhatsAppToContact(contactId, msg);
+  showWhatsAppOffer(contactId, msg, c);
+}
+function showWhatsAppOffer(contactId, msg, c){
+  // In-app banner so click is a real user gesture (avoids popup block)
+  let bar = document.getElementById('waOfferBar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'waOfferBar';
+    bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#128C7E;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:92vw;font-size:.9rem;';
+    document.body.appendChild(bar);
   }
+  bar.innerHTML = '';
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;min-width:0;';
+  info.innerHTML = '<strong>WhatsApp পাঠাবেন?</strong><div style="opacity:.9;font-size:.8rem;margin-top:2px;">' +
+    escapeHtml((c && c.name) || '') + ' · ' + escapeHtml((c && c.mobile) || '') + '</div>';
+  const sendBtn = document.createElement('button');
+  sendBtn.className = 'btn btn-sm';
+  sendBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  sendBtn.textContent = 'Send WA';
+  sendBtn.onclick = ()=>{
+    openWhatsAppToContact(contactId, msg);
+    bar.style.display = 'none';
+  };
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px 6px;';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
+  bar.appendChild(info);
+  bar.appendChild(sendBtn);
+  bar.appendChild(closeBtn);
+  bar.style.display = 'flex';
 }
 
 function renderSummary(){
@@ -2053,7 +2092,7 @@ function commitStagedEntries(){
   saveDB(true);
   toast(count + (count===1 ? ' entry added.' : ' entries added.'));
   // Offer WhatsApp confirmation message
-  setTimeout(()=> openWhatsAppAfterEntries(contactId, count), 300);
+  openWhatsAppAfterEntries(contactId, count);
 }
 
 document.getElementById('addEntryModalOverlay').addEventListener('keydown', e=>{
