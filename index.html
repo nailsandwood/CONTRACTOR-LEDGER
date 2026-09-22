@@ -1581,7 +1581,7 @@ function openWhatsAppToContact(contactId, customText){
   if(!c){ toast('Contractor not found.'); return false; }
   const phone = normalizeBdMobile(c.mobile);
   if(!phone){ toast('No mobile number for this contractor.'); return false; }
-  const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ, ' + String.fromCodePoint(0x1F60A));
+  const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ,😊' + String.fromCodePoint(0x1F60A));
   const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
   // Direct navigation-style open reduces popup block rate
   const w = window.open(url, '_blank');
@@ -1601,8 +1601,8 @@ function openWhatsAppAfterEntries(contactId, count){
   if(!c || !c.mobile) return;
   const smile = String.fromCodePoint(0x1F60A);
   const msg = count > 1
-    ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ, ` + smile)
-    : ('মেমো জমা হয়েছে ধন্যবাদ, ' + smile);
+    ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ,😊` + smile)
+    : ('মেমো জমা হয়েছে ধন্যবাদ,😊' + smile);
   showWhatsAppOffer(contactId, msg, c);
 }
 function showWhatsAppOffer(contactId, msg, c){
