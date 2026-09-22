@@ -720,7 +720,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '5.3.2-Drive';
+const APP_VERSION = '5.3.3-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1245,8 +1245,12 @@ function syncGrandTotalToSummary(contactId){
 }
 function sectionStatusThresholds(nid){
   const key = String(nid||'').trim().toLowerCase();
-  if(key==='lacquer' || key==='wallpaper') return {green:500000, yellow:100000};
-  return {green:800000, yellow:200000};
+  // Carpenter (default): Active 800000+, Idle 200000-799999, Inactive 1-199999
+  // Lacquer / Wallpaper: Active 500000+, Idle 100000-499999, Inactive 1-99999
+  if(key==='lacquer' || key==='wallpaper'){
+    return { active: 500000, idle: 100000 };
+  }
+  return { active: 800000, idle: 200000 };
 }
 function lastActivityDate(c){
   const entries = ((DB.accounts[c.id]||{}).entries||[]).filter(e=>e.date && !isNaN(new Date(e.date)));
@@ -1254,40 +1258,33 @@ function lastActivityDate(c){
   const sorted = [...entries].sort((a,b)=> new Date(a.date)-new Date(b.date));
   return sorted[sorted.length-1].date;
 }
-function daysSinceLastActivity(c){
-  const last = lastActivityDate(c);
-  if(!last) return null;
-  const d = new Date(last);
-  if(isNaN(d)) return null;
-  const now = new Date();
-  const diff = Math.floor((now - d) / (1000*60*60*24));
-  return diff < 0 ? 0 : diff;
-}
 function contactStatusDetail(c){
   const total = Number(c.totalAmount)||0;
   const last = lastActivityDate(c);
-  const days = daysSinceLastActivity(c);
+  const { active, idle } = sectionStatusThresholds(c.nid);
   let status, label;
-  // Based on last work date (contractors often work 2–3 months after taking materials)
-  // Active: 0–120 days | Idle: 121–240 days | Inactive: 241+ or never
-  if(days === null){
-    status = 'red'; label = "Inactive";
-  } else if(days <= 120){
-    status = 'green'; label = 'Active';
-  } else if(days <= 240){
-    status = 'yellow'; label = 'Idle';
+  if(total <= 0){
+    status = 'red';
+    label = "Didn't Active";
+  } else if(total >= active){
+    status = 'green';
+    label = 'Active';
+  } else if(total >= idle){
+    status = 'yellow';
+    label = 'Idle';
   } else {
-    status = 'red'; label = 'Inactive';
+    status = 'red';
+    label = 'Inactive';
   }
-  return {status, label, lastActivityDate:last, total, daysSince: days};
+  return {status, label, lastActivityDate:last, total};
 }
 function contactStatus(c){ return contactStatusDetail(c).status; }
 function statusDetailTooltip(d){
   const parts = [];
+  parts.push(d.label || '');
   parts.push(d.lastActivityDate ? `Last activity: ${d.lastActivityDate}` : 'Last activity: never');
-  if(d.daysSince != null) parts.push(d.daysSince + ' day' + (d.daysSince===1?'':'s') + ' ago');
   parts.push(`Total Amount: ${fmtMoney(d.total)}`);
-  return parts.join(' · ');
+  return parts.filter(Boolean).join(' · ');
 }
 function statusPillHtml(status, detail){
   const map = {green:'pill-green', yellow:'pill-yellow', red:'pill-red'};
