@@ -612,7 +612,12 @@
     <div class="field"><label>Contractor ID</label><input id="mId" placeholder="e.g. 1001 (type your own ID)">
       <div class="hint" id="mIdHint">Choose any unique ID — letters and numbers are fine.</div></div>
     <div class="field"><label>Name</label><input id="mName" placeholder="Full name"></div>
-    <div class="field"><label>Mobile Number</label><input id="mMobile" placeholder="e.g. 017XXXXXXXX"></div>
+    <div class="field">
+      <label>Mobile Number(s)</label>
+      <div id="mMobileList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="addMobileRow()">+ Add another number</button>
+      <div class="hint">You can save one or more numbers. First number is primary (WhatsApp uses it by default).</div>
+    </div>
     <div class="field"><label>Address</label><input id="mAddress" placeholder="Address"></div>
     <div class="field"><label>Section</label><input id="mNid" placeholder="e.g. Zone, Ward, or Department"></div>
     <div class="modal-actions">
@@ -720,7 +725,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '5.3.3-Drive';
+const APP_VERSION = '5.4-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -769,6 +774,13 @@ function applyMigrations(){
   DB.contacts.forEach(c=>{
     if(!DB.accounts[c.id]) DB.accounts[c.id] = {entries:[], grandTotal:0};
     syncGrandTotalToSummary(c.id);
+  });
+  (DB.contacts||[]).forEach(c=>{
+    if(!Array.isArray(c.mobiles) || !c.mobiles.length){
+      const raw = String(c.mobile||'').trim();
+      c.mobiles = raw ? raw.split(/[,;/|]+/).map(x=>x.trim()).filter(Boolean) : [];
+    }
+    if(!c.mobile && c.mobiles.length) c.mobile = c.mobiles[0];
   });
 }
 
@@ -1310,13 +1322,78 @@ function statusActiveHtml(status, detail){
 /* =========================================================
    CONTRACTOR MODAL
    ========================================================= */
+
+function getContactMobiles(c){
+  if(!c) return [];
+  if(Array.isArray(c.mobiles) && c.mobiles.length){
+    return c.mobiles.map(x=>String(x||'').trim()).filter(Boolean);
+  }
+  const raw = String(c.mobile||'').trim();
+  if(!raw) return [];
+  // support legacy comma / slash / semicolon separated
+  return raw.split(/[,;/|]+/).map(x=>x.trim()).filter(Boolean);
+}
+function formatMobilesDisplay(c){
+  return getContactMobiles(c).join(', ');
+}
+function primaryMobile(c){
+  const list = getContactMobiles(c);
+  return list[0] || '';
+}
+function renderMobileRows(numbers){
+  const wrap = document.getElementById('mMobileList');
+  if(!wrap) return;
+  const list = (numbers && numbers.length) ? numbers : [''];
+  wrap.innerHTML = list.map((num,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;" data-mobile-row>
+      <input type="text" class="m-mobile-input" placeholder="e.g. 017XXXXXXXX" value="${escapeHtml(num)}" style="flex:1;">
+      <button type="button" class="btn btn-ghost btn-sm" style="padding:4px 10px;" title="Remove" onclick="removeMobileRow(this)" ${list.length<=1?'disabled':''}>✕</button>
+    </div>
+  `).join('');
+}
+function addMobileRow(){
+  const wrap = document.getElementById('mMobileList');
+  if(!wrap) return;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  div.setAttribute('data-mobile-row','');
+  div.innerHTML = `<input type="text" class="m-mobile-input" placeholder="e.g. 017XXXXXXXX" value="" style="flex:1;">
+    <button type="button" class="btn btn-ghost btn-sm" style="padding:4px 10px;" title="Remove" onclick="removeMobileRow(this)">✕</button>`;
+  wrap.appendChild(div);
+  // enable all remove buttons
+  wrap.querySelectorAll('button').forEach(b=> b.disabled = wrap.querySelectorAll('[data-mobile-row]').length<=1);
+  div.querySelector('input').focus();
+}
+function removeMobileRow(btn){
+  const wrap = document.getElementById('mMobileList');
+  if(!wrap) return;
+  const rows = wrap.querySelectorAll('[data-mobile-row]');
+  if(rows.length <= 1) return;
+  btn.closest('[data-mobile-row]').remove();
+  const left = wrap.querySelectorAll('[data-mobile-row]');
+  if(left.length === 1){
+    const b = left[0].querySelector('button');
+    if(b) b.disabled = true;
+  }
+}
+function collectMobilesFromForm(){
+  const inputs = document.querySelectorAll('#mMobileList .m-mobile-input');
+  const nums = [];
+  inputs.forEach(inp=>{
+    const v = (inp.value||'').trim();
+    if(v && !nums.includes(v)) nums.push(v);
+  });
+  return nums;
+}
+
 function openNewContactModal(){
   document.getElementById('contactModalTitle').textContent = 'New Contractor';
   document.getElementById('contactModalEditingId').value = '';
   document.getElementById('mId').value=''; document.getElementById('mId').disabled=false;
   document.getElementById('mIdHint').textContent = 'Choose any unique ID — letters and numbers are fine.';
-  document.getElementById('mName').value=''; document.getElementById('mMobile').value='';
+  document.getElementById('mName').value='';
   document.getElementById('mAddress').value=''; document.getElementById('mNid').value='';
+  renderMobileRows(['']);
   document.getElementById('contactModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('mId').focus(),50);
 }
@@ -1328,9 +1405,9 @@ function openEditContactModal(id){
   document.getElementById('mId').value = c.id; document.getElementById('mId').disabled = false;
   document.getElementById('mIdHint').textContent = 'You can change the ID — the account and all its entries will move with it.';
   document.getElementById('mName').value = c.name;
-  document.getElementById('mMobile').value = c.mobile;
   document.getElementById('mAddress').value = c.address;
   document.getElementById('mNid').value = c.nid;
+  renderMobileRows(getContactMobiles(c));
   document.getElementById('contactModalOverlay').classList.add('open');
 }
 function closeContactModal(){ document.getElementById('contactModalOverlay').classList.remove('open'); }
@@ -1339,7 +1416,8 @@ function saveContactModal(){
   const editingId = document.getElementById('contactModalEditingId').value;
   const idInput = document.getElementById('mId').value.trim();
   const name = document.getElementById('mName').value.trim();
-  const mobile = document.getElementById('mMobile').value.trim();
+  const mobiles = collectMobilesFromForm();
+  const mobile = mobiles[0] || '';
   const address = document.getElementById('mAddress').value.trim();
   const nid = document.getElementById('mNid').value.trim();
   if(!name){ toast('Name is required.'); return; }
@@ -1358,7 +1436,7 @@ function saveContactModal(){
       delete DB.accounts[oldId];
       if(currentAccountId === oldId) currentAccountId = idInput;
     }
-    Object.assign(c, {name,mobile,address,nid});
+    Object.assign(c, {name, mobile, mobiles, address, nid});
     toast('Contractor updated.');
     saveDB(true); closeContactModal(); renderSummary(); renderAccountsTab();
     return;
@@ -1368,7 +1446,7 @@ function saveContactModal(){
   if(DB.contacts.some(c=>c.id.toLowerCase()===idInput.toLowerCase())){
     toast('That Contractor ID already exists — please choose a different one.'); return;
   }
-  const c = {id:idInput,name,mobile,address,nid,totalAmount:0,ranking:0};
+  const c = {id:idInput,name,mobile,mobiles,address,nid,totalAmount:0,ranking:0};
   DB.contacts.push(c);
   DB.accounts[idInput] = {entries:[], grandTotal:0};
   toast('New contractor created: ' + idInput);
@@ -1579,9 +1657,9 @@ function normalizeBdMobile(mobile){
 function openWhatsAppToContact(contactId, customText){
   const c = DB.contacts.find(x=>x.id===contactId);
   if(!c){ toast('Contractor not found.'); return false; }
-  const phone = normalizeBdMobile(c.mobile);
+  const phone = normalizeBdMobile(primaryMobile(c));
   if(!phone){ toast('No mobile number for this contractor.'); return false; }
-  const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ,😊' + String.fromCodePoint(0x1F60A));
+  const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ, ' + String.fromCodePoint(0x1F60A));
   const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
   // Direct navigation-style open reduces popup block rate
   const w = window.open(url, '_blank');
@@ -1598,11 +1676,11 @@ function openWhatsAppToContact(contactId, customText){
 }
 function openWhatsAppAfterEntries(contactId, count){
   const c = DB.contacts.find(x=>x.id===contactId);
-  if(!c || !c.mobile) return;
+  if(!c || !primaryMobile(c)) return;
   const smile = String.fromCodePoint(0x1F60A);
   const msg = count > 1
-    ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ,😊` + smile)
-    : ('মেমো জমা হয়েছে ধন্যবাদ,😊' + smile);
+    ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ, ` + smile)
+    : ('মেমো জমা হয়েছে ধন্যবাদ, ' + smile);
   showWhatsAppOffer(contactId, msg, c);
 }
 function showWhatsAppOffer(contactId, msg, c){
@@ -1618,7 +1696,7 @@ function showWhatsAppOffer(contactId, msg, c){
   const info = document.createElement('div');
   info.style.cssText = 'flex:1;min-width:0;';
   info.innerHTML = '<strong>WhatsApp পাঠাবেন?</strong><div style="opacity:.9;font-size:.8rem;margin-top:2px;">' +
-    escapeHtml((c && c.name) || '') + ' · ' + escapeHtml((c && c.mobile) || '') + '</div>';
+    escapeHtml((c && c.name) || '') + ' · ' + escapeHtml(primaryMobile(c) || '') + '</div>';
   const sendBtn = document.createElement('button');
   sendBtn.className = 'btn btn-sm';
   sendBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
@@ -1644,7 +1722,7 @@ function renderSummary(){
   const F = msFilterState.summary;
   const markF = (document.getElementById('summaryMarkFilter')||{}).value || 'all';
   let filtered = list.filter(c=>{
-    if(q && ![c.id,c.name,c.mobile,c.address,c.nid].join(' ').toLowerCase().includes(q)) return false;
+    if(q && ![c.id,c.name,c.mobile,formatMobilesDisplay(c),c.address,c.nid].join(' ').toLowerCase().includes(q)) return false;
     if(markF==='marked' && !c.marked) return false;
     if(markF==='unmarked' && c.marked) return false;
     if(F.ranking.size && !F.ranking.has(String(c.ranking))) return false;
@@ -1682,7 +1760,7 @@ function renderSummary(){
       <td>${c.ranking===1?'🥇 ':c.ranking===2?'🥈 ':c.ranking===3?'🥉 ':''}${c.ranking}</td>
       <td class="mono">${escapeHtml(c.id)}</td>
       <td>${escapeHtml(c.name)} ${c.died? '<span class="pill pill-dark">Dead</span>':''} ${c.marked? '<span class="pill pill-yellow">Marked</span>':''}</td>
-      <td class="mono">${escapeHtml(c.mobile||'')}</td>
+      <td class="mono">${escapeHtml(formatMobilesDisplay(c))}</td>
       <td>${escapeHtml(c.address||'')}</td>
       <td class="mono">${escapeHtml(c.nid||'')}</td>
       <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
@@ -1737,7 +1815,7 @@ function renderContractorLookup(){
   const q = (document.getElementById('contractorLookupSearch').value||'').toLowerCase().trim();
   const wrap = document.getElementById('contractorLookupResults');
   if(!q){ wrap.style.display='none'; wrap.innerHTML=''; window.__lookupMatches=[]; lookupHighlightIdx=-1; return; }
-  const matches = DB.contacts.filter(c=> [c.id,c.name,c.mobile,c.nid,c.address].join(' ').toLowerCase().includes(q));
+  const matches = DB.contacts.filter(c=> [c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid,c.address].join(' ').toLowerCase().includes(q));
   window.__lookupMatches = matches;
   wrap.style.display = 'block';
   if(!matches.length){ wrap.innerHTML = '<div class="gs-empty">No contractor matches.</div>'; lookupHighlightIdx=-1; return; }
@@ -1745,7 +1823,7 @@ function renderContractorLookup(){
   wrap.innerHTML = matches.slice(0,8).map((c,i)=>`
     <div class="gs-item" data-id="${escapeHtml(c.id)}" data-idx="${i}">
       <div><div class="gtitle">${escapeHtml(c.name)} — ${escapeHtml(c.id)}</div>
-        <div class="gsub">${escapeHtml(c.mobile||'')}${c.nid? ' · Section '+escapeHtml(c.nid):''}</div></div>
+        <div class="gsub">${escapeHtml(formatMobilesDisplay(c))}${c.nid? ' · Section '+escapeHtml(c.nid):''}</div></div>
       <span class="pill pill-gold">Open</span>
     </div>`).join('');
   wrap.querySelectorAll('.gs-item').forEach(el=>{
@@ -1827,7 +1905,7 @@ function openAccount(id){
   document.getElementById('accId').textContent = c.id;
   document.getElementById('accRankBadge').textContent = 'Rank #' + c.ranking;
   document.getElementById('accName').textContent = c.name;
-  document.getElementById('accMobile').textContent = c.mobile||'—';
+  document.getElementById('accMobile').textContent = formatMobilesDisplay(c)||'—';
   document.getElementById('accNid').textContent = c.nid||'—';
   document.getElementById('accAddress').textContent = c.address||'—';
   document.getElementById('accDiedBadge').innerHTML = c.died ? '<span class="pill pill-dark">Dead</span>' : '';
@@ -2232,7 +2310,7 @@ function renderReports(){
   };
   const markF = (document.getElementById('reportMarkFilter')||{}).value || 'all';
   let filtered = list.filter(c=>{
-    if(q && ![c.id,c.name,c.mobile,c.address,c.nid].join(' ').toLowerCase().includes(q)) return false;
+    if(q && ![c.id,c.name,c.mobile,formatMobilesDisplay(c),c.address,c.nid].join(' ').toLowerCase().includes(q)) return false;
     if(markF==='marked' && !c.marked) return false;
     if(markF==='unmarked' && c.marked) return false;
     if(F.ranking.size && !F.ranking.has(String(c.ranking))) return false;
@@ -2271,7 +2349,7 @@ function renderReports(){
       <td class="no-print"><input type="checkbox" ${c.marked?'checked':''} onchange="toggleMark('${c.id}')" title="Mark"></td>
       <td>${c.ranking}</td><td class="mono">${escapeHtml(c.id)}</td>
       <td>${escapeHtml(c.name)} ${c.marked? '<span class="pill pill-yellow">Marked</span>':''}</td>
-      <td class="mono">${escapeHtml(c.mobile||'')}</td><td>${escapeHtml(c.address||'')}</td>
+      <td class="mono">${escapeHtml(formatMobilesDisplay(c))}</td><td>${escapeHtml(c.address||'')}</td>
       <td class="mono">${escapeHtml(c.nid||'')}</td><td class="mono">${c.entries}</td>
       <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
       <td>${statusPillHtml(c.status, c.statusDetail)}</td>
@@ -2898,8 +2976,8 @@ function renderGlobalSearch(){
 
   const items = [];
   DB.contacts.forEach(c=>{
-    if([c.id,c.name,c.mobile,c.address,c.nid].join(' ').toLowerCase().includes(q)){
-      items.push({type:'contractor', id:c.id, title:`${c.name} — ${c.id}`, sub:`${c.mobile||''} ${c.nid?'· Section '+c.nid:''}`});
+    if([c.id,c.name,c.mobile,formatMobilesDisplay(c),c.address,c.nid].join(' ').toLowerCase().includes(q)){
+      items.push({type:'contractor', id:c.id, title:`${c.name} — ${c.id}`, sub:`${formatMobilesDisplay(c)||''} ${c.nid?'· Section '+c.nid:''}`});
     }
     const acc = DB.accounts[c.id];
     if(acc){
