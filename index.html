@@ -1003,7 +1003,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.2-Drive';
+const APP_VERSION = '6.2.1-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -3473,18 +3473,32 @@ function ensureSavings(){
 }
 
 function resolveContactQuery(q){
-  q = String(q||'').trim().toLowerCase();
+  q = String(q||'').trim();
   if(!q) return null;
-  let c = DB.contacts.find(x=> String(x.id).toLowerCase()===q);
+  // Datalist format: "1004 — Mr. Name" or "1004 - Mr. Name"
+  let idPart = q;
+  const sep = q.match(/\s*[—–\-]\s*/);
+  if(sep){
+    idPart = q.slice(0, sep.index).trim();
+  }
+  const idLower = idPart.toLowerCase();
+  let c = DB.contacts.find(x=> String(x.id).toLowerCase()===idLower);
   if(c) return c;
-  c = DB.contacts.find(x=> String(x.name||'').toLowerCase()===q);
+  const qLower = q.toLowerCase();
+  c = DB.contacts.find(x=> String(x.name||'').toLowerCase()===qLower);
   if(c) return c;
-  const matches = DB.contacts.filter(x=>
-    String(x.id).toLowerCase().includes(q) ||
-    String(x.name||'').toLowerCase().includes(q) ||
-    formatMobilesDisplay(x).toLowerCase().includes(q)
-  );
-  return matches.length===1 ? matches[0] : null;
+  // unique partial match on id or name
+  const matches = DB.contacts.filter(x=>{
+    const id = String(x.id).toLowerCase();
+    const name = String(x.name||'').toLowerCase();
+    return id===idLower || id.startsWith(idLower) || name===qLower || name.includes(qLower) ||
+      (idPart && name.includes(idPart.toLowerCase()));
+  });
+  // Prefer exact id start
+  const byId = matches.filter(x=> String(x.id).toLowerCase()===idLower);
+  if(byId.length===1) return byId[0];
+  if(matches.length===1) return matches[0];
+  return null;
 }
 
 function savingsEffectsForContact(contactId){
