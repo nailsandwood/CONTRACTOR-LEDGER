@@ -231,6 +231,27 @@
   .drive-status{font-size:.72rem;padding:3px 8px;border-radius:4px;background:var(--green-100);color:var(--green-700);font-weight:600;}
   .drive-status.offline{background:var(--red-100);color:var(--red-600);}
   .drive-status.syncing{background:var(--yellow-100);color:var(--yellow-700);}
+
+  body.dark-mode{
+    --paper:#121516; --paper-dim:#1a1f21; --ink:#e8ecea; --ink-soft:#9aa3a7;
+    --ring-line:#2e3639; --walnut-900:#0e1112; --walnut-950:#0a0c0d;
+  }
+  body.dark-mode .card, body.dark-mode .stat-box, body.dark-mode .modal,
+  body.dark-mode input, body.dark-mode select, body.dark-mode textarea,
+  body.dark-mode .table-wrap{background:#1a1f21;color:var(--ink);}
+  body.dark-mode table th{background:#0e1112;}
+  body.dark-mode tr:nth-child(even) td{background:#151a1c;}
+  body.dark-mode .btn{background:#1a1f21;color:var(--ink);}
+  body.dark-mode .btn-accent{background:var(--amber-600);color:#fff;}
+  @media(max-width:700px){
+    .announce-layout{grid-template-columns:1fr !important;}
+    nav.tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
+    nav.tabs button{flex:0 0 auto;font-size:.75rem;padding:8px 10px;}
+    .layout-2{grid-template-columns:1fr !important;}
+    .grid-4,.grid-6,.grid-3{grid-template-columns:1fr 1fr !important;}
+    .modal.modal-wide{max-width:100%;margin:8px;}
+  }
+
 </style>
 </head>
 <body>
@@ -289,6 +310,8 @@
     <button data-tab="summary" onclick="showTab('summary')">Contractor Summary</button>
     <button data-tab="accounts" onclick="showTab('accounts')">Contractor Accounts</button>
     <button data-tab="reports" onclick="showTab('reports')">Reports</button>
+    <button data-tab="savings" onclick="showTab('savings')">Welfare Fund</button>
+    <button data-tab="announce" onclick="showTab('announce')">Announcements</button>
     <button data-tab="backup" onclick="showTab('backup')">Backup &amp; Files</button>
     <button data-tab="settings" onclick="showTab('settings')">Settings</button>
   </nav>
@@ -414,6 +437,7 @@
         <div class="toolbar no-print" style="margin-bottom:12px;">
           <button class="btn btn-accent btn-sm" onclick="openAddEntryModal()">+ Add Entry</button>
           <button class="btn btn-ghost btn-sm" onclick="openEditContactModal(currentAccountId)">✎ Edit Contractor Info</button>
+          <button class="btn btn-ghost btn-sm" onclick="if(currentAccountId) openSavStatement(currentAccountId)">Welfare Fund Statement</button>
           <button class="btn btn-ghost btn-sm" id="accDiedToggleBtn" onclick="toggleDied(currentAccountId)">Mark Dead</button>
           <button class="btn btn-ghost btn-sm" onclick="saveDB(true); toast('Saved to Google Drive.');">💾 Save to Drive</button>
           <button class="btn btn-ghost btn-sm" onclick="printAccountReport()">🖨 Print This Account / PDF</button>
@@ -527,6 +551,220 @@
       </div>
     </section>
 
+
+    <!-- ============ SAVINGS ============ -->
+    <section class="panel" id="panel-savings">
+      <div class="section-head">
+        <div>
+          <h2>Contractor Welfare Fund</h2>
+          <div class="sub">Deposits, withdrawals, and help transfers — full history and individual statements.</div>
+        </div>
+        <div class="toolbar no-print">
+          <button class="btn btn-ghost" onclick="saveDB(true); toast('Saved to Google Drive.');">💾 Save to Drive</button>
+          <button class="btn btn-ghost" onclick="printSavingsHistory()">🖨 Print History / PDF</button>
+          <button class="btn btn-ghost" onclick="exportSavingsCSV()">⇩ CSV</button>
+          <button class="btn btn-accent" onclick="openSavingsTxnModal()">+ New Transaction</button>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:18px;">
+        <div class="stat-box"><div class="label">Total Balance</div><div class="value" id="savTotalBalance">0</div></div>
+        <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">This Month Deposit</div><div class="value" id="savMonthIn">0</div></div>
+        <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">This Month Withdraw</div><div class="value" id="savMonthOut">0</div></div>
+        <div class="stat-box"><div class="label">Active Savers</div><div class="value" id="savActiveCount">0</div></div>
+      </div>
+
+      <div class="layout-2" style="display:grid;grid-template-columns:1fr minmax(280px,340px);gap:16px;align-items:start;">
+        <div>
+          <div class="toolbar no-print" style="margin-bottom:12px;flex-wrap:wrap;">
+            <div class="search-bar"><input id="savSearch" placeholder="Search name, ID, mobile, note…" oninput="renderSavings()"></div>
+            <select class="select-sm" id="savTypeFilter" onchange="renderSavings()">
+              <option value="all">All types</option>
+              <option value="deposit">Deposit</option>
+              <option value="withdraw">Withdraw</option>
+              <option value="help">Help</option>
+            </select>
+            <select class="select-sm" id="savMethodFilter" onchange="renderSavings()">
+              <option value="all">All methods</option>
+              <option value="Cash">Cash</option>
+              <option value="bKash">bKash</option>
+              <option value="Nagad">Nagad</option>
+              <option value="Rocket">Rocket</option>
+              <option value="Bank">Bank</option>
+              <option value="Other">Other</option>
+            </select>
+            <input type="month" class="input-sm" id="savMonthFilter" onchange="renderSavings()" title="Filter by month">
+            <button class="btn btn-ghost btn-sm" onclick="clearSavingsFilters()">Clear filters</button>
+          </div>
+
+          <div class="card" style="padding:0;">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Note</th>
+                    <th class="no-print">—</th>
+                  </tr>
+                </thead>
+                <tbody id="savTxnTbody"></tbody>
+              </table>
+            </div>
+            <p id="savTxnEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No transactions yet. Click <strong>+ New Transaction</strong>.</p>
+          </div>
+
+          <h3 style="margin:18px 0 10px;">Contractor Balances</h3>
+          <div class="toolbar no-print" style="margin-bottom:10px;">
+            <div class="search-bar"><input id="savBalSearch" placeholder="Search balances…" oninput="renderSavingsBalances()"></div>
+            <select class="select-sm" id="savBalSort" onchange="renderSavingsBalances()">
+              <option value="balance_desc">Sort: Balance high–low</option>
+              <option value="balance_asc">Sort: Balance low–high</option>
+              <option value="name">Sort: Name</option>
+              <option value="id">Sort: ID</option>
+            </select>
+          </div>
+          <div class="card" style="padding:0;">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Section</th>
+                    <th>Deposited</th>
+                    <th>Withdrawn</th>
+                    <th>Balance</th>
+                    <th>Last Txn</th>
+                    <th class="no-print">Statement</th>
+                  </tr>
+                </thead>
+                <tbody id="savBalTbody"></tbody>
+              </table>
+            </div>
+            <p id="savBalEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No welfare fund balances yet.</p>
+          </div>
+        </div>
+
+        <div class="card no-print" id="savQuickFormCard">
+          <h3 style="margin-bottom:10px;">Quick entry</h3>
+          <div style="display:flex;gap:6px;margin-bottom:12px;">
+            <button type="button" class="btn btn-sm" id="savTypeDeposit" style="flex:1;" onclick="setSavFormType('deposit')">Deposit</button>
+            <button type="button" class="btn btn-sm" id="savTypeWithdraw" style="flex:1;" onclick="setSavFormType('withdraw')">Withdraw</button>
+            <button type="button" class="btn btn-sm" id="savTypeHelp" style="flex:1;" onclick="setSavFormType('help')">Help</button>
+          </div>
+          <input type="hidden" id="savFormType" value="deposit">
+          <div class="field">
+            <label>Contractor</label>
+            <input id="savFormContact" list="savContactList" placeholder="Type ID or name…">
+            <datalist id="savContactList"></datalist>
+          </div>
+          <div id="savFormToWrap" style="display:none;" class="field">
+            <label>Help — To contractor</label>
+            <input id="savFormToContact" list="savContactList" placeholder="Receiver ID or name…">
+          </div>
+          <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="field"><label>Date</label><input type="date" id="savFormDate"></div>
+            <div class="field"><label>Amount (Tk)</label><input type="number" id="savFormAmount" class="mono" placeholder="0" min="0" step="1"></div>
+          </div>
+          <div class="field">
+            <label>Payment method</label>
+            <select id="savFormMethod">
+              <option>Cash</option>
+              <option>bKash</option>
+              <option>Nagad</option>
+              <option>Rocket</option>
+              <option>Bank</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Note</label><input id="savFormNote" placeholder="Optional"></div>
+          <div id="savFormBalanceHint" style="font-size:.8rem;color:var(--ink-soft);margin:8px 0;"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-ghost" onclick="resetSavForm()">Clear</button>
+            <button class="btn btn-accent" onclick="submitSavForm()">Save</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============ ANNOUNCEMENTS ============ -->
+    <section class="panel" id="panel-announce">
+      <div class="section-head">
+        <div>
+          <h2>Announcements</h2>
+          <div class="sub">Ready corporate Bengali messages — edit templates, filter contractors, send via WhatsApp to one or many.</div>
+        </div>
+        <div class="toolbar no-print">
+          <button class="btn btn-ghost" onclick="saveDB(true); toast('Saved to Google Drive.');">Save to Drive</button>
+          <button class="btn btn-accent" onclick="startAnnounceSend()">Send WhatsApp</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;" class="announce-layout">
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Message templates</h3>
+          <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:10px;">Select a template, edit if needed, then send. Changes are saved to Drive.</p>
+          <div class="field">
+            <label>Template</label>
+            <select id="annTemplateSelect" onchange="loadAnnounceTemplate()"></select>
+          </div>
+          <div class="field">
+            <label>Title</label>
+            <input id="annTitle" placeholder="Template title">
+          </div>
+          <div class="field">
+            <label>Message (Bengali)</label>
+            <textarea id="annBody" rows="8" style="width:100%;padding:10px;border:1px solid var(--ring-line);border-radius:4px;font-size:.9rem;line-height:1.5;resize:vertical;"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-accent btn-sm" onclick="saveAnnounceTemplate()">Save template</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetAnnounceTemplates()">Restore default 10</button>
+          </div>
+          <p id="annTplHint" style="font-size:.75rem;color:var(--ink-soft);margin-top:8px;"></p>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Recipients</h3>
+          <div class="toolbar" style="margin-bottom:10px;flex-wrap:wrap;">
+            <div class="search-bar"><input id="annSearch" placeholder="Search name, ID, mobile…" oninput="renderAnnounceRecipients()"></div>
+            <select class="select-sm" id="annSectionFilter" onchange="renderAnnounceRecipients()">
+              <option value="all">All sections</option>
+            </select>
+            <select class="select-sm" id="annStatusFilter" onchange="renderAnnounceRecipients()">
+              <option value="all">All status</option>
+              <option value="green">Active</option>
+              <option value="yellow">Idle</option>
+              <option value="red">Inactive / Zero</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="annSelectAll(true)">Select all (filtered)</button>
+            <button class="btn btn-ghost btn-sm" onclick="annSelectAll(false)">Clear selection</button>
+            <span id="annSelCount" style="font-size:.82rem;align-self:center;color:var(--ink-soft);">0 selected</span>
+          </div>
+          <div class="table-wrap" style="max-height:380px;overflow:auto;">
+            <table>
+              <thead><tr>
+                <th class="no-print">✓</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mobile</th>
+                <th>Section</th>
+              </tr></thead>
+              <tbody id="annRecipientTbody"></tbody>
+            </table>
+          </div>
+          <p style="font-size:.75rem;color:var(--ink-soft);margin-top:10px;">WhatsApp opens one chat at a time (same tab). Confirm each send in WhatsApp. No emoji in default text.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ BACKUP ============ -->
     <section class="panel" id="panel-backup">
       <div class="section-head"><div><h2>Backup &amp; Files</h2><div class="sub">Data is automatically saved to your Google Drive. You can also download a local copy or restore from a file.</div></div></div>
@@ -590,6 +828,28 @@
           </div>
         </div>
       </div>
+
+      <div class="grid-2" style="margin-top:14px;">
+        <div class="card">
+          <h3>Display</h3>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;">
+            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)"> Dark mode
+          </label>
+          <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">Easier on the eyes at night. Saved on this device only.</p>
+        </div>
+        <div class="card">
+          <h3>Editor PIN (optional)</h3>
+          <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">If set, this device needs the PIN to add or edit data. Viewing stays open after Google sign-in.</p>
+          <div class="field"><label>New PIN</label><input type="password" id="settingsPin" placeholder="4–8 characters" class="mono"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-accent btn-sm" onclick="setEditorPin()">Save PIN</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearEditorPin()">Remove PIN</button>
+            <button class="btn btn-ghost btn-sm" onclick="unlockEditorWithPin()">Unlock editor</button>
+          </div>
+          <p id="pinStatus" style="font-size:.78rem;margin-top:8px;color:var(--ink-soft);"></p>
+        </div>
+      </div>
+
       <div class="card" style="max-width:420px;">
         <h3>About</h3>
         <div class="kv"><span class="k">Software</span><span class="v">Contractor Ledger (Google Drive)</span></div>
@@ -697,6 +957,24 @@
   </div>
 </div>
 
+
+<!-- ===================== SAVINGS STATEMENT ===================== -->
+<div class="modal-overlay" id="savStatementOverlay">
+  <div class="modal modal-wide" style="max-width:900px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+      <h3 style="margin:0;" id="savStmtTitle">Savings Statement</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeSavStatement()" style="padding:4px 10px;">&times;</button>
+    </div>
+    <div class="toolbar no-print" style="margin:12px 0;flex-wrap:wrap;">
+      <label style="font-size:.78rem;">From <input type="date" class="input-sm" id="savStmtFrom" onchange="renderSavStatementBody()"></label>
+      <label style="font-size:.78rem;">To <input type="date" class="input-sm" id="savStmtTo" onchange="renderSavStatementBody()"></label>
+      <button class="btn btn-ghost btn-sm" onclick="printSavStatement()">🖨 Print / PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportSavStatementCSV()">⇩ CSV</button>
+    </div>
+    <div id="savStmtBody"></div>
+  </div>
+</div>
+
 <div id="printStage"></div>
 <div class="toast" id="toast"></div>
 
@@ -725,7 +1003,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '5.4-Drive';
+const APP_VERSION = '6.2-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -750,6 +1028,8 @@ function defaultDB(){
     inCharge: ['Naquib','Rayhan','Ashraf'],
     contacts: [],
     accounts: {},
+    savings: { transactions: [] },
+    announcements: { templates: [] },
     meta: { lastExternalBackupAt: null, entriesCountAtLastBackup: 0, snoozedUntil: null }
   };
 }
@@ -762,6 +1042,11 @@ function applyMigrations(){
   if(!DB.contacts) DB.contacts = [];
   if(!DB.accounts) DB.accounts = {};
   if(!DB.meta) DB.meta = { lastExternalBackupAt: null, entriesCountAtLastBackup: 0, snoozedUntil: null };
+  if(!DB.savings) DB.savings = { transactions: [] };
+  if(!Array.isArray(DB.savings.transactions)) DB.savings.transactions = [];
+  if(!DB.announcements) DB.announcements = { templates: [] };
+  if(!Array.isArray(DB.announcements.templates)) DB.announcements.templates = [];
+  if(!DB.announcements.templates.length) DB.announcements.templates = defaultAnnounceTemplates();
   DB.inCharge = DB.inCharge.map(n=> n==='Naqib'?'Naquib' : n==='Raihan'?'Rayhan' : n);
   Object.values(DB.accounts).forEach(acc=>{
     if(!acc.entries) acc.entries=[];
@@ -1237,8 +1522,10 @@ function showTab(tab){
   if(tab==='summary') renderSummary();
   if(tab==='accounts') renderAccountsTab();
   if(tab==='reports') renderReports();
+  if(tab==='savings') renderSavings();
+  if(tab==='announce') renderAnnouncements();
   if(tab==='settings') renderSettings();
-  if(tab==='backup'){ /* drive info already shown */ }
+  if(tab==='backup'){ /* drive info refreshed on connect */ }
 }
 
 function rankedContacts(){
@@ -1413,6 +1700,7 @@ function openEditContactModal(id){
 function closeContactModal(){ document.getElementById('contactModalOverlay').classList.remove('open'); }
 
 function saveContactModal(){
+  if(!requireEditor('Saving contractor')) return;
   const editingId = document.getElementById('contactModalEditingId').value;
   const idInput = document.getElementById('mId').value.trim();
   const name = document.getElementById('mName').value.trim();
@@ -1459,6 +1747,7 @@ function saveContactModal(){
   openAccount(idInput);
 }
 function deleteContact(id){
+  if(!requireEditor('Delete')) return;
   if(!confirm('Delete this contractor and its entire account? This cannot be undone.')) return;
   DB.contacts = DB.contacts.filter(c=>c.id!==id);
   delete DB.accounts[id];
@@ -1659,12 +1948,10 @@ function openWhatsAppToContact(contactId, customText){
   if(!c){ toast('Contractor not found.'); return false; }
   const phone = normalizeBdMobile(primaryMobile(c));
   if(!phone){ toast('No mobile number for this contractor.'); return false; }
-  const text = customText || ('মেমো জমা হয়েছে ধন্যবাদ, ' + String.fromCodePoint(0x1F60A));
+  const text = customText || 'Memo received. Thank you.';
   const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
-  // Direct navigation-style open reduces popup block rate
-  const w = window.open(url, '_blank');
+  const w = window.open(url, 'contractor_ledger_whatsapp');
   if(!w || w.closed || typeof w.closed === 'undefined'){
-    // Fallback: same-tab redirect prompt
     if(confirm('Popup blocked. Open WhatsApp in this tab?\n\n(You can press Back to return)')){
       window.location.href = url;
     } else {
@@ -1672,16 +1959,45 @@ function openWhatsAppToContact(contactId, customText){
     }
     return false;
   }
+  try{ w.focus(); }catch(e){}
   return true;
 }
 function openWhatsAppAfterEntries(contactId, count){
   const c = DB.contacts.find(x=>x.id===contactId);
   if(!c || !primaryMobile(c)) return;
-  const smile = String.fromCodePoint(0x1F60A);
   const msg = count > 1
-    ? (`${count}টি মেমো জমা হয়েছে ধন্যবাদ, ` + smile)
-    : ('মেমো জমা হয়েছে ধন্যবাদ, ' + smile);
+    ? (count + ' memos received. Thank you.')
+    : 'Memo received. Thank you.';
   showWhatsAppOffer(contactId, msg, c);
+}
+function openWhatsAppHelpPair(fromId, toId, amount, note){
+  const msgFrom = 'Help sent: Tk ' + fmtMoney(amount) + (note? (' — ' + note) : '') + '.';
+  const msgTo = 'Help received: Tk ' + fmtMoney(amount) + (note? (' — ' + note) : '') + '.';
+  let bar = document.getElementById('waOfferBar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'waOfferBar';
+    bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#128C7E;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:94vw;font-size:.9rem;flex-wrap:wrap;';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = '';
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;min-width:140px;';
+  info.innerHTML = '<strong>WhatsApp Help notices</strong><div style="opacity:.9;font-size:.78rem;margin-top:2px;">Sender and receiver</div>';
+  const b1 = document.createElement('button');
+  b1.textContent = 'WA Sender';
+  b1.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  b1.onclick = ()=> openWhatsAppToContact(fromId, msgFrom);
+  const b2 = document.createElement('button');
+  b2.textContent = 'WA Receiver';
+  b2.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  b2.onclick = ()=> openWhatsAppToContact(toId, msgTo);
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;';
+  closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
+  bar.appendChild(info); bar.appendChild(b1); bar.appendChild(b2); bar.appendChild(closeBtn);
+  bar.style.display = 'flex';
 }
 function showWhatsAppOffer(contactId, msg, c){
   // In-app banner so click is a real user gesture (avoids popup block)
@@ -1695,7 +2011,7 @@ function showWhatsAppOffer(contactId, msg, c){
   bar.innerHTML = '';
   const info = document.createElement('div');
   info.style.cssText = 'flex:1;min-width:0;';
-  info.innerHTML = '<strong>WhatsApp পাঠাবেন?</strong><div style="opacity:.9;font-size:.8rem;margin-top:2px;">' +
+  info.innerHTML = '<strong>Send WhatsApp?</strong><div style="opacity:.9;font-size:.8rem;margin-top:2px;">' +
     escapeHtml((c && c.name) || '') + ' · ' + escapeHtml(primaryMobile(c) || '') + '</div>';
   const sendBtn = document.createElement('button');
   sendBtn.className = 'btn btn-sm';
@@ -2113,53 +2429,82 @@ function renderStagedList(){
   empty.style.display='none';
   countBadge.textContent = stagedEntries.length + (stagedEntries.length===1 ? ' item' : ' items');
   wrap.innerHTML = stagedEntries.map((s,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;${i>0?'border-top:1px solid var(--ring-line);':''}">
-      <input type="date" class="input-sm" style="width:130px;" value="${escapeHtml(s.date||'')}" onchange="updateStagedEntry(${i},'date',this.value)">
-      <input type="text" class="input-sm mono" style="width:110px;" value="${escapeHtml(s.memo||'')}" onchange="updateStagedEntry(${i},'memo',this.value)" placeholder="Memo #">
-      <input type="number" class="input-sm mono" style="width:100px;" value="${s.amount||0}" onchange="updateStagedEntry(${i},'amount',this.value)" placeholder="Amount">
-      <select class="input-sm" style="width:110px;" onchange="updateStagedEntry(${i},'inCharge',this.value)">${inChargeOptionsHtml(s.inCharge||'')}</select>
-      <button class="btn btn-ghost btn-sm" onclick="removeStagedEntry(${i})" title="Remove" style="padding:2px 8px;">✕</button>
+    <div class="staged-row" data-staged-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;${i>0?'border-top:1px solid var(--ring-line);':''}">
+      <input type="date" class="input-sm staged-date" style="width:130px;" value="${escapeHtml(s.date||'')}">
+      <input type="text" class="input-sm mono staged-memo" style="width:110px;" value="${escapeHtml(s.memo||'')}" placeholder="Memo #">
+      <input type="number" class="input-sm mono staged-amount" style="width:100px;" value="${s.amount||0}" placeholder="Amount">
+      <select class="input-sm staged-incharge" style="width:120px;">${inChargeOptionsHtml(s.inCharge||'')}</select>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="removeStagedEntry(${i})" title="Remove" style="padding:2px 8px;">✕</button>
     </div>
   `).join('');
+  wrap.querySelectorAll('.staged-row').forEach(row=>{
+    row.querySelectorAll('input,select').forEach(el=>{
+      el.addEventListener('change', ()=> syncStagedFromDom());
+      el.addEventListener('input', ()=> syncStagedFromDom());
+    });
+  });
+}
+function syncStagedFromDom(){
+  const wrap = document.getElementById('aeListWrap');
+  if(!wrap) return;
+  wrap.querySelectorAll('.staged-row').forEach(row=>{
+    const i = Number(row.getAttribute('data-staged-idx'));
+    if(!stagedEntries[i]) return;
+    const dateEl = row.querySelector('.staged-date');
+    const memoEl = row.querySelector('.staged-memo');
+    const amountEl = row.querySelector('.staged-amount');
+    const icEl = row.querySelector('.staged-incharge');
+    if(dateEl) stagedEntries[i].date = dateEl.value;
+    if(memoEl) stagedEntries[i].memo = memoEl.value.trim();
+    if(amountEl) stagedEntries[i].amount = Number(amountEl.value)||0;
+    if(icEl) stagedEntries[i].inCharge = icEl.value || '';
+  });
 }
 function updateStagedEntry(i, field, value){
   if(!stagedEntries[i]) return;
   if(field==='amount') stagedEntries[i].amount = Number(value)||0;
   else stagedEntries[i][field] = value;
 }
-
-
 function removeStagedEntry(i){
+  syncStagedFromDom();
   stagedEntries.splice(i,1);
   renderStagedList();
 }
-
 function addToStagedList(){
   const date = document.getElementById('aeDate').value;
   const memo = document.getElementById('aeMemo').value.trim();
   const amount = Number(document.getElementById('aeAmount').value)||0;
-  const inCharge = document.getElementById('aeInCharge').value;
+  const inCharge = document.getElementById('aeInCharge').value || '';
   if(!date){ toast('Please pick a date.'); return; }
   if(!memo){ toast('Please enter a Memo Number.'); document.getElementById('aeMemo').focus(); return; }
+  syncStagedFromDom();
   stagedEntries.push({date, memo, amount, inCharge});
   renderStagedList();
   document.getElementById('aeMemo').value='';
   document.getElementById('aeAmount').value='';
-  document.getElementById('aeDate').focus();
+  document.getElementById('aeMemo').focus();
 }
-
 function commitStagedEntries(){
+  if(typeof requireEditor === 'function' && !requireEditor('Adding entries')) return;
   const acc = DB.accounts[currentAccountId];
   if(!acc) return;
+  syncStagedFromDom();
   const date = document.getElementById('aeDate').value;
   const memo = document.getElementById('aeMemo').value.trim();
   const amount = Number(document.getElementById('aeAmount').value)||0;
-  const inCharge = document.getElementById('aeInCharge').value;
+  const inCharge = document.getElementById('aeInCharge').value || '';
   if(memo){ stagedEntries.push({date, memo, amount, inCharge}); }
   if(stagedEntries.length===0){ toast('Add at least one entry first.'); return; }
   const contactId = currentAccountId;
   stagedEntries.forEach(s=>{
-    acc.entries.push({uid:generateUid(), date:s.date, memo:s.memo, amount:s.amount, inCharge:s.inCharge||'', remark:''});
+    acc.entries.push({
+      uid: generateUid(),
+      date: s.date,
+      memo: s.memo,
+      amount: Number(s.amount)||0,
+      inCharge: s.inCharge || '',
+      remark: ''
+    });
   });
   const count = stagedEntries.length;
   stagedEntries = [];
@@ -2167,16 +2512,17 @@ function commitStagedEntries(){
   renderEntries();
   saveDB(true);
   toast(count + (count===1 ? ' entry added.' : ' entries added.'));
-  // Offer WhatsApp confirmation message
   openWhatsAppAfterEntries(contactId, count);
 }
 
 document.getElementById('addEntryModalOverlay').addEventListener('keydown', e=>{
   if(e.key==='Enter' && !e.ctrlKey && !e.metaKey && e.target.tagName!=='BUTTON'){
+    if(e.target.closest && e.target.closest('#aeListWrap')) return;
     e.preventDefault();
     addToStagedList();
   }
 });
+
 
 function deleteEntryByIdx(idx){
   const acc = DB.accounts[currentAccountId];
@@ -2383,6 +2729,8 @@ function renderSettings(){
   renderInChargeTags();
   document.getElementById('appVersionSettings').textContent = 'v' + APP_VERSION;
   document.getElementById('appUpdatedSettings').textContent = APP_UPDATED;
+  applyDarkModeFromStorage();
+  updatePinStatus();
 }
 function saveSession(){
   DB.session.from = document.getElementById('sessionFrom').value;
@@ -2404,6 +2752,255 @@ function removeInCharge(i){
   const name = DB.inCharge[i];
   if(!confirm('Remove "'+name+'" from the in-charge list?')) return;
   DB.inCharge.splice(i,1); saveDB(true); renderInChargeTags();
+}
+
+
+
+/* =========================================================
+   ANNOUNCEMENTS (templates + bulk WhatsApp)
+   ========================================================= */
+function defaultAnnounceTemplates(){
+  return [
+    { id:'t1', title:'ঈদ মোবারক', body:'প্রিয় সহকর্মী,\n\nআপনাদের সকলকে জানাই আন্তরিক ঈদ মোবারক। এই পবিত্র উপলক্ষে আপনাদের পরিবারসহ সুস্থতা, শান্তি ও সমৃদ্ধি কামনা করি।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t2', title:'নববর্ষের শুভেচ্ছা', body:'প্রিয় সহকর্মী,\n\nনতুন বছরের সূচনালগ্নে আপনাদের সবাইকে জানাই আন্তরিক শুভেচ্ছা ও অভিনন্দন। নতুন বছর আপনাদের জন্য হোক আরও সাফল্যমণ্ডিত।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t3', title:'কর্মসূচি / মিটিং আমন্ত্রণ', body:'প্রিয় সহকর্মী,\n\nআপনাদের অবগতির জন্য জানানো যাচ্ছে যে আগামী নির্ধারিত তারিখে আমাদের একটি গুরুত্বপূর্ণ সভা/কর্মসূচি অনুষ্ঠিত হবে। অনুগ্রহ করে উপস্থিত থাকার জন্য অনুরোধ করা হলো।\n\nস্থান: [লিখুন]\nতারিখ ও সময়: [লিখুন]\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t4', title:'অফিস ছুটির নোটিশ', body:'প্রিয় সহকর্মী,\n\nজানানো যাচ্ছে যে আগামী [তারিখ] তারিখে অফিস বন্ধ থাকবে। প্রয়োজনীয় কাজ আগেভাগে সম্পন্ন রাখার অনুরোধ রইল।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t5', title:'পেমেন্ট / জমা সংক্রান্ত', body:'প্রিয় সহকর্মী,\n\nঅনুগ্রহ করে নির্ধারিত সময়ের মধ্যে আপনার বকেয়া/জমার বিষয়টি নিষ্পত্তি করবেন। কোনো জিজ্ঞাসা থাকলে অফিসে যোগাযোগ করুন।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t6', title:'Welfare Fund জমার স্মরণ', body:'প্রিয় সহকর্মী,\n\nContractor Welfare Fund-এর চলতি মাসের জমা এখনো সম্পন্ন না হয়ে থাকলে অনুগ্রহ করে শীঘ্রই জমা দেওয়ার অনুরোধ করা হলো।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t7', title:'সাধারণ ধন্যবাদ', body:'প্রিয় সহকর্মী,\n\nআপনার সহযোগিতা ও নিয়মিত কাজের জন্য আন্তরিক ধন্যবাদ। ভবিষ্যতেও একইভাবে পাশে থাকবেন বলে আশা রাখি।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t8', title:'জরুরি অবগতি', body:'প্রিয় সহকর্মী,\n\nএটি একটি জরুরি অবগতি। অনুগ্রহ করে বার্তাটি মনোযোগসহকারে পড়ুন এবং প্রয়োজনীয় ব্যবস্থা নিন। বিস্তারিত জানতে অফিসে যোগাযোগ করুন।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t9', title:'শুভ কামনা (সাধারণ)', body:'প্রিয় সহকর্মী,\n\nআপনাদের সকলকে জানাই আন্তরিক শুভেচ্ছা ও শুভকামনা। আপনাদের ব্যক্তিগত ও পেশাগত জীবনে সাফল্য কামনা করি।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' },
+    { id:'t10', title:'কাজের সময়সূচি পরিবর্তন', body:'প্রিয় সহকর্মী,\n\nজানানো যাচ্ছে যে কাজের সময়সূচিতে সাময়িক পরিবর্তন আসছে। নতুন সময়সূচি অফিস থেকে জানিয়ে দেওয়া হবে। সহযোগিতার জন্য ধন্যবাদ।\n\nধন্যবাদান্তে,\nনাইলস অ্যান্ড উড' }
+  ];
+}
+
+function ensureAnnouncements(){
+  if(!DB.announcements) DB.announcements = { templates: [] };
+  if(!Array.isArray(DB.announcements.templates) || !DB.announcements.templates.length){
+    DB.announcements.templates = defaultAnnounceTemplates();
+  }
+}
+
+let __annSelected = new Set();
+
+function renderAnnouncements(){
+  ensureAnnouncements();
+  const sel = document.getElementById('annTemplateSelect');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = DB.announcements.templates.map((t,i)=>
+    `<option value="${i}">${escapeHtml(t.title||('Template '+(i+1)))}</option>`
+  ).join('');
+  if(prev !== '' && Number(prev) < DB.announcements.templates.length) sel.value = prev;
+  else sel.value = '0';
+  loadAnnounceTemplate();
+
+  // section filter options
+  const sections = [...new Set(DB.contacts.map(c=> (c.nid||'').trim()).filter(Boolean))].sort();
+  const secEl = document.getElementById('annSectionFilter');
+  const curSec = secEl.value || 'all';
+  secEl.innerHTML = '<option value="all">All sections</option>' +
+    sections.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  if([...secEl.options].some(o=>o.value===curSec)) secEl.value = curSec;
+
+  renderAnnounceRecipients();
+}
+
+function loadAnnounceTemplate(){
+  ensureAnnouncements();
+  const i = Number(document.getElementById('annTemplateSelect').value)||0;
+  const t = DB.announcements.templates[i];
+  if(!t) return;
+  document.getElementById('annTitle').value = t.title || '';
+  document.getElementById('annBody').value = t.body || '';
+  document.getElementById('annTplHint').textContent = 'Template ' + (i+1) + ' of ' + DB.announcements.templates.length;
+}
+
+function saveAnnounceTemplate(){
+  if(typeof requireEditor === 'function' && !requireEditor('Save template')) return;
+  ensureAnnouncements();
+  const i = Number(document.getElementById('annTemplateSelect').value)||0;
+  if(!DB.announcements.templates[i]) return;
+  DB.announcements.templates[i].title = document.getElementById('annTitle').value.trim() || ('Template '+(i+1));
+  DB.announcements.templates[i].body = document.getElementById('annBody').value;
+  saveDB(true);
+  renderAnnouncements();
+  document.getElementById('annTemplateSelect').value = String(i);
+  loadAnnounceTemplate();
+  toast('Template saved.');
+}
+
+function resetAnnounceTemplates(){
+  if(typeof requireEditor === 'function' && !requireEditor('Reset templates')) return;
+  if(!confirm('Restore the default 10 corporate Bengali templates? Your edited templates will be replaced.')) return;
+  DB.announcements.templates = defaultAnnounceTemplates();
+  saveDB(true);
+  renderAnnouncements();
+  toast('Default templates restored.');
+}
+
+function filteredAnnounceContacts(){
+  const q = (document.getElementById('annSearch').value||'').toLowerCase().trim();
+  const sec = document.getElementById('annSectionFilter').value;
+  const st = document.getElementById('annStatusFilter').value;
+  return rankedContacts().filter(c=>{
+    if(c.died) return false;
+    if(sec!=='all' && (c.nid||'')!==sec) return false;
+    if(st!=='all' && contactStatus(c)!==st) return false;
+    if(q && ![c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function renderAnnounceRecipients(){
+  const list = filteredAnnounceContacts();
+  const tbody = document.getElementById('annRecipientTbody');
+  if(!tbody) return;
+  tbody.innerHTML = list.map(c=>{
+    const checked = __annSelected.has(c.id) ? 'checked' : '';
+    return `<tr>
+      <td class="no-print"><input type="checkbox" ${checked} onchange="annToggle('${c.id}', this.checked)"></td>
+      <td class="mono">${escapeHtml(c.id)}</td>
+      <td>${escapeHtml(c.name)}</td>
+      <td class="mono">${escapeHtml(formatMobilesDisplay(c)||'—')}</td>
+      <td>${escapeHtml(c.nid||'')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('annSelCount').textContent = __annSelected.size + ' selected';
+}
+
+function annToggle(id, on){
+  if(on) __annSelected.add(id); else __annSelected.delete(id);
+  document.getElementById('annSelCount').textContent = __annSelected.size + ' selected';
+}
+
+function annSelectAll(on){
+  const list = filteredAnnounceContacts();
+  if(on) list.forEach(c=> __annSelected.add(c.id));
+  else list.forEach(c=> __annSelected.delete(c.id));
+  renderAnnounceRecipients();
+}
+
+function startAnnounceSend(){
+  const body = (document.getElementById('annBody').value||'').trim();
+  if(!body){ toast('Message is empty.'); return; }
+  const ids = [...__annSelected];
+  if(!ids.length){ toast('Select at least one recipient.'); return; }
+  // Only those with mobile
+  const queue = ids.map(id=> DB.contacts.find(c=>c.id===id)).filter(c=> c && primaryMobile(c));
+  const skipped = ids.length - queue.length;
+  if(!queue.length){ toast('No selected contractor has a mobile number.'); return; }
+  if(skipped) toast(skipped + ' skipped (no mobile).');
+  runAnnounceQueue(queue, body, 0);
+}
+
+function runAnnounceQueue(queue, body, index){
+  if(index >= queue.length){
+    toast('Finished: ' + queue.length + ' WhatsApp chat(s) opened.');
+    return;
+  }
+  const c = queue[index];
+  const phone = normalizeBdMobile(primaryMobile(c));
+  const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(body);
+  window.open(url, 'contractor_ledger_whatsapp');
+  // Banner to continue to next
+  let bar = document.getElementById('waOfferBar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'waOfferBar';
+    bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#128C7E;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:94vw;font-size:.9rem;flex-wrap:wrap;';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = '';
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;min-width:160px;';
+  info.innerHTML = '<strong>WhatsApp ' + (index+1) + ' / ' + queue.length + '</strong><div style="opacity:.9;font-size:.78rem;margin-top:2px;">' +
+    escapeHtml(c.name) + ' · ' + escapeHtml(primaryMobile(c)||'') + '</div><div style="opacity:.85;font-size:.72rem;">Send in WhatsApp, then continue</div>';
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = index+1 < queue.length ? 'Next' : 'Done';
+  nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;';
+  nextBtn.onclick = ()=>{
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
+    else { bar.style.display = 'none'; toast('All chats processed.'); }
+  };
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = 'Skip';
+  skipBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  skipBtn.onclick = ()=>{
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
+    else { bar.style.display = 'none'; }
+  };
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;';
+  closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
+  bar.appendChild(info); bar.appendChild(nextBtn); bar.appendChild(skipBtn); bar.appendChild(closeBtn);
+  bar.style.display = 'flex';
+}
+
+/* =========================================================
+   DISPLAY / PIN / VIEWER MODE
+   ========================================================= */
+function toggleDarkMode(on){
+  document.body.classList.toggle('dark-mode', !!on);
+  localStorage.setItem('nw_dark_mode', on ? '1' : '0');
+}
+function applyDarkModeFromStorage(){
+  const on = localStorage.getItem('nw_dark_mode') === '1';
+  document.body.classList.toggle('dark-mode', on);
+  const el = document.getElementById('darkModeToggle');
+  if(el) el.checked = on;
+}
+function setEditorPin(){
+  const pin = (document.getElementById('settingsPin').value||'').trim();
+  if(pin.length < 4){ toast('PIN must be at least 4 characters.'); return; }
+  localStorage.setItem('nw_editor_pin', pin);
+  sessionStorage.setItem('nw_editor_unlocked', '1');
+  document.getElementById('settingsPin').value = '';
+  updatePinStatus();
+  toast('Editor PIN saved on this device.');
+}
+function clearEditorPin(){
+  localStorage.removeItem('nw_editor_pin');
+  sessionStorage.setItem('nw_editor_unlocked', '1');
+  updatePinStatus();
+  toast('Editor PIN removed.');
+}
+function unlockEditorWithPin(){
+  const stored = localStorage.getItem('nw_editor_pin');
+  if(!stored){ toast('No PIN set.'); return; }
+  const entered = prompt('Enter editor PIN:');
+  if(entered === stored){
+    sessionStorage.setItem('nw_editor_unlocked', '1');
+    updatePinStatus();
+    toast('Editor unlocked.');
+  } else {
+    toast('Wrong PIN.');
+  }
+}
+function isEditorUnlocked(){
+  const pin = localStorage.getItem('nw_editor_pin');
+  if(!pin) return true;
+  return sessionStorage.getItem('nw_editor_unlocked') === '1';
+}
+function requireEditor(actionLabel){
+  if(isEditorUnlocked()) return true;
+  const stored = localStorage.getItem('nw_editor_pin');
+  const entered = prompt((actionLabel||'Edit') + ' requires PIN:');
+  if(entered === stored){
+    sessionStorage.setItem('nw_editor_unlocked', '1');
+    updatePinStatus();
+    return true;
+  }
+  toast('Editor locked. Enter PIN from Settings.');
+  return false;
+}
+function updatePinStatus(){
+  const el = document.getElementById('pinStatus');
+  if(!el) return;
+  const pin = localStorage.getItem('nw_editor_pin');
+  if(!pin){ el.textContent = 'No PIN set — full edit access.'; return; }
+  el.textContent = isEditorUnlocked() ? 'PIN set — editor unlocked this session.' : 'PIN set — editor locked (view only until unlock).';
 }
 
 /* =========================================================
@@ -2435,6 +3032,11 @@ function totalEntriesCount(){
 function checkBackupReminder(){
   const bar = document.getElementById('backupReminderBar');
   if(!DB.meta) DB.meta = { lastExternalBackupAt: null, entriesCountAtLastBackup: 0, snoozedUntil: null };
+  if(!DB.savings) DB.savings = { transactions: [] };
+  if(!Array.isArray(DB.savings.transactions)) DB.savings.transactions = [];
+  if(!DB.announcements) DB.announcements = { templates: [] };
+  if(!Array.isArray(DB.announcements.templates)) DB.announcements.templates = [];
+  if(!DB.announcements.templates.length) DB.announcements.templates = defaultAnnounceTemplates();
   const meta = DB.meta;
   if(!meta.lastExternalBackupAt){
     meta.lastExternalBackupAt = new Date().toISOString();
@@ -2449,9 +3051,11 @@ function checkBackupReminder(){
   }
   const daysSince = Math.floor((Date.now() - new Date(meta.lastExternalBackupAt).getTime()) / 86400000);
   const entriesSince = Math.max(0, totalEntriesCount() - (meta.entriesCountAtLastBackup||0));
-  if(daysSince >= 7 || entriesSince >= 50){  // less aggressive because Drive already backs up
+  const savCount = (DB.savings && DB.savings.transactions) ? DB.savings.transactions.length : 0;
+  const savSince = Math.max(0, savCount - (meta.savingsCountAtLastBackup||0));
+  if(daysSince >= 3 || entriesSince >= 20 || savSince >= 10){
     document.getElementById('backupReminderMsg').textContent =
-      `📥 It's been ${daysSince} day${daysSince===1?'':'s'} and ${entriesSince} new entr${entriesSince===1?'y':'ies'} since your last local backup file.`;
+      `Local backup recommended: ${daysSince} day(s), ${entriesSince} memo entry(ies), ${savSince} welfare txn(s) since last JSON download. Drive auto-save is on — still keep a file copy.`;
     bar.classList.add('show');
   } else {
     bar.classList.remove('show');
@@ -2461,6 +3065,7 @@ function markBackupDone(){
   DB.meta = DB.meta || {};
   DB.meta.lastExternalBackupAt = new Date().toISOString();
   DB.meta.entriesCountAtLastBackup = totalEntriesCount();
+  DB.meta.savingsCountAtLastBackup = (DB.savings && DB.savings.transactions) ? DB.savings.transactions.length : 0;
   DB.meta.snoozedUntil = null;
   saveDB(true);
   document.getElementById('backupReminderBar').classList.remove('show');
@@ -2853,6 +3458,494 @@ async function exportReportsExcelToDrive(){
   await uploadBlobToDrive(name, buildExcelBlob(headers, rows, [8]), 'application/vnd.ms-excel');
 }
 
+
+/* =========================================================
+   SAVINGS MODULE
+   ========================================================= */
+const SAV_METHODS = ['Cash','bKash','Nagad','Rocket','Bank','Other'];
+
+function ensureSavings(){
+  if(!DB.savings) DB.savings = { transactions: [] };
+  if(!Array.isArray(DB.savings.transactions)) DB.savings.transactions = [];
+  if(!DB.announcements) DB.announcements = { templates: [] };
+  if(!Array.isArray(DB.announcements.templates)) DB.announcements.templates = [];
+  if(!DB.announcements.templates.length) DB.announcements.templates = defaultAnnounceTemplates();
+}
+
+function resolveContactQuery(q){
+  q = String(q||'').trim().toLowerCase();
+  if(!q) return null;
+  let c = DB.contacts.find(x=> String(x.id).toLowerCase()===q);
+  if(c) return c;
+  c = DB.contacts.find(x=> String(x.name||'').toLowerCase()===q);
+  if(c) return c;
+  const matches = DB.contacts.filter(x=>
+    String(x.id).toLowerCase().includes(q) ||
+    String(x.name||'').toLowerCase().includes(q) ||
+    formatMobilesDisplay(x).toLowerCase().includes(q)
+  );
+  return matches.length===1 ? matches[0] : null;
+}
+
+function savingsEffectsForContact(contactId){
+  ensureSavings();
+  let deposited = 0, withdrawn = 0, helpIn = 0, helpOut = 0;
+  let lastDate = null;
+  DB.savings.transactions.forEach(t=>{
+    const amt = Number(t.amount)||0;
+    if(t.type==='deposit' && t.contactId===contactId){
+      deposited += amt;
+      if(!lastDate || t.date>lastDate) lastDate = t.date;
+    } else if(t.type==='withdraw' && t.contactId===contactId){
+      withdrawn += amt;
+      if(!lastDate || t.date>lastDate) lastDate = t.date;
+    } else if(t.type==='help'){
+      if(t.contactId===contactId){
+        helpOut += amt;
+        if(!lastDate || t.date>lastDate) lastDate = t.date;
+      }
+      if(t.toContactId===contactId){
+        helpIn += amt;
+        if(!lastDate || t.date>lastDate) lastDate = t.date;
+      }
+    }
+  });
+  const balance = deposited + helpIn - withdrawn - helpOut;
+  return { deposited, withdrawn, helpIn, helpOut, balance, lastDate };
+}
+
+function savingsBalance(contactId){
+  return savingsEffectsForContact(contactId).balance;
+}
+
+function fillSavContactList(){
+  const dl = document.getElementById('savContactList');
+  if(!dl) return;
+  dl.innerHTML = DB.contacts.filter(c=>!c.died).map(c=>
+    `<option value="${escapeHtml(c.id)} — ${escapeHtml(c.name)}"></option>`
+  ).join('');
+}
+
+function setSavFormType(type){
+  document.getElementById('savFormType').value = type;
+  ['deposit','withdraw','help'].forEach(t=>{
+    const btn = document.getElementById('savType'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(!btn) return;
+    if(t===type){
+      btn.style.background = 'var(--amber-600)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--amber-600)';
+    } else {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }
+  });
+  document.getElementById('savFormToWrap').style.display = type==='help' ? 'block' : 'none';
+  updateSavFormBalanceHint();
+}
+
+function updateSavFormBalanceHint(){
+  const hint = document.getElementById('savFormBalanceHint');
+  if(!hint) return;
+  const c = resolveContactQuery(document.getElementById('savFormContact').value);
+  if(!c){ hint.textContent = ''; return; }
+  const bal = savingsBalance(c.id);
+  hint.innerHTML = `Selected: <strong>${escapeHtml(c.name)}</strong> (ID ${escapeHtml(c.id)}) · Current balance: <strong class="mono">${fmtMoney(bal)}</strong>`;
+}
+
+function resetSavForm(){
+  document.getElementById('savFormContact').value = '';
+  document.getElementById('savFormToContact').value = '';
+  document.getElementById('savFormDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('savFormAmount').value = '';
+  document.getElementById('savFormMethod').value = 'Cash';
+  document.getElementById('savFormNote').value = '';
+  setSavFormType('deposit');
+  document.getElementById('savFormBalanceHint').textContent = '';
+}
+
+function openSavingsTxnModal(){
+  showTab('savings');
+  resetSavForm();
+  fillSavContactList();
+  setTimeout(()=> document.getElementById('savFormContact').focus(), 50);
+}
+
+function submitSavForm(){
+  if(!requireEditor('Saving transaction')) return;
+  ensureSavings();
+  const type = document.getElementById('savFormType').value;
+  const fromC = resolveContactQuery(document.getElementById('savFormContact').value);
+  if(!fromC){ toast('Select a valid contractor (ID or full name).'); return; }
+  let toC = null;
+  if(type==='help'){
+    toC = resolveContactQuery(document.getElementById('savFormToContact').value);
+    if(!toC){ toast('Select a valid receiver contractor for Help.'); return; }
+    if(toC.id===fromC.id){ toast('Cannot help the same contractor.'); return; }
+  }
+  const date = document.getElementById('savFormDate').value;
+  const amount = Number(document.getElementById('savFormAmount').value);
+  const method = document.getElementById('savFormMethod').value || 'Cash';
+  const note = document.getElementById('savFormNote').value.trim();
+  if(!date){ toast('Date is required.'); return; }
+  if(!amount || amount<=0){ toast('Enter a valid amount.'); return; }
+
+  if(type==='withdraw' || type==='help'){
+    const bal = savingsBalance(fromC.id);
+    if(amount > bal + 1e-9){
+      if(!confirm(`Balance is only ${fmtMoney(bal)}. Save anyway?`)) return;
+    }
+  }
+
+  const txn = {
+    uid: generateUid(),
+    date,
+    type,
+    contactId: fromC.id,
+    toContactId: type==='help' ? toC.id : '',
+    amount,
+    method,
+    note,
+    createdAt: new Date().toISOString()
+  };
+  DB.savings.transactions.push(txn);
+  saveDB(true);
+  toast(type.charAt(0).toUpperCase()+type.slice(1) + ' saved.');
+  resetSavForm();
+  renderSavings();
+  if(type==='help' && toC){
+    openWhatsAppHelpPair(fromC.id, toC.id, amount, note);
+  }
+}
+
+function deleteSavTxn(uid){
+  if(!requireEditor('Delete')) return;
+  ensureSavings();
+  if(!confirm('Delete this savings transaction?')) return;
+  DB.savings.transactions = DB.savings.transactions.filter(t=>t.uid!==uid);
+  saveDB(true);
+  renderSavings();
+  toast('Transaction deleted.');
+}
+
+function clearSavingsFilters(){
+  document.getElementById('savSearch').value = '';
+  document.getElementById('savTypeFilter').value = 'all';
+  document.getElementById('savMethodFilter').value = 'all';
+  document.getElementById('savMonthFilter').value = '';
+  renderSavings();
+}
+
+function filteredSavingsTxns(){
+  ensureSavings();
+  const q = (document.getElementById('savSearch').value||'').toLowerCase().trim();
+  const typeF = document.getElementById('savTypeFilter').value;
+  const methodF = document.getElementById('savMethodFilter').value;
+  const monthF = document.getElementById('savMonthFilter').value; // YYYY-MM
+  let list = [...DB.savings.transactions];
+  list.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+  return list.filter(t=>{
+    if(typeF!=='all' && t.type!==typeF) return false;
+    if(methodF!=='all' && t.method!==methodF) return false;
+    if(monthF && !(t.date||'').startsWith(monthF)) return false;
+    if(q){
+      const c = DB.contacts.find(x=>x.id===t.contactId);
+      const to = t.toContactId ? DB.contacts.find(x=>x.id===t.toContactId) : null;
+      const hay = [
+        t.contactId, t.toContactId, t.note, t.method, t.type, t.date, String(t.amount),
+        c&&c.name, c&&c.mobile, formatMobilesDisplay(c||{}),
+        to&&to.name
+      ].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function savTypePill(type){
+  if(type==='deposit') return '<span class="pill pill-green">Deposit</span>';
+  if(type==='withdraw') return '<span class="pill pill-red">Withdraw</span>';
+  return '<span class="pill pill-yellow">Help</span>';
+}
+
+function renderSavings(){
+  ensureSavings();
+  fillSavContactList();
+  if(!document.getElementById('savFormDate').value){
+    document.getElementById('savFormDate').value = new Date().toISOString().slice(0,10);
+  }
+  setSavFormType(document.getElementById('savFormType').value||'deposit');
+
+  // Stats
+  const now = new Date();
+  const ym = now.toISOString().slice(0,7);
+  let totalBal = 0, monthIn = 0, monthOut = 0, active = 0;
+  DB.contacts.forEach(c=>{
+    if(c.died) return;
+    const e = savingsEffectsForContact(c.id);
+    totalBal += e.balance;
+    if(e.balance>0 || e.deposited>0 || e.withdrawn>0 || e.helpIn>0 || e.helpOut>0) active++;
+  });
+  DB.savings.transactions.forEach(t=>{
+    if(!(t.date||'').startsWith(ym)) return;
+    const amt = Number(t.amount)||0;
+    if(t.type==='deposit') monthIn += amt;
+    if(t.type==='withdraw') monthOut += amt;
+    // help moves between members; count as neither office in/out for month cards, or count both sides loosely — count help as neutral
+  });
+  document.getElementById('savTotalBalance').textContent = fmtMoney(totalBal);
+  document.getElementById('savMonthIn').textContent = fmtMoney(monthIn);
+  document.getElementById('savMonthOut').textContent = fmtMoney(monthOut);
+  document.getElementById('savActiveCount').textContent = active;
+
+  const list = filteredSavingsTxns();
+  window.__lastSavFiltered = list;
+  const tbody = document.getElementById('savTxnTbody');
+  const empty = document.getElementById('savTxnEmpty');
+  if(!list.length){
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = list.map(t=>{
+      const c = DB.contacts.find(x=>x.id===t.contactId);
+      const to = t.toContactId ? DB.contacts.find(x=>x.id===t.toContactId) : null;
+      const name = c ? c.name : t.contactId;
+      let idCell = escapeHtml(t.contactId);
+      let nameCell = escapeHtml(name);
+      if(t.type==='help'){
+        idCell = escapeHtml(t.contactId) + ' → ' + escapeHtml(t.toContactId||'');
+        nameCell = escapeHtml(name) + ' → ' + escapeHtml(to ? to.name : (t.toContactId||''));
+      }
+      const sign = t.type==='withdraw' ? '−' : (t.type==='deposit' ? '+' : '');
+      const color = t.type==='withdraw' ? 'var(--red-600,#b3311c)' : (t.type==='deposit' ? 'var(--green-700,#0f8a34)' : 'inherit');
+      return `<tr>
+        <td class="mono">${escapeHtml(t.date||'')}</td>
+        <td class="mono">${idCell}</td>
+        <td>${nameCell}</td>
+        <td>${savTypePill(t.type)}</td>
+        <td>${escapeHtml(t.method||'')}</td>
+        <td class="mono" style="font-weight:700;color:${color}">${sign}${fmtMoney(t.amount)}</td>
+        <td>${escapeHtml(t.note||'')}</td>
+        <td class="no-print"><button class="icon-btn danger" onclick="deleteSavTxn('${t.uid}')">Delete</button></td>
+      </tr>`;
+    }).join('');
+  }
+  renderSavingsBalances();
+}
+
+function renderSavingsBalances(){
+  const q = (document.getElementById('savBalSearch').value||'').toLowerCase().trim();
+  const sort = document.getElementById('savBalSort').value;
+  let rows = DB.contacts.filter(c=>!c.died).map(c=>{
+    const e = savingsEffectsForContact(c.id);
+    return { c, ...e };
+  }).filter(r=> r.deposited || r.withdrawn || r.helpIn || r.helpOut || r.balance);
+  if(q){
+    rows = rows.filter(r=> [r.c.id,r.c.name,r.c.mobile,formatMobilesDisplay(r.c),r.c.nid].join(' ').toLowerCase().includes(q));
+  }
+  rows.sort((a,b)=>{
+    if(sort==='balance_desc') return b.balance - a.balance;
+    if(sort==='balance_asc') return a.balance - b.balance;
+    if(sort==='name') return String(a.c.name||'').localeCompare(String(b.c.name||''));
+    return String(a.c.id).localeCompare(String(b.c.id));
+  });
+  const tbody = document.getElementById('savBalTbody');
+  const empty = document.getElementById('savBalEmpty');
+  if(!rows.length){
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = rows.map(r=>`<tr>
+      <td class="mono">${escapeHtml(r.c.id)}</td>
+      <td>${escapeHtml(r.c.name)}</td>
+      <td>${escapeHtml(r.c.nid||'')}</td>
+      <td class="mono">${fmtMoney(r.deposited + r.helpIn)}</td>
+      <td class="mono">${fmtMoney(r.withdrawn + r.helpOut)}</td>
+      <td class="mono" style="font-weight:700;color:${r.balance>=0?'#0f8a34':'#b3311c'}">${fmtMoney(r.balance)}</td>
+      <td class="mono">${escapeHtml(r.lastDate||'—')}</td>
+      <td class="no-print"><button class="icon-btn" onclick="openSavStatement('${r.c.id}')">Open</button></td>
+    </tr>`).join('');
+  }
+}
+
+let __savStmtContactId = null;
+
+function openSavStatement(contactId){
+  const c = DB.contacts.find(x=>x.id===contactId);
+  if(!c){ toast('Contractor not found.'); return; }
+  __savStmtContactId = contactId;
+  document.getElementById('savStmtTitle').textContent = 'Welfare Fund Statement — ' + c.name + ' (' + c.id + ')';
+  document.getElementById('savStmtFrom').value = '';
+  document.getElementById('savStmtTo').value = '';
+  renderSavStatementBody();
+  document.getElementById('savStatementOverlay').classList.add('open');
+}
+
+function closeSavStatement(){
+  document.getElementById('savStatementOverlay').classList.remove('open');
+  __savStmtContactId = null;
+}
+
+function savStatementLines(contactId, from, to){
+  ensureSavings();
+  let txns = DB.savings.transactions.filter(t=>
+    t.contactId===contactId || t.toContactId===contactId
+  ).slice();
+  txns.sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.createdAt||'').localeCompare(b.createdAt||''));
+  if(from) txns = txns.filter(t=> (t.date||'') >= from);
+  if(to) txns = txns.filter(t=> (t.date||'') <= to);
+
+  // opening balance before from
+  let opening = 0;
+  if(from){
+    DB.savings.transactions.forEach(t=>{
+      if((t.date||'') >= from) return;
+      const amt = Number(t.amount)||0;
+      if(t.type==='deposit' && t.contactId===contactId) opening += amt;
+      if(t.type==='withdraw' && t.contactId===contactId) opening -= amt;
+      if(t.type==='help' && t.contactId===contactId) opening -= amt;
+      if(t.type==='help' && t.toContactId===contactId) opening += amt;
+    });
+  }
+
+  let bal = opening;
+  const lines = [];
+  let totalIn = 0, totalOut = 0;
+  txns.forEach(t=>{
+    const amt = Number(t.amount)||0;
+    let typeLabel = t.type;
+    let inn = 0, out = 0;
+    if(t.type==='deposit' && t.contactId===contactId){ inn = amt; typeLabel = 'Deposit'; }
+    else if(t.type==='withdraw' && t.contactId===contactId){ out = amt; typeLabel = 'Withdraw'; }
+    else if(t.type==='help' && t.contactId===contactId){ out = amt; typeLabel = 'Help Out'; }
+    else if(t.type==='help' && t.toContactId===contactId){ inn = amt; typeLabel = 'Help In'; }
+    bal += inn - out;
+    totalIn += inn;
+    totalOut += out;
+    let note = t.note||'';
+    if(t.type==='help'){
+      if(t.contactId===contactId) note = (note? note+' · ' : '') + 'To ID ' + t.toContactId;
+      if(t.toContactId===contactId) note = (note? note+' · ' : '') + 'From ID ' + t.contactId;
+    }
+    lines.push({ date:t.date, type:typeLabel, method:t.method, inn, out, bal, note, raw:t });
+  });
+  return { opening, lines, totalIn, totalOut, closing: bal };
+}
+
+function renderSavStatementBody(){
+  const contactId = __savStmtContactId;
+  const c = DB.contacts.find(x=>x.id===contactId);
+  if(!c) return;
+  const from = document.getElementById('savStmtFrom').value;
+  const to = document.getElementById('savStmtTo').value;
+  const data = savStatementLines(contactId, from||null, to||null);
+  window.__lastSavStmt = { contactId, from, to, data };
+  const rows = data.lines.map((l,i)=>`<tr>
+    <td>${i+1}</td>
+    <td class="mono">${escapeHtml(l.date||'')}</td>
+    <td>${escapeHtml(l.type)}</td>
+    <td>${escapeHtml(l.method||'')}</td>
+    <td class="mono">${l.inn?fmtMoney(l.inn):'—'}</td>
+    <td class="mono">${l.out?fmtMoney(l.out):'—'}</td>
+    <td class="mono"><strong>${fmtMoney(l.bal)}</strong></td>
+    <td>${escapeHtml(l.note||'')}</td>
+  </tr>`).join('');
+  document.getElementById('savStmtBody').innerHTML = `
+    <div style="font-size:.88rem;margin-bottom:12px;padding:12px;background:var(--paper-dim);border-radius:6px;">
+      <div><strong>${escapeHtml(c.name)}</strong> · ID <span class="mono">${escapeHtml(c.id)}</span>
+      · ${escapeHtml(c.nid||'—')} · ${escapeHtml(formatMobilesDisplay(c)||'—')}</div>
+      <div style="color:var(--ink-soft);margin-top:4px;">${escapeHtml(c.address||'')}</div>
+    </div>
+    <div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+      <div class="stat-box"><div class="label">Total In</div><div class="value">${fmtMoney(data.totalIn)}</div></div>
+      <div class="stat-box"><div class="label">Total Out</div><div class="value">${fmtMoney(data.totalOut)}</div></div>
+      <div class="stat-box"><div class="label">Closing Balance</div><div class="value">${fmtMoney(data.closing)}</div></div>
+    </div>
+    ${from?`<p style="font-size:.8rem;color:var(--ink-soft);">Opening balance before ${escapeHtml(from)}: <strong class="mono">${fmtMoney(data.opening)}</strong></p>`:''}
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="8">No transactions in this period.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+function printSavStatement(){
+  const contactId = __savStmtContactId;
+  const c = DB.contacts.find(x=>x.id===contactId);
+  if(!c) return;
+  const from = document.getElementById('savStmtFrom').value;
+  const to = document.getElementById('savStmtTo').value;
+  const data = savStatementLines(contactId, from||null, to||null);
+  const rows = data.lines.map((l,i)=>`<tr>
+    <td>${i+1}</td><td>${escapeHtml(l.date||'')}</td><td>${escapeHtml(l.type)}</td>
+    <td>${escapeHtml(l.method||'')}</td><td>${l.inn?fmtMoney(l.inn):'—'}</td>
+    <td>${l.out?fmtMoney(l.out):'—'}</td><td>${fmtMoney(l.bal)}</td><td>${escapeHtml(l.note||'')}</td>
+  </tr>`).join('');
+  const html = `<div class="pr-head"><h2>Contractor Welfare Fund Statement</h2></div>
+    <div class="pr-meta">
+      Name: <strong>${escapeHtml(c.name)}</strong> · ID: ${escapeHtml(c.id)} · Section: ${escapeHtml(c.nid||'—')}<br>
+      Mobile: ${escapeHtml(formatMobilesDisplay(c)||'—')} · Address: ${escapeHtml(c.address||'—')}<br>
+      Period: ${from||'…'} → ${to||'…'} · Printed: ${new Date().toLocaleString()}<br>
+      Total In: <strong>${fmtMoney(data.totalIn)}</strong> · Total Out: <strong>${fmtMoney(data.totalOut)}</strong> · Closing: <strong>${fmtMoney(data.closing)}</strong>
+    </div>
+    <table><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="8">No transactions.</td></tr>'}</tbody></table>
+    <p style="margin-top:40px;font-size:.8rem;">______________________ &nbsp;&nbsp;&nbsp; ______________________<br>Contractor signature &nbsp;&nbsp;&nbsp;&nbsp; Office signature</p>`;
+  enterPrintMode(html);
+}
+
+function printSavingsHistory(){
+  const list = window.__lastSavFiltered || filteredSavingsTxns();
+  const rows = list.map(t=>{
+    const c = DB.contacts.find(x=>x.id===t.contactId);
+    let who = (c?c.name:'') + ' ('+t.contactId+')';
+    if(t.type==='help') who += ' → ' + t.toContactId;
+    return `<tr><td>${escapeHtml(t.date||'')}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(t.type)}</td>
+      <td>${escapeHtml(t.method||'')}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(t.note||'')}</td></tr>`;
+  }).join('');
+  const html = `<div class="pr-head"><h2>Welfare Fund Transaction History</h2></div>
+    <div class="pr-meta">Printed: ${new Date().toLocaleString()} · Rows: ${list.length}</div>
+    <table><thead><tr><th>Date</th><th>Contractor</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+  enterPrintMode(html);
+}
+
+function exportSavingsCSV(){
+  const list = window.__lastSavFiltered || filteredSavingsTxns();
+  const lines = [['Date','Type','From ID','To ID','Name','Method','Amount','Note'].join(',')];
+  list.forEach(t=>{
+    const c = DB.contacts.find(x=>x.id===t.contactId);
+    lines.push([
+      t.date||'', t.type||'', t.contactId||'', t.toContactId||'',
+      '"'+(c?c.name:'').replace(/"/g,'""')+'"',
+      t.method||'', t.amount||0,
+      '"'+(t.note||'').replace(/"/g,'""')+'"'
+    ].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'savings-history.csv';
+  a.click();
+}
+
+function exportSavStatementCSV(){
+  if(!__savStmtContactId || !window.__lastSavStmt){ toast('Open a statement first.'); return; }
+  const { data } = window.__lastSavStmt;
+  const c = DB.contacts.find(x=>x.id===__savStmtContactId);
+  const lines = [['Date','Type','Method','In','Out','Balance','Note'].join(',')];
+  data.lines.forEach(l=>{
+    lines.push([l.date,l.type,l.method,l.inn||'',l.out||'',l.bal,'"'+(l.note||'').replace(/"/g,'""')+'"'].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'savings-statement-' + (__savStmtContactId||'x') + '.csv';
+  a.click();
+}
+
 /* =========================================================
    PRINT
    ========================================================= */
@@ -3056,6 +4149,7 @@ document.addEventListener('keydown', e=>{
     if(document.getElementById('globalSearchOverlay').classList.contains('open')) closeGlobalSearch();
     else if(document.getElementById('memoLookupOverlay').classList.contains('open')) closeMemoLookup();
     else if(document.getElementById('addEntryModalOverlay').classList.contains('open')) closeAddEntryModal();
+    else if(document.getElementById('savStatementOverlay')&&document.getElementById('savStatementOverlay').classList.contains('open')) closeSavStatement();
     else if(document.getElementById('contactModalOverlay').classList.contains('open')) closeContactModal();
   }
 });
@@ -3063,7 +4157,19 @@ document.addEventListener('keydown', e=>{
 /* =========================================================
    INIT
    ========================================================= */
-function initApp(){ showTab('summary'); renderSettings(); checkBackupReminder(); document.getElementById('appVersionFooter').textContent = '· v' + APP_VERSION; }
+function initApp(){
+  showTab('summary');
+  renderSettings();
+  applyDarkModeFromStorage();
+  updatePinStatus();
+  checkBackupReminder();
+  document.getElementById('appVersionFooter').textContent = '· v' + APP_VERSION;
+  const savIn = document.getElementById('savFormContact');
+  if(savIn){
+    savIn.addEventListener('change', updateSavFormBalanceHint);
+    savIn.addEventListener('blur', updateSavFormBalanceHint);
+  }
+}
 
 (async function boot(){
   // Load GAPI first
