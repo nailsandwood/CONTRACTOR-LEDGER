@@ -742,6 +742,9 @@
               <option value="yellow">Idle</option>
               <option value="red">Inactive / Zero</option>
             </select>
+            <select class="select-sm" id="annAmountFilter" onchange="renderAnnounceRecipients()">
+              <option value="all">All amounts</option>
+            </select>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" onclick="annSelectAll(true)">Select all (filtered)</button>
@@ -756,6 +759,7 @@
                 <th>Name</th>
                 <th>Mobile</th>
                 <th>Section</th>
+                <th style="text-align:right;">Total Amount</th>
               </tr></thead>
               <tbody id="annRecipientTbody"></tbody>
             </table>
@@ -2808,6 +2812,13 @@ function renderAnnouncements(){
     sections.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
   if([...secEl.options].some(o=>o.value===curSec)) secEl.value = curSec;
 
+  // amount filter options (same ranges as Summary > Total Amount)
+  const amtEl = document.getElementById('annAmountFilter');
+  const curAmt = amtEl.value || 'all';
+  amtEl.innerHTML = '<option value="all">All amounts</option>' +
+    TOTAL_AMOUNT_BUCKETS.map(b=>`<option value="${b.key}">${escapeHtml(b.label)}</option>`).join('');
+  if([...amtEl.options].some(o=>o.value===curAmt)) amtEl.value = curAmt;
+
   renderAnnounceRecipients();
 }
 
@@ -2848,10 +2859,12 @@ function filteredAnnounceContacts(){
   const q = (document.getElementById('annSearch').value||'').toLowerCase().trim();
   const sec = document.getElementById('annSectionFilter').value;
   const st = document.getElementById('annStatusFilter').value;
+  const amt = document.getElementById('annAmountFilter').value;
   return rankedContacts().filter(c=>{
     if(c.died) return false;
     if(sec!=='all' && (c.nid||'')!==sec) return false;
     if(st!=='all' && contactStatus(c)!==st) return false;
+    if(amt!=='all' && totalAmountBucketKey(c.totalAmount)!==amt) return false;
     if(q && ![c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid].join(' ').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -2869,6 +2882,7 @@ function renderAnnounceRecipients(){
       <td>${escapeHtml(c.name)}</td>
       <td class="mono">${escapeHtml(formatMobilesDisplay(c)||'—')}</td>
       <td>${escapeHtml(c.nid||'')}</td>
+      <td class="mono" style="text-align:right;">${fmtMoney(c.totalAmount||0)}</td>
     </tr>`;
   }).join('');
   document.getElementById('annSelCount').textContent = __annSelected.size + ' selected';
@@ -2896,51 +2910,91 @@ function startAnnounceSend(){
   const skipped = ids.length - queue.length;
   if(!queue.length){ toast('No selected contractor has a mobile number.'); return; }
   if(skipped) toast(skipped + ' skipped (no mobile).');
-  runAnnounceQueue(queue, body, 0);
+  runAnnounceQueue(queue, body);
 }
 
-function runAnnounceQueue(queue, body, index){
-  if(index >= queue.length){
-    toast('Finished: ' + queue.length + ' WhatsApp chat(s) opened.');
-    return;
+function runAnnounceQueue(queue, body){
+  // One checklist panel listing every selected recipient.
+  // Each chat opens in the same WhatsApp window (WhatsApp Web allows only one active tab).
+  const state = queue.map(c=>({ c: c, status: 'pending' }));
+  let panel = document.getElementById('waQueuePanel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'waQueuePanel';
+    panel.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;width:min(400px,94vw);max-height:75vh;background:var(--paper);color:var(--ink);border:2px solid #128C7E;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;font-size:.88rem;';
+    document.body.appendChild(panel);
   }
-  const c = queue[index];
-  const phone = normalizeBdMobile(primaryMobile(c));
-  const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(body);
-  window.open(url, 'contractor_ledger_whatsapp');
-  // Banner to continue to next
-  let bar = document.getElementById('waOfferBar');
-  if(!bar){
-    bar = document.createElement('div');
-    bar.id = 'waOfferBar';
-    bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#128C7E;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:94vw;font-size:.9rem;flex-wrap:wrap;';
-    document.body.appendChild(bar);
+  panel.style.display = 'flex';
+
+  function openChat(i){
+    const item = state[i];
+    const phone = normalizeBdMobile(primaryMobile(item.c));
+    if(!phone){ item.status = 'skipped'; render(); return; }
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(body), 'contractor_ledger_whatsapp');
+    item.status = 'opened';
+    render();
   }
-  bar.innerHTML = '';
-  const info = document.createElement('div');
-  info.style.cssText = 'flex:1;min-width:160px;';
-  info.innerHTML = '<strong>WhatsApp ' + (index+1) + ' / ' + queue.length + '</strong><div style="opacity:.9;font-size:.78rem;margin-top:2px;">' +
-    escapeHtml(c.name) + ' · ' + escapeHtml(primaryMobile(c)||'') + '</div><div style="opacity:.85;font-size:.72rem;">Send in WhatsApp, then continue</div>';
-  const nextBtn = document.createElement('button');
-  nextBtn.textContent = index+1 < queue.length ? 'Next' : 'Done';
-  nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;';
-  nextBtn.onclick = ()=>{
-    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
-    else { bar.style.display = 'none'; toast('All chats processed.'); }
-  };
-  const skipBtn = document.createElement('button');
-  skipBtn.textContent = 'Skip';
-  skipBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
-  skipBtn.onclick = ()=>{
-    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
-    else { bar.style.display = 'none'; }
-  };
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '×';
-  closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;';
-  closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
-  bar.appendChild(info); bar.appendChild(nextBtn); bar.appendChild(skipBtn); bar.appendChild(closeBtn);
-  bar.style.display = 'flex';
+  function openNext(){
+    const i = state.findIndex(x=>x.status==='pending');
+    if(i === -1){ toast('All chats processed.'); return; }
+    openChat(i);
+  }
+  function render(){
+    const total = state.length;
+    const opened = state.filter(x=>x.status==='opened').length;
+    const pending = state.filter(x=>x.status==='pending').length;
+    panel.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'background:#128C7E;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;';
+    head.innerHTML = '<div style="flex:1;"><strong>WhatsApp: ' + opened + ' / ' + total + ' opened</strong>' +
+      '<div style="font-size:.74rem;opacity:.9;margin-top:2px;">প্রতিটা চ্যাটে WhatsApp-এ Send চাপুন, তারপর এখানে ফিরে আসুন</div></div>';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.3rem;cursor:pointer;';
+    closeBtn.onclick = ()=>{ panel.style.display = 'none'; };
+    head.appendChild(closeBtn);
+    panel.appendChild(head);
+
+    const list = document.createElement('div');
+    list.style.cssText = 'overflow:auto;flex:1;';
+    state.forEach((item, i)=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;' + (i>0 ? 'border-top:1px solid var(--ring-line);' : '');
+      const label = item.status==='opened' ? '✓ Opened' : (item.status==='skipped' ? 'Skipped' : 'Pending');
+      const color = item.status==='opened' ? '#128C7E' : 'var(--ink-soft)';
+      const info = document.createElement('div');
+      info.style.cssText = 'flex:1;min-width:0;';
+      info.innerHTML = '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(item.c.name) + '</div>' +
+        '<div class="mono" style="font-size:.74rem;color:var(--ink-soft);">' + escapeHtml(primaryMobile(item.c)||'') + ' · <span style="color:' + color + ';font-weight:600;">' + label + '</span></div>';
+      const btn = document.createElement('button');
+      btn.textContent = item.status==='opened' ? 'Resend' : 'Send';
+      btn.className = 'btn btn-ghost btn-sm';
+      btn.onclick = ()=> openChat(i);
+      const skip = document.createElement('button');
+      skip.textContent = 'Skip';
+      skip.className = 'btn btn-ghost btn-sm';
+      skip.style.display = item.status==='pending' ? '' : 'none';
+      skip.onclick = ()=>{ item.status = 'skipped'; render(); };
+      row.appendChild(info); row.appendChild(btn); row.appendChild(skip);
+      list.appendChild(row);
+    });
+    panel.appendChild(list);
+
+    const foot = document.createElement('div');
+    foot.style.cssText = 'padding:10px 14px;border-top:1px solid var(--ring-line);display:flex;gap:8px;';
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn btn-accent';
+    nextBtn.style.flex = '1';
+    nextBtn.textContent = pending ? ('Send next (' + pending + ' left)') : 'All done';
+    nextBtn.disabled = !pending;
+    nextBtn.onclick = openNext;
+    foot.appendChild(nextBtn);
+    panel.appendChild(foot);
+  }
+
+  render();
+  openNext(); // open the first chat straight away
 }
 
 /* =========================================================
