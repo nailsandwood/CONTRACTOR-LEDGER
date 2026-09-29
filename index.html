@@ -639,10 +639,6 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field">
-            <label>Txn ID (optional)</label>
-            <input id="savFormTxnId" class="mono sav-enter" placeholder="Auto if empty">
-          </div>
           <div class="field"><label>Note</label><input id="savFormNote" class="sav-enter" placeholder="Optional"></div>
           <div id="savFormBalanceHint" style="font-size:.8rem;color:var(--ink-soft);margin:8px 0;"></div>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -1096,7 +1092,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.7.2-Drive';
+const APP_VERSION = '6.7.3-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -3804,7 +3800,6 @@ function resetSavForm(){
   document.getElementById('savFormAmount').value = '';
   document.getElementById('savFormMethod').value = 'Bkash';
   document.getElementById('savFormNote').value = '';
-  const tid = document.getElementById('savFormTxnId'); if(tid) tid.value = '';
   const eu = document.getElementById('savFormEditUid'); if(eu) eu.value = '';
   const sb = document.getElementById('savFormSaveBtn'); if(sb) sb.textContent = 'Save';
   setSavFormType('deposit');
@@ -3835,10 +3830,9 @@ function submitSavForm(){
   const amount = Number(document.getElementById('savFormAmount').value);
   const method = normalizeSavMethod(document.getElementById('savFormMethod').value || 'Cash');
   const note = document.getElementById('savFormNote').value.trim();
-  let txnId = (document.getElementById('savFormTxnId').value||'').trim();
   if(!date){ toast('Date is required.'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount.'); return; }
-  if(!txnId) txnId = 'TXN-' + Date.now().toString(36).toUpperCase().slice(-6);
+  const txnId = 'TXN-' + Date.now().toString(36).toUpperCase().slice(-6);
 
   if(type==='withdraw' || type==='help'){
     const bal = savingsBalance(fromC.id);
@@ -3917,7 +3911,6 @@ function editSavTxn(uid){
   document.getElementById('savFormDate').value = t.date || '';
   document.getElementById('savFormAmount').value = t.amount || '';
   document.getElementById('savFormMethod').value = t.method || 'Cash';
-  document.getElementById('savFormTxnId').value = t.txnId || '';
   document.getElementById('savFormNote').value = t.note || '';
   document.getElementById('savFormSaveBtn').textContent = 'Update';
   updateSavFormBalanceHint();
@@ -4273,16 +4266,17 @@ function renderSavStatementBody(){
   window.__lastSavStmt = { contactId, from, to, data };
   const rows = data.lines.map((l,i)=>`<tr>
     <td>${i+1}</td>
-    <td class="mono" style="font-size:.75rem;">${escapeHtml((l.raw&&(l.raw.txnId||(l.raw.uid||'').slice(-8)))||'')}</td>
     <td class="mono">${escapeHtml(l.date||'')}</td>
     <td>${escapeHtml(l.type)}</td>
-    <td>${escapeHtml(l.method||'')}</td>
+    <td>${escapeHtml(normalizeSavMethod(l.method))}</td>
     <td class="mono">${l.inn?fmtMoney(l.inn):'—'}</td>
     <td class="mono">${l.out?fmtMoney(l.out):'—'}</td>
     <td class="mono"><strong>${fmtMoney(l.bal)}</strong></td>
     <td>${escapeHtml(l.note||'')}</td>
   </tr>`).join('');
   document.getElementById('savStmtBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;min-height:calc(100vh - 160px);">
+    <div>
     <div style="font-size:.88rem;margin-bottom:12px;padding:12px;background:var(--paper-dim);border-radius:6px;">
       <div><strong>${escapeHtml(c.name)}</strong> · ID <span class="mono">${escapeHtml(c.id)}</span>
       · ${escapeHtml(c.nid||'—')} · ${escapeHtml(formatMobilesDisplay(c)||'—')}</div>
@@ -4295,12 +4289,15 @@ function renderSavStatementBody(){
     </div>
     ${from?`<p style="font-size:.8rem;color:var(--ink-soft);">Opening balance before ${escapeHtml(from)}: <strong class="mono">${fmtMoney(data.opening)}</strong></p>`:''}
     <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Txn ID</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="9">No transactions in this period.</td></tr>'}</tbody>
+      <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="8">No transactions in this period.</td></tr>'}</tbody>
     </table></div>
-    <div style="margin-top:80px;padding-top:24px;min-height:120px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);page-break-inside:avoid;">
+    </div>
+    <div style="flex:1 1 auto;min-height:48px;"></div>
+    <div style="padding-top:16px;padding-bottom:8px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);page-break-inside:avoid;">
       <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:8px;">Contractor signature<br><span class="mono">${escapeHtml(c.name)} (${escapeHtml(c.id)})</span></div></div>
       <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:8px;">Office signature<br>Shah Amanat Traders</div></div>
+    </div>
     </div>`;
 }
 
@@ -4312,23 +4309,28 @@ function printSavStatement(){
   const to = document.getElementById('savStmtTo').value;
   const data = savStatementLines(contactId, from||null, to||null);
   const rows = data.lines.map((l,i)=>`<tr>
-    <td>${i+1}</td><td>${escapeHtml((l.raw&&(l.raw.txnId||(l.raw.uid||'').slice(-8)))||'')}</td>
+    <td>${i+1}</td>
     <td>${escapeHtml(l.date||'')}</td><td>${escapeHtml(l.type)}</td>
-    <td>${escapeHtml(l.method||'')}</td><td>${l.inn?fmtMoney(l.inn):'—'}</td>
+    <td>${escapeHtml(normalizeSavMethod(l.method))}</td><td>${l.inn?fmtMoney(l.inn):'—'}</td>
     <td>${l.out?fmtMoney(l.out):'—'}</td><td>${fmtMoney(l.bal)}</td><td>${escapeHtml(l.note||'')}</td>
   </tr>`).join('');
-  const html = `<div class="pr-head"><h2>Contractor Welfare Fund Statement</h2></div>
+  const html = `<div style="display:flex;flex-direction:column;min-height:95vh;">
+    <div>
+    <div class="pr-head"><h2>Contractor Welfare Fund Statement</h2></div>
     <div class="pr-meta" style="font-size:12px;line-height:1.55;">
       Name: <strong>${escapeHtml(c.name)}</strong> · ID: ${escapeHtml(c.id)} · Section: ${escapeHtml(c.nid||'—')}<br>
       Mobile: ${escapeHtml(formatMobilesDisplay(c)||'—')} · Address: ${escapeHtml(c.address||'—')}<br>
       Period: ${from||'…'} → ${to||'…'} · Printed: ${new Date().toLocaleString()}<br>
       Total In: <strong>${fmtMoney(data.totalIn)}</strong> · Total Out: <strong>${fmtMoney(data.totalOut)}</strong> · Closing: <strong>${fmtMoney(data.closing)}</strong>
     </div>
-    <table style="font-size:12px;"><thead><tr><th>#</th><th>Txn ID</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="9">No transactions.</td></tr>'}</tbody></table>
-    <div style="margin-top:100px;padding-top:28px;page-break-inside:avoid;display:flex;justify-content:space-between;font-size:12px;">
+    <table style="font-size:12px;"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="8">No transactions.</td></tr>'}</tbody></table>
+    </div>
+    <div style="flex:1 1 auto;"></div>
+    <div style="padding-top:20px;padding-bottom:12px;page-break-inside:avoid;display:flex;justify-content:space-between;font-size:12px;">
       <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:8px;">Contractor signature<br>${escapeHtml(c.name)} (${escapeHtml(c.id)})</div>
       <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:8px;">Office signature<br>Shah Amanat Traders</div>
+    </div>
     </div>`;
   enterPrintMode(html, 'Contractor Welfare Fund');
 }
