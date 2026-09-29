@@ -683,7 +683,7 @@
                 <thead>
                   <tr>
                     <th class="no-print"><input type="checkbox" id="savSelectAll" onchange="savToggleSelectAll(this.checked)" title="Select all filtered"></th>
-                    <th>Txn ID</th>
+                    <th>#</th>
                     <th>Date</th>
                     <th>ID</th>
                     <th>Name / Address</th>
@@ -846,11 +846,7 @@
               <tbody id="annRecipientTbody"></tbody>
             </table>
           </div>
-          <p style="font-size:.75rem;color:var(--ink-soft);margin-top:10px;">
-            <strong>Tip:</strong> Goto kal 277 jon ke pathiyechile — ekbar oi 277 select kore <em>Mark selected = Sent</em> chapun.
-            Pore filter <em>Not sent yet</em> + Select not-sent only — abar unselect korte hobe na.
-            Next chaple auto “Sent” mark hobe.
-          </p>
+
         </div>
       </div>
     </section>
@@ -1100,7 +1096,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.7-Drive';
+const APP_VERSION = '6.7.2-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -2917,14 +2913,14 @@ function annMarkSent(id, save){
 function annMarkSelectedSent(){
   const ids = [...__annSelected];
   if(!ids.length){ toast('Select people first.'); return; }
-  if(!confirm(ids.length + ' jon ke “Already sent” mark korben?')) return;
+  if(!confirm('Mark ' + ids.length + ' people as Already sent?')) return;
   ids.forEach(id=> annMarkSent(id, false));
   saveDB(true);
-  toast(ids.length + ' marked as sent. Ebar “Not sent yet” filter use korun.');
+  toast(ids.length + ' marked as sent. Use filter: Not sent yet.');
   renderAnnounceRecipients();
 }
 function annClearSentLog(){
-  if(!confirm('Sob sent log clear korben? (Ager 277 mark o muche jabe)')) return;
+  if(!confirm('Clear the entire sent log? This cannot be undone.')) return;
   ensureAnnouncements();
   DB.announcements.sent = {};
   saveDB(true);
@@ -3104,13 +3100,13 @@ function startAnnounceSend(){
   const skipped = ids.length - queue.length;
   if(!queue.length){ toast('No selected contractor has a mobile number.'); return; }
   if(skipped) toast(skipped + ' skipped (no mobile).');
-  toast('Sending to ' + queue.length + ' people. WhatsApp-e Send, then Next.');
+  toast('Opening WhatsApp for ' + queue.length + ' people. Press Send in WhatsApp, then Next.');
   runAnnounceQueue(queue, body, 0);
 }
 
 function runAnnounceQueue(queue, body, index){
   if(index >= queue.length){
-    toast('Finished: ' + queue.length + ' WhatsApp chat(s) opened.');
+    toast('Finished: ' + queue.length + ' WhatsApp chat(s) processed.');
     return;
   }
   const c = queue[index];
@@ -3134,7 +3130,7 @@ function runAnnounceQueue(queue, body, index){
   info.style.cssText = 'flex:1;min-width:160px;';
   info.innerHTML = '<strong>WhatsApp ' + (index+1) + ' / ' + queue.length + '</strong><div style="opacity:.9;font-size:.78rem;margin-top:2px;">' +
     escapeHtml(c.name) + ' · ID ' + escapeHtml(String(c.id)) + ' · ' + escapeHtml(primaryMobile(c)||'') +
-    '</div><div style="opacity:.85;font-size:.72rem;">1) WhatsApp-e Send chapun  2) Ekhane Next chapun</div>';
+    '</div><div style="opacity:.85;font-size:.72rem;">1) Press Send in WhatsApp &nbsp; 2) Click Next here</div>';
   const nextBtn = document.createElement('button');
   nextBtn.textContent = index+1 < queue.length ? ('Next (' + (index+2) + '/' + queue.length + ')') : 'Done';
   nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;';
@@ -4016,7 +4012,7 @@ function renderSavings(){
     empty.style.display = 'block';
   } else {
     empty.style.display = 'none';
-    tbody.innerHTML = list.map(t=>{
+    tbody.innerHTML = list.map((t,idx)=>{
       const c = DB.contacts.find(x=>x.id===t.contactId);
       const to = t.toContactId ? DB.contacts.find(x=>x.id===t.toContactId) : null;
       const name = c ? c.name : t.contactId;
@@ -4028,13 +4024,12 @@ function renderSavings(){
       }
       const sign = t.type==='withdraw' ? '−' : (t.type==='deposit' ? '+' : '');
       const color = t.type==='withdraw' ? 'var(--red-600,#b3311c)' : (t.type==='deposit' ? 'var(--green-700,#0f8a34)' : 'inherit');
-      const txnShow = escapeHtml(t.txnId || (t.uid||'').slice(-8));
       const ck = __savSelected.has(t.uid) ? 'checked' : '';
       const addr = c ? (c.address||'') : '';
       const nameAddr = nameCell + (addr ? `<div style="font-size:.72rem;color:var(--ink-soft);">${escapeHtml(addr)}</div>` : '');
       return `<tr>
         <td class="no-print"><input type="checkbox" ${ck} onchange="savToggleOne('${t.uid}',this.checked)"></td>
-        <td class="mono" style="font-size:.75rem;">${txnShow}</td>
+        <td class="mono">${idx+1}</td>
         <td class="mono">${escapeHtml(t.date||'')}</td>
         <td class="mono">${idCell}</td>
         <td>${nameAddr}</td>
@@ -4173,7 +4168,7 @@ function printSavBalances(){
     <td>${fmtMoney(r.balance)}</td><td>${escapeHtml(r.lastDate||'')}</td>
   </tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Welfare Fund</h2></div>
-    <div class="pr-meta" style="font-size:12px;">Balances report · Printed: ${new Date().toLocaleString()} · Rows: ${rows.length}<br>
+    <div class="pr-meta" style="font-size:12px;">Balances report · Printed: ${new Date().toLocaleString()}<br>
     Total deposited: <strong>${fmtMoney(totalDep)}</strong> · Total withdrawn: <strong>${fmtMoney(totalWd)}</strong> · Sum of balances: <strong>${fmtMoney(totalBal)}</strong></div>
     <table style="font-size:12px;"><thead><tr>
       <th>#</th><th>ID</th><th>Name</th><th>Address</th><th>Section</th><th>Rank</th>
@@ -4303,9 +4298,9 @@ function renderSavStatementBody(){
       <thead><tr><th>#</th><th>Txn ID</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="9">No transactions in this period.</td></tr>'}</tbody>
     </table></div>
-    <div style="display:flex;justify-content:space-between;gap:24px;margin-top:48px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);">
-      <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:6px;">Contractor signature<br><span class="mono">${escapeHtml(c.name)} (${escapeHtml(c.id)})</span></div></div>
-      <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:6px;">Office signature<br>Shah Amanat Traders / Nails and Wood</div></div>
+    <div style="margin-top:80px;padding-top:24px;min-height:120px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);page-break-inside:avoid;">
+      <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:8px;">Contractor signature<br><span class="mono">${escapeHtml(c.name)} (${escapeHtml(c.id)})</span></div></div>
+      <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:8px;">Office signature<br>Shah Amanat Traders</div></div>
     </div>`;
 }
 
@@ -4331,9 +4326,9 @@ function printSavStatement(){
     </div>
     <table style="font-size:12px;"><thead><tr><th>#</th><th>Txn ID</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
     <tbody>${rows||'<tr><td colspan="9">No transactions.</td></tr>'}</tbody></table>
-    <div style="display:flex;justify-content:space-between;margin-top:56px;font-size:12px;">
-      <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:6px;">Contractor signature<br>${escapeHtml(c.name)} (${escapeHtml(c.id)})</div>
-      <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:6px;">Office signature<br>Shah Amanat Traders<br>Nails and Wood</div>
+    <div style="margin-top:100px;padding-top:28px;page-break-inside:avoid;display:flex;justify-content:space-between;font-size:12px;">
+      <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:8px;">Contractor signature<br>${escapeHtml(c.name)} (${escapeHtml(c.id)})</div>
+      <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:8px;">Office signature<br>Shah Amanat Traders</div>
     </div>`;
   enterPrintMode(html, 'Contractor Welfare Fund');
 }
@@ -4352,24 +4347,24 @@ function printSavingsHistory(){
     byMeth[m] = (byMeth[m]||0) + amt;
   });
   const methLines = Object.keys(byMeth).filter(k=>byMeth[k]>0).map(k=> k + ': <strong>' + fmtMoney(byMeth[k]) + '</strong>').join(' · ');
-  const rows = list.map(t=>{
+  const rows = list.map((t,i)=>{
     const c = DB.contacts.find(x=>x.id===t.contactId);
     let who = (c?c.name:'') + ' ('+t.contactId+')';
     if(c && c.address) who += ' · ' + c.address;
     if(t.type==='help') who += ' → ' + t.toContactId;
-    return `<tr><td>${escapeHtml(t.txnId||(t.uid||'').slice(-8))}</td><td>${escapeHtml(t.date||'')}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(savTypeLabel(t.type))}</td>
+    return `<tr><td>${i+1}</td><td>${escapeHtml(t.date||'')}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(savTypeLabel(t.type))}</td>
       <td>${escapeHtml(normalizeSavMethod(t.method))}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(t.note||'')}</td></tr>`;
   }).join('');
   const fromF = (document.getElementById('savFromFilter')||{}).value || '';
   const toF = (document.getElementById('savToFilter')||{}).value || '';
+  const periodLine = (fromF||toF) ? ('Period: ' + (fromF||'…') + ' → ' + (toF||'…') + '<br>') : '';
   const html = `<div class="pr-head"><h2>Contractor Welfare Fund</h2></div>
     <div class="pr-meta" style="font-size:12px;line-height:1.5;">
-      Transaction history · Printed: ${new Date().toLocaleString()} · Rows: ${list.length}
-      ${fromF||toF ? (' · Period: ' + (fromF||'…') + ' → ' + (toF||'…')) : ''}<br>
-      Total amount (listed): <strong>${fmtMoney(total)}</strong> · Deposit: <strong>${fmtMoney(dep)}</strong> · Withdraw: <strong>${fmtMoney(wd)}</strong><br>
-      ${methLines ? ('By method — ' + methLines) : ''}
+      ${periodLine}Printed: ${new Date().toLocaleString()}<br>
+      Total: <strong>${fmtMoney(total)}</strong> · Deposit: <strong>${fmtMoney(dep)}</strong> · Withdraw: <strong>${fmtMoney(wd)}</strong>
+      ${methLines ? ('<br>By method — ' + methLines) : ''}
     </div>
-    <table style="font-size:12px;"><thead><tr><th>Txn ID</th><th>Date</th><th>Contractor / Address</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th></tr></thead>
+    <table style="font-size:12px;"><thead><tr><th>#</th><th>Date</th><th>Contractor / Address</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
   enterPrintMode(html, 'Contractor Welfare Fund');
 }
