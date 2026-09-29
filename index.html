@@ -202,7 +202,7 @@
   #printStage .pr-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:3px solid var(--amber-600);padding-bottom:10px;}
   #printStage .pr-head h2{margin:0;color:var(--walnut-900);}
   #printStage .pr-meta{font-size:.8rem;color:var(--ink-soft);margin-bottom:14px;}
-  #printStage table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  #printStage table{width:100%;border-collapse:collapse;font-size:12px;}
   #printStage thead{display:table-header-group;}
   #printStage tr{break-inside:avoid;page-break-inside:avoid;}
   #printStage th,#printStage td{box-shadow:inset 0 0 0 1px var(--ring-line);border:none;padding:7px 10px;text-align:left;}
@@ -473,6 +473,13 @@
             <input type="date" class="input-sm" id="reportMeetingDate" onchange="saveReportMeetingDate()">
           </label>
           <button class="btn btn-ghost" onclick="saveDB(true); toast('Saved to Google Drive.');">💾 Save to Drive</button>
+          <label style="font-size:.75rem;">From <input type="date" class="input-sm" id="reportPeriodFrom" onchange="renderReports()"></label>
+          <label style="font-size:.75rem;">To <input type="date" class="input-sm" id="reportPeriodTo" onchange="renderReports()"></label>
+          <select class="select-sm" id="reportPeriodPreset" onchange="applyReportPeriodPreset()">
+            <option value="">Period: All</option>
+            <option value="month">This month</option>
+            <option value="year">This year</option>
+          </select>
           <button class="btn btn-ghost" onclick="printReportsPanel()">🖨 Print Report / PDF</button>
           <button class="btn btn-ghost" onclick="exportReportsExcel()">⇩ Excel Download</button>
           <button class="btn btn-accent" onclick="exportReportsExcelToDrive()">⬆ Excel → Drive</button>
@@ -567,17 +574,71 @@
         </div>
       </div>
 
-      <div class="grid-4" style="margin-bottom:18px;">
+      <div class="grid-4" style="margin-bottom:12px;">
         <div class="stat-box"><div class="label">Total Balance</div><div class="value" id="savTotalBalance">0</div></div>
-        <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">This Month Deposit</div><div class="value" id="savMonthIn">0</div></div>
-        <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">This Month Withdraw</div><div class="value" id="savMonthOut">0</div></div>
-        <div class="stat-box"><div class="label">Active Savers</div><div class="value" id="savActiveCount">0</div></div>
+        <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">All Deposit</div><div class="value" id="savAllDeposit">0</div></div>
+        <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">All Withdraw</div><div class="value" id="savAllWithdraw">0</div></div>
+        <div class="stat-box"><div class="label">Depositors</div><div class="value" id="savActiveCount">0</div></div>
+      </div>
+      <div class="grid-6" style="margin-bottom:14px;" id="savMethodStats">
+        <div class="stat-box"><div class="label">This Month Deposit</div><div class="value" id="savMonthIn">0</div></div>
+        <div class="stat-box"><div class="label">This Month Withdraw</div><div class="value" id="savMonthOut">0</div></div>
+        <div class="stat-box"><div class="label">Cash (all)</div><div class="value" id="savMethCash">0</div></div>
+        <div class="stat-box"><div class="label">bKash (all)</div><div class="value" id="savMethBkash">0</div></div>
+        <div class="stat-box"><div class="label">Nagad (all)</div><div class="value" id="savMethNagad">0</div></div>
+        <div class="stat-box"><div class="label">Other methods</div><div class="value" id="savMethOther">0</div></div>
       </div>
 
-      <div class="layout-2" style="display:grid;grid-template-columns:1fr minmax(280px,340px);gap:16px;align-items:start;">
+      <!-- Quick entry on top (full width) -->
+      <div class="card no-print" id="savQuickFormCard" style="margin-bottom:16px;">
+        <h3 style="margin-bottom:10px;">Quick entry</h3>
+        <div style="display:flex;gap:6px;margin-bottom:12px;max-width:360px;">
+          <button type="button" class="btn btn-sm" id="savTypeDeposit" style="flex:1;" onclick="setSavFormType('deposit')">Deposit</button>
+          <button type="button" class="btn btn-sm" id="savTypeWithdraw" style="flex:1;" onclick="setSavFormType('withdraw')">Withdraw</button>
+          <button type="button" class="btn btn-sm" id="savTypeHelp" style="flex:1;" onclick="setSavFormType('help')">Help</button>
+        </div>
+        <input type="hidden" id="savFormType" value="deposit">
+        <input type="hidden" id="savFormEditUid" value="">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;">
+          <div class="field" style="margin:0;">
+            <label>Contractor</label>
+            <input id="savFormContact" class="sav-enter" list="savContactList" placeholder="Type ID or name…">
+            <datalist id="savContactList"></datalist>
+          </div>
+          <div id="savFormToWrap" style="display:none;" class="field" style="margin:0;">
+            <label>Help — To contractor</label>
+            <input id="savFormToContact" class="sav-enter" list="savContactList" placeholder="Receiver ID or name…">
+          </div>
+          <div class="field" style="margin:0;"><label>Date</label><input type="date" id="savFormDate" class="sav-enter"></div>
+          <div class="field" style="margin:0;"><label>Amount (Tk)</label><input type="number" id="savFormAmount" class="mono sav-enter" placeholder="0" min="0" step="1"></div>
+          <div class="field" style="margin:0;">
+            <label>Payment method</label>
+            <select id="savFormMethod" class="sav-enter">
+              <option>Cash</option>
+              <option selected>bKash</option>
+              <option>Nagad</option>
+              <option>Rocket</option>
+              <option>Bank</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;">
+            <label>Txn ID (optional)</label>
+            <input id="savFormTxnId" class="mono sav-enter" placeholder="Auto if empty">
+          </div>
+          <div class="field" style="margin:0;"><label>Note</label><input id="savFormNote" class="sav-enter" placeholder="Optional"></div>
+          <div style="display:flex;gap:8px;align-items:center;padding-bottom:2px;">
+            <button class="btn btn-ghost" onclick="resetSavForm()">Clear</button>
+            <button class="btn btn-accent" id="savFormSaveBtn" onclick="submitSavForm()">Save</button>
+          </div>
+        </div>
+        <div id="savFormBalanceHint" style="font-size:.8rem;color:var(--ink-soft);margin-top:8px;"></div>
+      </div>
+
+      <div class="layout-2" style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">
         <div>
           <div class="toolbar no-print" style="margin-bottom:12px;flex-wrap:wrap;">
-            <div class="search-bar"><input id="savSearch" placeholder="Search name, ID, mobile, note…" oninput="renderSavings()"></div>
+            <div class="search-bar"><input id="savSearch" placeholder="Search name, ID, mobile, note, txn…" oninput="renderSavings()"></div>
             <select class="select-sm" id="savTypeFilter" onchange="renderSavings()">
               <option value="all">All types</option>
               <option value="deposit">Deposit</option>
@@ -593,15 +654,20 @@
               <option value="Bank">Bank</option>
               <option value="Other">Other</option>
             </select>
+            <input type="date" class="input-sm" id="savFromFilter" onchange="renderSavings()" title="From date">
+            <input type="date" class="input-sm" id="savToFilter" onchange="renderSavings()" title="To date">
             <input type="month" class="input-sm" id="savMonthFilter" onchange="renderSavings()" title="Filter by month">
             <button class="btn btn-ghost btn-sm" onclick="clearSavingsFilters()">Clear filters</button>
+            <button class="btn btn-ghost btn-sm" onclick="printSavingsHistory()">Print filtered</button>
           </div>
 
           <div class="card" style="padding:0;">
-            <div class="table-wrap">
+            <div class="table-wrap" style="max-height:420px;overflow:auto;">
               <table>
                 <thead>
                   <tr>
+                    <th class="no-print"><input type="checkbox" id="savSelectAll" onchange="savToggleSelectAll(this.checked)" title="Select all filtered"></th>
+                    <th>Txn ID</th>
                     <th>Date</th>
                     <th>ID</th>
                     <th>Name</th>
@@ -615,10 +681,12 @@
                 <tbody id="savTxnTbody"></tbody>
               </table>
             </div>
-            <p id="savTxnEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No transactions yet. Click <strong>+ New Transaction</strong>.</p>
+            <p id="savTxnEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No transactions yet.</p>
           </div>
+        </div>
 
-          <h3 style="margin:18px 0 10px;">Contractor Balances</h3>
+        <div>
+          <h3 style="margin:0 0 10px;">Contractor Balances</h3>
           <div class="toolbar no-print" style="margin-bottom:10px;">
             <div class="search-bar"><input id="savBalSearch" placeholder="Search balances…" oninput="renderSavingsBalances()"></div>
             <select class="select-sm" id="savBalSort" onchange="renderSavingsBalances()">
@@ -629,7 +697,7 @@
             </select>
           </div>
           <div class="card" style="padding:0;">
-            <div class="table-wrap">
+            <div class="table-wrap" style="max-height:480px;overflow:auto;">
               <table>
                 <thead>
                   <tr>
@@ -647,46 +715,6 @@
               </table>
             </div>
             <p id="savBalEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No welfare fund balances yet.</p>
-          </div>
-        </div>
-
-        <div class="card no-print" id="savQuickFormCard">
-          <h3 style="margin-bottom:10px;">Quick entry</h3>
-          <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <button type="button" class="btn btn-sm" id="savTypeDeposit" style="flex:1;" onclick="setSavFormType('deposit')">Deposit</button>
-            <button type="button" class="btn btn-sm" id="savTypeWithdraw" style="flex:1;" onclick="setSavFormType('withdraw')">Withdraw</button>
-            <button type="button" class="btn btn-sm" id="savTypeHelp" style="flex:1;" onclick="setSavFormType('help')">Help</button>
-          </div>
-          <input type="hidden" id="savFormType" value="deposit">
-          <div class="field">
-            <label>Contractor</label>
-            <input id="savFormContact" list="savContactList" placeholder="Type ID or name…">
-            <datalist id="savContactList"></datalist>
-          </div>
-          <div id="savFormToWrap" style="display:none;" class="field">
-            <label>Help — To contractor</label>
-            <input id="savFormToContact" list="savContactList" placeholder="Receiver ID or name…">
-          </div>
-          <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="field"><label>Date</label><input type="date" id="savFormDate"></div>
-            <div class="field"><label>Amount (Tk)</label><input type="number" id="savFormAmount" class="mono" placeholder="0" min="0" step="1"></div>
-          </div>
-          <div class="field">
-            <label>Payment method</label>
-            <select id="savFormMethod">
-              <option>Cash</option>
-              <option>bKash</option>
-              <option>Nagad</option>
-              <option>Rocket</option>
-              <option>Bank</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div class="field"><label>Note</label><input id="savFormNote" placeholder="Optional"></div>
-          <div id="savFormBalanceHint" style="font-size:.8rem;color:var(--ink-soft);margin:8px 0;"></div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button class="btn btn-ghost" onclick="resetSavForm()">Clear</button>
-            <button class="btn btn-accent" onclick="submitSavForm()">Save</button>
           </div>
         </div>
       </div>
@@ -742,9 +770,8 @@
               <option value="yellow">Idle</option>
               <option value="red">Inactive / Zero</option>
             </select>
-            <select class="select-sm" id="annAmountFilter" onchange="renderAnnounceRecipients()">
-              <option value="all">All amounts</option>
-            </select>
+            <input type="number" class="input-sm mono" id="annMinAmount" placeholder="Min amount" style="width:110px;" oninput="renderAnnounceRecipients()" title="Minimum total amount">
+            <input type="number" class="input-sm mono" id="annMaxAmount" placeholder="Max amount" style="width:110px;" oninput="renderAnnounceRecipients()" title="Maximum total amount">
           </div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" onclick="annSelectAll(true)">Select all (filtered)</button>
@@ -759,7 +786,7 @@
                 <th>Name</th>
                 <th>Mobile</th>
                 <th>Section</th>
-                <th style="text-align:right;">Total Amount</th>
+                <th>Amount</th>
               </tr></thead>
               <tbody id="annRecipientTbody"></tbody>
             </table>
@@ -842,7 +869,14 @@
           <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">Easier on the eyes at night. Saved on this device only.</p>
         </div>
         <div class="card">
-          <h3>Editor PIN (optional)</h3>
+          <h3>Security</h3>
+          <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">Data stays in <strong>your</strong> Google Drive. Use a strong Google password + 2-Step Verification. Editor PIN only locks editing on <em>this device</em> — it is not a server password.</p>
+          <ul style="font-size:.78rem;color:var(--ink-soft);margin:0 0 10px 16px;line-height:1.45;">
+            <li>Download JSON backup regularly</li>
+            <li>Do not share the GitHub site + Google account together</li>
+            <li>Sign out when using a shared computer</li>
+          </ul>
+          <h3 style="margin-top:12px;">Editor PIN (optional)</h3>
           <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">If set, this device needs the PIN to add or edit data. Viewing stays open after Google sign-in.</p>
           <div class="field"><label>New PIN</label><input type="password" id="settingsPin" placeholder="4–8 characters" class="mono"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1007,7 +1041,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.2.1-Drive';
+const APP_VERSION = '6.5-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1952,7 +1986,7 @@ function openWhatsAppToContact(contactId, customText){
   if(!c){ toast('Contractor not found.'); return false; }
   const phone = normalizeBdMobile(primaryMobile(c));
   if(!phone){ toast('No mobile number for this contractor.'); return false; }
-  const text = customText || 'মেমো জমা হয়েছে, ধন্যবাদ।';
+  const text = customText || 'মেমো জমা হয়েছে, ধন্যবাদ।';
   const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
   const w = window.open(url, 'contractor_ledger_whatsapp');
   if(!w || w.closed || typeof w.closed === 'undefined'){
@@ -1970,8 +2004,8 @@ function openWhatsAppAfterEntries(contactId, count){
   const c = DB.contacts.find(x=>x.id===contactId);
   if(!c || !primaryMobile(c)) return;
   const msg = count > 1
-    ? (count + 'টি মেমো জমা হয়েছে, ধন্যবাদ।')
-    : 'মেমো জমা হয়েছে, ধন্যবাদ।';
+    ? (count + 'টি মেমো জমা হয়েছে, ধন্যবাদ।')
+    : 'মেমো জমা হয়েছে, ধন্যবাদ।';
   showWhatsAppOffer(contactId, msg, c);
 }
 function openWhatsAppHelpPair(fromId, toId, amount, note){
@@ -2643,6 +2677,23 @@ function saveReportMeetingDate(){
   DB.session.meetingDate = document.getElementById('reportMeetingDate').value;
   saveDB(true);
 }
+function applyReportPeriodPreset(){
+  const p = document.getElementById('reportPeriodPreset').value;
+  const from = document.getElementById('reportPeriodFrom');
+  const to = document.getElementById('reportPeriodTo');
+  if(!from||!to) return;
+  const now = new Date();
+  if(p==='month'){
+    from.value = now.toISOString().slice(0,7)+'-01';
+    to.value = now.toISOString().slice(0,10);
+  } else if(p==='year'){
+    from.value = now.getFullYear()+'-01-01';
+    to.value = now.toISOString().slice(0,10);
+  } else {
+    from.value = ''; to.value = '';
+  }
+  renderReports();
+}
 function renderReports(){
   ensureMselMounted('reports','reportFilterRow');
   const meetingDateEl = document.getElementById('reportMeetingDate');
@@ -2775,11 +2826,11 @@ function defaultAnnounceTemplates(){
     { id:'t8', title:'জরুরি অবগতি', body:'প্রিয় সহকর্মী,\n\nএটি একটি জরুরি অবগতি। অনুগ্রহ করে বার্তাটি মনোযোগসহকারে পড়ুন এবং প্রয়োজনীয় ব্যবস্থা নিন। বিস্তারিত জানতে অফিসে যোগাযোগ করুন।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
     { id:'t9', title:'শুভ কামনা (সাধারণ)', body:'প্রিয় সহকর্মী,\n\nআপনাদের সকলকে জানাই আন্তরিক শুভেচ্ছা ও শুভকামনা। আপনাদের ব্যক্তিগত ও পেশাগত জীবনে সাফল্য কামনা করি।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
     { id:'t10', title:'কাজের সময়সূচি পরিবর্তন', body:'প্রিয় সহকর্মী,\n\nজানানো যাচ্ছে যে কাজের সময়সূচিতে সাময়িক পরিবর্তন আসছে। নতুন সময়সূচি অফিস থেকে জানিয়ে দেওয়া হবে। সহযোগিতার জন্য ধন্যবাদ।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
-    { id:'t11', title:'শ্রমিক নিরাপত্তা সংক্রান্ত', body:'প্রিয় সহকর্মী,\n\nকাজের স্থানে সকলের নিরাপত্তা নিশ্চিত করতে প্রয়োজনীয় সেফটি সরঞ্জাম ব্যবহার এবং নিরাপত্তা নিয়ম যথাযথভাবে মেনে চলার জন্য অনুরোধ করা হলো। কোনো সমস্যা দেখা দিলে দ্রুত অফিসে জানাবেন।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
-    { id:'t12', title:'নতুন সেশন শুরুর ঘোষণা', body:'প্রিয় সহকর্মী,\n\nআপনাদের অবগতির জন্য জানানো যাচ্ছে যে আগামী নির্ধারিত তারিখ থেকে নতুন সেশনের কার্যক্রম শুরু হচ্ছে। এই সংক্রান্ত প্রয়োজনীয় তথ্যের জন্য অনুগ্রহ করে অফিসে যোগাযোগ করুন।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
-    { id:'t13', title:'হিসাব মিলিয়ে নেওয়ার অনুরোধ', body:'প্রিয় সহকর্মী,\n\nআপনার হালনাগাদ হিসাব বিবরণী মিলিয়ে দেখার জন্য অনুরোধ করা হলো। কোনো অসামঞ্জস্য পেলে অনুগ্রহ করে দ্রুত অফিসে যোগাযোগ করুন।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
-    { id:'t14', title:'শোক বার্তা', body:'প্রিয় সহকর্মী,\n\nগভীর দুঃখের সাথে জানানো যাচ্ছে যে আমাদের পরিবারের একজন সদস্য সম্প্রতি ইন্তেকাল করেছেন। মরহুম/মরহুমার বিদেহী আত্মার মাগফিরাত কামনা করছি এবং শোকসন্তপ্ত পরিবারের প্রতি আন্তরিক সমবেদনা জানাচ্ছি।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
-    { id:'t15', title:'কল্যাণ তহবিল থেকে সহায়তা প্রদান', body:'প্রিয় সহকর্মী,\n\nContractor Welfare Fund থেকে প্রয়োজনীয় সহায়তা প্রদানের ব্যবস্থা করা হয়েছে। বিস্তারিত জানতে ও প্রয়োজনীয় কাগজপত্র জমা দিতে অনুগ্রহ করে অফিসে যোগাযোগ করুন।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' }
+    { id:'t11', title:'পূজার শুভেচ্ছা', body:'প্রিয় সহকর্মী,\n\nপূজার এই শুভ সময়ে আপনাদের সকলকে জানাই আন্তরিক শুভেচ্ছা ও শুভকামনা। উৎসব আনন্দময় হোক।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
+    { id:'t12', title:'বিজয় দিবস / জাতীয় দিবস', body:'প্রিয় সহকর্মী,\n\nএই গুরুত্বপূর্ণ জাতীয় দিবসে আপনাদের সকলকে জানাই আন্তরিক শ্রদ্ধা ও শুভেচ্ছা।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
+    { id:'t13', title:'মেমো জমা স্মরণ', body:'প্রিয় সহকর্মী,\n\nঅনুগ্রহ করে বকেয়া মেমো/কাজের হিসাব নির্ধারিত সময়ের মধ্যে জমা দেওয়ার অনুরোধ করা হলো। সহযোগিতার জন্য ধন্যবাদ।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
+    { id:'t14', title:'মানসম্মত কাজের অনুরোধ', body:'প্রিয় সহকর্মী,\n\nকাজের মান ও সময়মতো সম্পন্ন করার বিষয়ে সচেতন থাকার অনুরোধ রইল। কোনো সমস্যা হলে অবিলম্বে অফিসকে জানাবেন।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' },
+    { id:'t15', title:'বার্ষিক সভা আমন্ত্রণ', body:'প্রিয় সহকর্মী,\n\nআগামী বার্ষিক সভায় আপনাদের উপস্থিতি একান্ত কাম্য। তারিখ, সময় ও স্থান পরে জানানো হবে।\n\nধন্যবাদান্তে,\nশাহ আমানত ট্রেডার্স\nনেইলস এন্ড উড' }
   ];
 }
 
@@ -2811,13 +2862,6 @@ function renderAnnouncements(){
   secEl.innerHTML = '<option value="all">All sections</option>' +
     sections.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
   if([...secEl.options].some(o=>o.value===curSec)) secEl.value = curSec;
-
-  // amount filter options (same ranges as Summary > Total Amount)
-  const amtEl = document.getElementById('annAmountFilter');
-  const curAmt = amtEl.value || 'all';
-  amtEl.innerHTML = '<option value="all">All amounts</option>' +
-    TOTAL_AMOUNT_BUCKETS.map(b=>`<option value="${b.key}">${escapeHtml(b.label)}</option>`).join('');
-  if([...amtEl.options].some(o=>o.value===curAmt)) amtEl.value = curAmt;
 
   renderAnnounceRecipients();
 }
@@ -2852,19 +2896,24 @@ function resetAnnounceTemplates(){
   DB.announcements.templates = defaultAnnounceTemplates();
   saveDB(true);
   renderAnnouncements();
-  toast('Default templates restored.');
+  toast('Default 15 templates restored.');
 }
 
 function filteredAnnounceContacts(){
   const q = (document.getElementById('annSearch').value||'').toLowerCase().trim();
   const sec = document.getElementById('annSectionFilter').value;
   const st = document.getElementById('annStatusFilter').value;
-  const amt = document.getElementById('annAmountFilter').value;
+  const minEl = document.getElementById('annMinAmount');
+  const maxEl = document.getElementById('annMaxAmount');
+  const minA = minEl && minEl.value !== '' ? Number(minEl.value) : null;
+  const maxA = maxEl && maxEl.value !== '' ? Number(maxEl.value) : null;
   return rankedContacts().filter(c=>{
     if(c.died) return false;
     if(sec!=='all' && (c.nid||'')!==sec) return false;
     if(st!=='all' && contactStatus(c)!==st) return false;
-    if(amt!=='all' && totalAmountBucketKey(c.totalAmount)!==amt) return false;
+    const amt = Number(c.totalAmount)||0;
+    if(minA !== null && !isNaN(minA) && amt < minA) return false;
+    if(maxA !== null && !isNaN(maxA) && amt > maxA) return false;
     if(q && ![c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid].join(' ').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -2877,12 +2926,12 @@ function renderAnnounceRecipients(){
   tbody.innerHTML = list.map(c=>{
     const checked = __annSelected.has(c.id) ? 'checked' : '';
     return `<tr>
-      <td class="no-print"><input type="checkbox" ${checked} onchange="annToggle('${c.id}', this.checked)"></td>
+      <td class="no-print"><input type="checkbox" ${checked} onchange="annToggle('${String(c.id)}', this.checked)"></td>
       <td class="mono">${escapeHtml(c.id)}</td>
       <td>${escapeHtml(c.name)}</td>
       <td class="mono">${escapeHtml(formatMobilesDisplay(c)||'—')}</td>
       <td>${escapeHtml(c.nid||'')}</td>
-      <td class="mono" style="text-align:right;">${fmtMoney(c.totalAmount||0)}</td>
+      <td class="mono">${fmtMoney(c.totalAmount)}</td>
     </tr>`;
   }).join('');
   document.getElementById('annSelCount').textContent = __annSelected.size + ' selected';
@@ -2903,98 +2952,63 @@ function annSelectAll(on){
 function startAnnounceSend(){
   const body = (document.getElementById('annBody').value||'').trim();
   if(!body){ toast('Message is empty.'); return; }
-  const ids = [...__annSelected];
+  const ids = [...__annSelected].map(String);
   if(!ids.length){ toast('Select at least one recipient.'); return; }
-  // Only those with mobile
-  const queue = ids.map(id=> DB.contacts.find(c=>c.id===id)).filter(c=> c && primaryMobile(c));
+  const queue = ids.map(id=> DB.contacts.find(c=> String(c.id)===String(id))).filter(c=> c && primaryMobile(c));
   const skipped = ids.length - queue.length;
   if(!queue.length){ toast('No selected contractor has a mobile number.'); return; }
   if(skipped) toast(skipped + ' skipped (no mobile).');
-  runAnnounceQueue(queue, body);
+  toast('Sending to ' + queue.length + ' people. WhatsApp-e Send, then Next.');
+  runAnnounceQueue(queue, body, 0);
 }
 
-function runAnnounceQueue(queue, body){
-  // One checklist panel listing every selected recipient.
-  // Each chat opens in the same WhatsApp window (WhatsApp Web allows only one active tab).
-  const state = queue.map(c=>({ c: c, status: 'pending' }));
-  let panel = document.getElementById('waQueuePanel');
-  if(!panel){
-    panel = document.createElement('div');
-    panel.id = 'waQueuePanel';
-    panel.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;width:min(400px,94vw);max-height:75vh;background:var(--paper);color:var(--ink);border:2px solid #128C7E;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;font-size:.88rem;';
-    document.body.appendChild(panel);
+function runAnnounceQueue(queue, body, index){
+  if(index >= queue.length){
+    toast('Finished: ' + queue.length + ' WhatsApp chat(s) opened.');
+    return;
   }
-  panel.style.display = 'flex';
-
-  function openChat(i){
-    const item = state[i];
-    const phone = normalizeBdMobile(primaryMobile(item.c));
-    if(!phone){ item.status = 'skipped'; render(); return; }
-    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(body), 'contractor_ledger_whatsapp');
-    item.status = 'opened';
-    render();
+  const c = queue[index];
+  const phone = normalizeBdMobile(primaryMobile(c));
+  if(!phone){
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
+    return;
   }
-  function openNext(){
-    const i = state.findIndex(x=>x.status==='pending');
-    if(i === -1){ toast('All chats processed.'); return; }
-    openChat(i);
+  const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(body);
+  const w = window.open(url, 'contractor_ledger_whatsapp');
+  try{ if(w) w.focus(); }catch(e){}
+  let bar = document.getElementById('waOfferBar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'waOfferBar';
+    bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#128C7E;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:94vw;font-size:.9rem;flex-wrap:wrap;';
+    document.body.appendChild(bar);
   }
-  function render(){
-    const total = state.length;
-    const opened = state.filter(x=>x.status==='opened').length;
-    const pending = state.filter(x=>x.status==='pending').length;
-    panel.innerHTML = '';
-
-    const head = document.createElement('div');
-    head.style.cssText = 'background:#128C7E;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;';
-    head.innerHTML = '<div style="flex:1;"><strong>WhatsApp: ' + opened + ' / ' + total + ' opened</strong>' +
-      '<div style="font-size:.74rem;opacity:.9;margin-top:2px;">প্রতিটা চ্যাটে WhatsApp-এ Send চাপুন, তারপর এখানে ফিরে আসুন</div></div>';
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.3rem;cursor:pointer;';
-    closeBtn.onclick = ()=>{ panel.style.display = 'none'; };
-    head.appendChild(closeBtn);
-    panel.appendChild(head);
-
-    const list = document.createElement('div');
-    list.style.cssText = 'overflow:auto;flex:1;';
-    state.forEach((item, i)=>{
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;' + (i>0 ? 'border-top:1px solid var(--ring-line);' : '');
-      const label = item.status==='opened' ? '✓ Opened' : (item.status==='skipped' ? 'Skipped' : 'Pending');
-      const color = item.status==='opened' ? '#128C7E' : 'var(--ink-soft)';
-      const info = document.createElement('div');
-      info.style.cssText = 'flex:1;min-width:0;';
-      info.innerHTML = '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(item.c.name) + '</div>' +
-        '<div class="mono" style="font-size:.74rem;color:var(--ink-soft);">' + escapeHtml(primaryMobile(item.c)||'') + ' · <span style="color:' + color + ';font-weight:600;">' + label + '</span></div>';
-      const btn = document.createElement('button');
-      btn.textContent = item.status==='opened' ? 'Resend' : 'Send';
-      btn.className = 'btn btn-ghost btn-sm';
-      btn.onclick = ()=> openChat(i);
-      const skip = document.createElement('button');
-      skip.textContent = 'Skip';
-      skip.className = 'btn btn-ghost btn-sm';
-      skip.style.display = item.status==='pending' ? '' : 'none';
-      skip.onclick = ()=>{ item.status = 'skipped'; render(); };
-      row.appendChild(info); row.appendChild(btn); row.appendChild(skip);
-      list.appendChild(row);
-    });
-    panel.appendChild(list);
-
-    const foot = document.createElement('div');
-    foot.style.cssText = 'padding:10px 14px;border-top:1px solid var(--ring-line);display:flex;gap:8px;';
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'btn btn-accent';
-    nextBtn.style.flex = '1';
-    nextBtn.textContent = pending ? ('Send next (' + pending + ' left)') : 'All done';
-    nextBtn.disabled = !pending;
-    nextBtn.onclick = openNext;
-    foot.appendChild(nextBtn);
-    panel.appendChild(foot);
-  }
-
-  render();
-  openNext(); // open the first chat straight away
+  bar.innerHTML = '';
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;min-width:160px;';
+  info.innerHTML = '<strong>WhatsApp ' + (index+1) + ' / ' + queue.length + '</strong><div style="opacity:.9;font-size:.78rem;margin-top:2px;">' +
+    escapeHtml(c.name) + ' · ID ' + escapeHtml(String(c.id)) + ' · ' + escapeHtml(primaryMobile(c)||'') +
+    '</div><div style="opacity:.85;font-size:.72rem;">1) WhatsApp-e Send chapun  2) Ekhane Next chapun</div>';
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = index+1 < queue.length ? ('Next (' + (index+2) + '/' + queue.length + ')') : 'Done';
+  nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;';
+  nextBtn.onclick = ()=>{
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
+    else { bar.style.display = 'none'; toast('All chats processed.'); }
+  };
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = 'Skip';
+  skipBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  skipBtn.onclick = ()=>{
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
+    else { bar.style.display = 'none'; }
+  };
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;';
+  closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
+  bar.appendChild(info); bar.appendChild(nextBtn); bar.appendChild(skipBtn); bar.appendChild(closeBtn);
+  bar.style.display = 'flex';
 }
 
 /* =========================================================
@@ -3632,8 +3646,11 @@ function resetSavForm(){
   document.getElementById('savFormToContact').value = '';
   document.getElementById('savFormDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('savFormAmount').value = '';
-  document.getElementById('savFormMethod').value = 'Cash';
+  document.getElementById('savFormMethod').value = 'bKash';
   document.getElementById('savFormNote').value = '';
+  const tid = document.getElementById('savFormTxnId'); if(tid) tid.value = '';
+  const eu = document.getElementById('savFormEditUid'); if(eu) eu.value = '';
+  const sb = document.getElementById('savFormSaveBtn'); if(sb) sb.textContent = 'Save';
   setSavFormType('deposit');
   document.getElementById('savFormBalanceHint').textContent = '';
 }
@@ -3646,9 +3663,10 @@ function openSavingsTxnModal(){
 }
 
 function submitSavForm(){
-  if(!requireEditor('Saving transaction')) return;
+  if(typeof requireEditor === 'function' && !requireEditor('Saving transaction')) return;
   ensureSavings();
   const type = document.getElementById('savFormType').value;
+  const editUid = (document.getElementById('savFormEditUid').value||'').trim();
   const fromC = resolveContactQuery(document.getElementById('savFormContact').value);
   if(!fromC){ toast('Select a valid contractor (ID or full name).'); return; }
   let toC = null;
@@ -3661,35 +3679,41 @@ function submitSavForm(){
   const amount = Number(document.getElementById('savFormAmount').value);
   const method = document.getElementById('savFormMethod').value || 'Cash';
   const note = document.getElementById('savFormNote').value.trim();
+  let txnId = (document.getElementById('savFormTxnId').value||'').trim();
   if(!date){ toast('Date is required.'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount.'); return; }
+  if(!txnId) txnId = 'TXN-' + Date.now().toString(36).toUpperCase().slice(-6);
 
   if(type==='withdraw' || type==='help'){
     const bal = savingsBalance(fromC.id);
     if(amount > bal + 1e-9){
-      if(!confirm(`Balance is only ${fmtMoney(bal)}. Save anyway?`)) return;
+      if(!confirm('Balance is only ' + fmtMoney(bal) + '. Save anyway?')) return;
     }
   }
 
-  const txn = {
-    uid: generateUid(),
-    date,
-    type,
-    contactId: fromC.id,
-    toContactId: type==='help' ? toC.id : '',
-    amount,
-    method,
-    note,
-    createdAt: new Date().toISOString()
-  };
-  DB.savings.transactions.push(txn);
+  if(editUid){
+    const t = DB.savings.transactions.find(x=>x.uid===editUid);
+    if(!t){ toast('Transaction not found.'); return; }
+    Object.assign(t, {
+      date, type, contactId: fromC.id,
+      toContactId: type==='help' ? toC.id : '',
+      amount, method, note, txnId
+    });
+    toast('Transaction updated.');
+  } else {
+    DB.savings.transactions.push({
+      uid: generateUid(), date, type,
+      contactId: fromC.id,
+      toContactId: type==='help' ? toC.id : '',
+      amount, method, note, txnId,
+      createdAt: new Date().toISOString()
+    });
+    toast(type.charAt(0).toUpperCase()+type.slice(1) + ' saved.');
+    if(type==='help' && toC) openWhatsAppHelpPair(fromC.id, toC.id, amount, note);
+  }
   saveDB(true);
-  toast(type.charAt(0).toUpperCase()+type.slice(1) + ' saved.');
   resetSavForm();
   renderSavings();
-  if(type==='help' && toC){
-    openWhatsAppHelpPair(fromC.id, toC.id, amount, note);
-  }
 }
 
 function deleteSavTxn(uid){
@@ -3707,7 +3731,41 @@ function clearSavingsFilters(){
   document.getElementById('savTypeFilter').value = 'all';
   document.getElementById('savMethodFilter').value = 'all';
   document.getElementById('savMonthFilter').value = '';
+  const f = document.getElementById('savFromFilter'); if(f) f.value = '';
+  const t = document.getElementById('savToFilter'); if(t) t.value = '';
   renderSavings();
+}
+let __savSelected = new Set();
+function savToggleSelectAll(on){
+  const list = window.__lastSavFiltered || [];
+  if(on) list.forEach(t=> __savSelected.add(t.uid));
+  else list.forEach(t=> __savSelected.delete(t.uid));
+  renderSavings();
+}
+function savToggleOne(uid, on){
+  if(on) __savSelected.add(uid); else __savSelected.delete(uid);
+}
+function editSavTxn(uid){
+  ensureSavings();
+  const t = DB.savings.transactions.find(x=>x.uid===uid);
+  if(!t) return;
+  document.getElementById('savFormEditUid').value = uid;
+  document.getElementById('savFormType').value = t.type;
+  setSavFormType(t.type);
+  const c = DB.contacts.find(x=>x.id===t.contactId);
+  document.getElementById('savFormContact').value = c ? (c.id + ' — ' + c.name) : t.contactId;
+  if(t.type==='help' && t.toContactId){
+    const to = DB.contacts.find(x=>x.id===t.toContactId);
+    document.getElementById('savFormToContact').value = to ? (to.id + ' — ' + to.name) : t.toContactId;
+  }
+  document.getElementById('savFormDate').value = t.date || '';
+  document.getElementById('savFormAmount').value = t.amount || '';
+  document.getElementById('savFormMethod').value = t.method || 'Cash';
+  document.getElementById('savFormTxnId').value = t.txnId || '';
+  document.getElementById('savFormNote').value = t.note || '';
+  document.getElementById('savFormSaveBtn').textContent = 'Update';
+  updateSavFormBalanceHint();
+  document.getElementById('savQuickFormCard').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function filteredSavingsTxns(){
@@ -3715,18 +3773,22 @@ function filteredSavingsTxns(){
   const q = (document.getElementById('savSearch').value||'').toLowerCase().trim();
   const typeF = document.getElementById('savTypeFilter').value;
   const methodF = document.getElementById('savMethodFilter').value;
-  const monthF = document.getElementById('savMonthFilter').value; // YYYY-MM
+  const monthF = document.getElementById('savMonthFilter').value;
+  const fromF = (document.getElementById('savFromFilter')||{}).value || '';
+  const toF = (document.getElementById('savToFilter')||{}).value || '';
   let list = [...DB.savings.transactions];
   list.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
   return list.filter(t=>{
     if(typeF!=='all' && t.type!==typeF) return false;
     if(methodF!=='all' && t.method!==methodF) return false;
     if(monthF && !(t.date||'').startsWith(monthF)) return false;
+    if(fromF && (t.date||'') < fromF) return false;
+    if(toF && (t.date||'') > toF) return false;
     if(q){
       const c = DB.contacts.find(x=>x.id===t.contactId);
       const to = t.toContactId ? DB.contacts.find(x=>x.id===t.toContactId) : null;
       const hay = [
-        t.contactId, t.toContactId, t.note, t.method, t.type, t.date, String(t.amount),
+        t.contactId, t.toContactId, t.note, t.method, t.type, t.date, String(t.amount), t.txnId, t.uid,
         c&&c.name, c&&c.mobile, formatMobilesDisplay(c||{}),
         to&&to.name
       ].join(' ').toLowerCase();
@@ -3754,6 +3816,8 @@ function renderSavings(){
   const now = new Date();
   const ym = now.toISOString().slice(0,7);
   let totalBal = 0, monthIn = 0, monthOut = 0, active = 0;
+  let allDep = 0, allWd = 0;
+  const meth = { Cash:0, bKash:0, Nagad:0, Rocket:0, Bank:0, Other:0 };
   DB.contacts.forEach(c=>{
     if(c.died) return;
     const e = savingsEffectsForContact(c.id);
@@ -3761,16 +3825,27 @@ function renderSavings(){
     if(e.balance>0 || e.deposited>0 || e.withdrawn>0 || e.helpIn>0 || e.helpOut>0) active++;
   });
   DB.savings.transactions.forEach(t=>{
-    if(!(t.date||'').startsWith(ym)) return;
     const amt = Number(t.amount)||0;
-    if(t.type==='deposit') monthIn += amt;
-    if(t.type==='withdraw') monthOut += amt;
-    // help moves between members; count as neither office in/out for month cards, or count both sides loosely — count help as neutral
+    if(t.type==='deposit') allDep += amt;
+    if(t.type==='withdraw') allWd += amt;
+    const m = t.method || 'Other';
+    if(meth[m] !== undefined) meth[m] += amt; else meth.Other += amt;
+    if((t.date||'').startsWith(ym)){
+      if(t.type==='deposit') monthIn += amt;
+      if(t.type==='withdraw') monthOut += amt;
+    }
   });
   document.getElementById('savTotalBalance').textContent = fmtMoney(totalBal);
+  const elAD = document.getElementById('savAllDeposit'); if(elAD) elAD.textContent = fmtMoney(allDep);
+  const elAW = document.getElementById('savAllWithdraw'); if(elAW) elAW.textContent = fmtMoney(allWd);
   document.getElementById('savMonthIn').textContent = fmtMoney(monthIn);
   document.getElementById('savMonthOut').textContent = fmtMoney(monthOut);
   document.getElementById('savActiveCount').textContent = active;
+  const setM = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent = fmtMoney(v); };
+  setM('savMethCash', meth.Cash);
+  setM('savMethBkash', meth.bKash);
+  setM('savMethNagad', meth.Nagad);
+  setM('savMethOther', meth.Rocket + meth.Bank + meth.Other);
 
   const list = filteredSavingsTxns();
   window.__lastSavFiltered = list;
@@ -3793,7 +3868,11 @@ function renderSavings(){
       }
       const sign = t.type==='withdraw' ? '−' : (t.type==='deposit' ? '+' : '');
       const color = t.type==='withdraw' ? 'var(--red-600,#b3311c)' : (t.type==='deposit' ? 'var(--green-700,#0f8a34)' : 'inherit');
+      const txnShow = escapeHtml(t.txnId || (t.uid||'').slice(-8));
+      const ck = __savSelected.has(t.uid) ? 'checked' : '';
       return `<tr>
+        <td class="no-print"><input type="checkbox" ${ck} onchange="savToggleOne('${t.uid}',this.checked)"></td>
+        <td class="mono" style="font-size:.75rem;">${txnShow}</td>
         <td class="mono">${escapeHtml(t.date||'')}</td>
         <td class="mono">${idCell}</td>
         <td>${nameCell}</td>
@@ -3801,7 +3880,10 @@ function renderSavings(){
         <td>${escapeHtml(t.method||'')}</td>
         <td class="mono" style="font-weight:700;color:${color}">${sign}${fmtMoney(t.amount)}</td>
         <td>${escapeHtml(t.note||'')}</td>
-        <td class="no-print"><button class="icon-btn danger" onclick="deleteSavTxn('${t.uid}')">Delete</button></td>
+        <td class="no-print" style="white-space:nowrap;">
+          <button class="icon-btn" onclick="editSavTxn('${t.uid}')">Edit</button>
+          <button class="icon-btn danger" onclick="deleteSavTxn('${t.uid}')">Delete</button>
+        </td>
       </tr>`;
     }).join('');
   }
@@ -3918,6 +4000,7 @@ function renderSavStatementBody(){
   window.__lastSavStmt = { contactId, from, to, data };
   const rows = data.lines.map((l,i)=>`<tr>
     <td>${i+1}</td>
+    <td class="mono" style="font-size:.75rem;">${escapeHtml((l.raw&&(l.raw.txnId||(l.raw.uid||'').slice(-8)))||'')}</td>
     <td class="mono">${escapeHtml(l.date||'')}</td>
     <td>${escapeHtml(l.type)}</td>
     <td>${escapeHtml(l.method||'')}</td>
@@ -3939,9 +4022,13 @@ function renderSavStatementBody(){
     </div>
     ${from?`<p style="font-size:.8rem;color:var(--ink-soft);">Opening balance before ${escapeHtml(from)}: <strong class="mono">${fmtMoney(data.opening)}</strong></p>`:''}
     <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="8">No transactions in this period.</td></tr>'}</tbody>
-    </table></div>`;
+      <thead><tr><th>#</th><th>Txn ID</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="9">No transactions in this period.</td></tr>'}</tbody>
+    </table></div>
+    <div style="display:flex;justify-content:space-between;gap:24px;margin-top:48px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);">
+      <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:6px;">Contractor signature<br><span class="mono">${escapeHtml(c.name)} (${escapeHtml(c.id)})</span></div></div>
+      <div style="text-align:center;min-width:180px;"><div style="border-top:1px solid #333;padding-top:6px;">Office signature<br>Shah Amanat Traders / Nails and Wood</div></div>
+    </div>`;
 }
 
 function printSavStatement(){
@@ -3952,35 +4039,58 @@ function printSavStatement(){
   const to = document.getElementById('savStmtTo').value;
   const data = savStatementLines(contactId, from||null, to||null);
   const rows = data.lines.map((l,i)=>`<tr>
-    <td>${i+1}</td><td>${escapeHtml(l.date||'')}</td><td>${escapeHtml(l.type)}</td>
+    <td>${i+1}</td><td>${escapeHtml((l.raw&&(l.raw.txnId||(l.raw.uid||'').slice(-8)))||'')}</td>
+    <td>${escapeHtml(l.date||'')}</td><td>${escapeHtml(l.type)}</td>
     <td>${escapeHtml(l.method||'')}</td><td>${l.inn?fmtMoney(l.inn):'—'}</td>
     <td>${l.out?fmtMoney(l.out):'—'}</td><td>${fmtMoney(l.bal)}</td><td>${escapeHtml(l.note||'')}</td>
   </tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Welfare Fund Statement</h2></div>
-    <div class="pr-meta">
+    <div class="pr-meta" style="font-size:12px;line-height:1.55;">
       Name: <strong>${escapeHtml(c.name)}</strong> · ID: ${escapeHtml(c.id)} · Section: ${escapeHtml(c.nid||'—')}<br>
       Mobile: ${escapeHtml(formatMobilesDisplay(c)||'—')} · Address: ${escapeHtml(c.address||'—')}<br>
       Period: ${from||'…'} → ${to||'…'} · Printed: ${new Date().toLocaleString()}<br>
       Total In: <strong>${fmtMoney(data.totalIn)}</strong> · Total Out: <strong>${fmtMoney(data.totalOut)}</strong> · Closing: <strong>${fmtMoney(data.closing)}</strong>
     </div>
-    <table><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="8">No transactions.</td></tr>'}</tbody></table>
-    <p style="margin-top:40px;font-size:.8rem;">______________________ &nbsp;&nbsp;&nbsp; ______________________<br>Contractor signature &nbsp;&nbsp;&nbsp;&nbsp; Office signature</p>`;
+    <table style="font-size:12px;"><thead><tr><th>#</th><th>Txn ID</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="9">No transactions.</td></tr>'}</tbody></table>
+    <div style="display:flex;justify-content:space-between;margin-top:56px;font-size:12px;">
+      <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:6px;">Contractor signature<br>${escapeHtml(c.name)} (${escapeHtml(c.id)})</div>
+      <div style="text-align:center;min-width:200px;border-top:1px solid #222;padding-top:6px;">Office signature<br>Shah Amanat Traders<br>Nails and Wood</div>
+    </div>`;
   enterPrintMode(html);
 }
 
 function printSavingsHistory(){
   const list = window.__lastSavFiltered || filteredSavingsTxns();
+  let total = 0;
+  const byMeth = {};
+  let dep = 0, wd = 0;
+  list.forEach(t=>{
+    const amt = Number(t.amount)||0;
+    total += amt;
+    if(t.type==='deposit') dep += amt;
+    if(t.type==='withdraw') wd += amt;
+    const m = t.method || 'Other';
+    byMeth[m] = (byMeth[m]||0) + amt;
+  });
+  const methLines = Object.keys(byMeth).filter(k=>byMeth[k]>0).map(k=> k + ': <strong>' + fmtMoney(byMeth[k]) + '</strong>').join(' · ');
   const rows = list.map(t=>{
     const c = DB.contacts.find(x=>x.id===t.contactId);
     let who = (c?c.name:'') + ' ('+t.contactId+')';
     if(t.type==='help') who += ' → ' + t.toContactId;
-    return `<tr><td>${escapeHtml(t.date||'')}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(t.type)}</td>
+    return `<tr><td>${escapeHtml(t.txnId||(t.uid||'').slice(-8))}</td><td>${escapeHtml(t.date||'')}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(t.type)}</td>
       <td>${escapeHtml(t.method||'')}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(t.note||'')}</td></tr>`;
   }).join('');
+  const fromF = (document.getElementById('savFromFilter')||{}).value || '';
+  const toF = (document.getElementById('savToFilter')||{}).value || '';
   const html = `<div class="pr-head"><h2>Welfare Fund Transaction History</h2></div>
-    <div class="pr-meta">Printed: ${new Date().toLocaleString()} · Rows: ${list.length}</div>
-    <table><thead><tr><th>Date</th><th>Contractor</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th></tr></thead>
+    <div class="pr-meta" style="font-size:12px;line-height:1.5;">
+      Printed: ${new Date().toLocaleString()} · Rows: ${list.length}
+      ${fromF||toF ? (' · Period: ' + (fromF||'…') + ' → ' + (toF||'…')) : ''}<br>
+      Total amount (listed): <strong>${fmtMoney(total)}</strong> · Deposit: <strong>${fmtMoney(dep)}</strong> · Withdraw: <strong>${fmtMoney(wd)}</strong><br>
+      ${methLines ? ('By method — ' + methLines) : ''}
+    </div>
+    <table style="font-size:12px;"><thead><tr><th>Txn ID</th><th>Date</th><th>Contractor</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
   enterPrintMode(html);
 }
@@ -4242,6 +4352,21 @@ function initApp(){
     savIn.addEventListener('change', updateSavFormBalanceHint);
     savIn.addEventListener('blur', updateSavFormBalanceHint);
   }
+  bindSavEnterNav();
+}
+function bindSavEnterNav(){
+  const card = document.getElementById('savQuickFormCard');
+  if(!card || card.dataset.enterBound) return;
+  card.dataset.enterBound = '1';
+  card.addEventListener('keydown', e=>{
+    if(e.key !== 'Enter') return;
+    if(e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    const fields = [...card.querySelectorAll('.sav-enter')].filter(el=> el.offsetParent !== null);
+    const i = fields.indexOf(e.target);
+    if(i >= 0 && i < fields.length - 1) fields[i+1].focus();
+    else submitSavForm();
+  });
 }
 
 (async function boot(){
