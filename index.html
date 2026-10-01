@@ -1532,25 +1532,40 @@ async function ensureDriveStructure(){
   }
 }
 
+/** Authorized Drive request that never uses browser cache and retries once after token refresh */
+async function driveFetch(url, init){
+  init = init || {};
+  const go = ()=> fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now(), Object.assign({}, init, {
+    cache: 'no-store',
+    headers: Object.assign({}, init.headers || {}, { Authorization: 'Bearer ' + accessToken })
+  }));
+  let res = await go();
+  if(res.status === 401 || res.status === 403){
+    const ok = await refreshGoogleTokenSilent();
+    if(!ok) throw new Error('Drive session expired');
+    res = await go();
+  }
+  return res;
+}
+
+async function getRemoteModifiedTime(){
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?fields=modifiedTime`);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const j = await res.json();
+  return j.modifiedTime || null;
+}
+
 async function loadDBFromDrive(){
   if(!driveFileId) throw new Error('No Drive file');
   setDriveStatus('Drive: loading…', 'syncing');
-  try{
-    const meta = await gapi.client.drive.files.get({
-      fileId: driveFileId,
-      fields: 'id,modifiedTime'
-    });
-    if(meta.result && meta.result.modifiedTime) driveFileModifiedTime = meta.result.modifiedTime;
-  }catch(e){}
-  const res = await gapi.client.drive.files.get({
-    fileId: driveFileId,
-    alt: 'media'
-  });
-  try{
-    DB = typeof res.body === 'string' ? JSON.parse(res.body) : res.result;
-  }catch(e){
-    DB = defaultDB();
-  }
+  let remoteTime = null;
+  try{ remoteTime = await getRemoteModifiedTime(); }catch(e){}
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  // Never replace data with an empty DB if the file cannot be read
+  DB = JSON.parse(text);
+  if(remoteTime) driveFileModifiedTime = remoteTime;
   applyMigrations();
   localDirty = false;
   setDriveStatus('Drive: connected');
@@ -1561,11 +1576,7 @@ async function pullDriveIfNewer(opts){
   opts = opts || {};
   if(!driveFileId || !accessToken || isSyncing) return false;
   try{
-    const meta = await gapi.client.drive.files.get({
-      fileId: driveFileId,
-      fields: 'id,modifiedTime'
-    });
-    const remote = meta.result && meta.result.modifiedTime;
+    const remote = await getRemoteModifiedTime();
     if(!remote) return false;
     if(driveFileModifiedTime && remote <= driveFileModifiedTime) return false;
     // remote is newer
@@ -1581,10 +1592,11 @@ async function pullDriveIfNewer(opts){
       const tab = active ? active.dataset.tab : 'summary';
       if(typeof showTab === 'function') showTab(tab);
     }catch(e){}
-    if(opts.toast) toast('Updated from Google Drive');
+    toast('Updated from Google Drive (other PC changes)');
     return true;
   }catch(e){
     console.warn('pullDriveIfNewer', e);
+    setDriveStatus('Drive: cannot check updates — tap status to re-login', 'offline');
     return false;
   }
 }
@@ -1600,15 +1612,38 @@ function refreshGoogleTokenSilent(){
   return silentRefreshToken();
 }
 
-async function persistDBNow(){
+async function persistDBNow(opts){
+  opts = opts || {};
   if(!driveFileId || !accessToken){
     updateSavedIndicator(false, new Error('Not connected to Drive'));
     return false;
   }
   if(isSyncing) return false;
+  // Nothing changed on this PC -> do NOT overwrite Drive (it may hold newer data from another PC)
+  if(!localDirty) return true;
   isSyncing = true;
   setDriveStatus('Drive: saving…', 'syncing');
   try{
+    // Conflict check: did another PC save after we last synced?
+    try{
+      const remote = await getRemoteModifiedTime();
+      if(remote && driveFileModifiedTime && remote > driveFileModifiedTime){
+        if(opts.silent){
+          isSyncing = false;
+          setDriveStatus('Drive: newer on another PC', 'syncing');
+          return false;
+        }
+        const loadTheirs = confirm('Another PC has saved newer data to Google Drive.\n\nOK = load the newer Drive data (changes made on this PC since last sync will be lost)\nCancel = overwrite Drive with this PC\'s data');
+        if(loadTheirs){
+          isSyncing = false;
+          localDirty = false;
+          await loadDBFromDrive();
+          try{ showTab(document.querySelector('nav.tabs button.active')?.dataset.tab || 'summary'); }catch(e){}
+          toast('Loaded newer data from Google Drive');
+          return false;
+        }
+      }
+    }catch(e){ console.warn('conflict check failed', e); }
     const content = JSON.stringify(DB, null, 2);
     let res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
       method: 'PATCH',
@@ -1636,8 +1671,8 @@ async function persistDBNow(){
     updateSavedIndicator(true);
     localDirty = false;
     try{
-      const meta = await gapi.client.drive.files.get({ fileId: driveFileId, fields: 'modifiedTime' });
-      if(meta.result && meta.result.modifiedTime) driveFileModifiedTime = meta.result.modifiedTime;
+      const t = await getRemoteModifiedTime();
+      if(t) driveFileModifiedTime = t;
     }catch(e){}
     setDriveStatus('Drive: connected');
     isSyncing = false;
@@ -1728,11 +1763,11 @@ async function forceSyncFromDrive(){
 }
 
 // Periodic auto-save
-setInterval(()=>{ if(DB && accessToken) persistDBNow(); }, 30000);
+setInterval(()=>{ if(DB && accessToken && localDirty) persistDBNow({silent:true}); }, 30000);
 
 window.addEventListener('beforeunload', ()=>{
   clearTimeout(saveTimer);
-  if(DB && accessToken) persistDBNow();
+  if(DB && accessToken && localDirty) persistDBNow({silent:true});
 });
 
 function fmtMoney(n){ n=Number(n)||0; return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -2554,7 +2589,8 @@ function refreshDuplicatesAndTotals(){
   rankedContacts();
   const rankedC = DB.contacts.find(x=>x.id===currentAccountId);
   if(rankedC) document.getElementById('accRankBadge').textContent = 'Rank #' + rankedC.ranking;
-  saveDB();
+  // NOTE: no saveDB() here. Rendering must never mark data dirty or overwrite Drive;
+  // callers that change entries call saveDB themselves.
 }
 
 function flashEntryRow(idx){
