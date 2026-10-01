@@ -1101,7 +1101,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.8.2-Drive';
+const APP_VERSION = '6.8.3-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1196,16 +1196,33 @@ function updateSavedIndicator(ok, err){
   }
 }
 
-async function initGapi(){
-  return new Promise((resolve)=>{
-    gapi.load('client', async ()=>{
-      await gapi.client.init({
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+let gapiReadyPromise = null;
+function initGapi(){
+  if(gapiReadyPromise) return gapiReadyPromise;
+  gapiReadyPromise = new Promise((resolve, reject)=>{
+    const start = ()=>{
+      if(!window.gapi){ reject(new Error('gapi missing')); return; }
+      gapi.load('client', async ()=>{
+        try{
+          await gapi.client.init({
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+          });
+          gapiLoaded = true;
+          resolve();
+        }catch(e){ reject(e); }
       });
-      gapiLoaded = true;
-      resolve();
-    });
+    };
+    if(window.gapi) start();
+    else {
+      let n = 0;
+      const t = setInterval(()=>{
+        n++;
+        if(window.gapi){ clearInterval(t); start(); }
+        else if(n > 50){ clearInterval(t); reject(new Error('Google API script timeout')); }
+      }, 200);
+    }
   });
+  return gapiReadyPromise;
 }
 
 function handleGoogleCredential(response){
@@ -1219,32 +1236,54 @@ let localDirty = false;           // local unsaved / pending changes since last 
 let drivePollTimer = null;
 
 function initGis(){
+  if(!window.google || !google.accounts || !google.accounts.oauth2){
+    console.error('GIS not available');
+    return;
+  }
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
     callback: async (tokenResponse)=>{
-      if(tokenResponse.error){
-        const errEl = document.getElementById('loginError');
-        if(errEl) errEl.textContent = 'Google sign-in failed: ' + tokenResponse.error;
-        // If already inside app, just show toast
+      const errEl = document.getElementById('loginError');
+      if(!tokenResponse || tokenResponse.error){
+        const code = (tokenResponse && tokenResponse.error) || 'unknown';
+        let msg = 'Google sign-in failed: ' + code;
+        if(code === 'popup_closed_by_user') msg = 'Sign-in window closed. Click the green button again.';
+        if(code === 'access_denied') msg = 'Permission denied. Click Allow for Google Drive access.';
+        if(errEl) errEl.textContent = msg;
         if(document.getElementById('app') && document.getElementById('app').style.display !== 'none'){
-          toast('Drive session expired — reconnecting…');
+          toast('Drive session expired — sign in again');
           setDriveStatus('Drive: need re-login', 'offline');
         }
         return;
       }
+      if(!tokenResponse.access_token){
+        if(errEl) errEl.textContent = 'No access token received. Try again.';
+        return;
+      }
       accessToken = tokenResponse.access_token;
       tokenObtainedAt = Date.now();
-      gapi.client.setToken({access_token: accessToken});
+      try{
+        await initGapi();
+        gapi.client.setToken({access_token: accessToken});
+      }catch(e){
+        if(errEl) errEl.textContent = 'Google API init failed: ' + (e.message||e);
+        return;
+      }
       scheduleTokenRefresh();
-      // If already logged into app UI, just update status
       const appEl = document.getElementById('app');
       if(appEl && appEl.style.display !== 'none' && DB){
         setDriveStatus('Drive: connected');
         toast('Drive reconnected');
         return;
       }
+      if(errEl) errEl.textContent = 'Signed in — loading Drive data…';
       await afterGoogleLogin();
+    },
+    error_callback: (err)=>{
+      const errEl = document.getElementById('loginError');
+      const msg = (err && (err.message || err.type || String(err))) || 'popup error';
+      if(errEl) errEl.textContent = 'Sign-in popup issue: ' + msg + ' — allow popups for this site, then try again.';
     }
   });
   gisLoaded = true;
@@ -1294,8 +1333,10 @@ function silentRefreshToken(){
 async function afterGoogleLogin(){
   try{
     const errEl = document.getElementById('loginError');
-    if(errEl) errEl.textContent = 'Connecting…';
+    if(errEl) errEl.textContent = 'Connecting to Google Drive…';
     setDriveStatus('Drive: connecting…', 'syncing');
+    await initGapi();
+    if(accessToken) gapi.client.setToken({access_token: accessToken});
     // Get user email
     const userInfo = await gapi.client.request({path:'https://www.googleapis.com/oauth2/v2/userinfo'});
     currentUserEmail = userInfo.result.email || '';
@@ -1310,31 +1351,38 @@ async function afterGoogleLogin(){
     initApp();
     setDriveStatus('Drive: connected');
     startDrivePolling();
+    if(errEl) errEl.textContent = '';
     toast('Connected to Google Drive');
   }catch(err){
     console.error(err);
-    document.getElementById('loginError').textContent = 'Could not connect to Drive: ' + (err.message||err);
+    const errEl2 = document.getElementById('loginError');
+    if(errEl2) errEl2.textContent = 'Could not connect to Drive: ' + (err.message||err) + ' — check OAuth Client ID origins include this website URL.';
     setDriveStatus('Drive: error', 'offline');
   }
 }
 
-function requestGoogleLogin(){
+async function requestGoogleLogin(){
   const errEl = document.getElementById('loginError');
-  if(!tokenClient){
-    if(errEl) errEl.textContent = 'Google client loading… wait 1–2 seconds, then click again.';
-    // retry shortly if scripts still loading
-    setTimeout(()=>{
-      if(tokenClient){
-        if(errEl) errEl.textContent = '';
-        tokenClient.requestAccessToken({prompt: 'consent'});
-      } else if(errEl){
-        errEl.textContent = 'Google still not ready. Refresh the page (Ctrl+F5) and try again.';
-      }
-    }, 1200);
-    return;
+  try{
+    if(errEl) errEl.textContent = 'Preparing Google sign-in…';
+    // Ensure scripts ready
+    if(!window.google || !google.accounts){
+      if(errEl) errEl.textContent = 'Google script not loaded. Check internet, then Ctrl+F5.';
+      return;
+    }
+    if(!tokenClient) initGis();
+    await initGapi().catch(()=>{});
+    if(!tokenClient){
+      if(errEl) errEl.textContent = 'Google client failed. Refresh (Ctrl+F5) and try again.';
+      return;
+    }
+    if(errEl) errEl.textContent = 'Opening Google window… (allow popups if blocked)';
+    // consent forces account picker / permission UI
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  }catch(e){
+    console.error(e);
+    if(errEl) errEl.textContent = 'Sign-in error: ' + (e.message||e);
   }
-  if(errEl) errEl.textContent = 'Opening Google sign-in…';
-  tokenClient.requestAccessToken({prompt: 'consent'});
 }
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && accessToken){
@@ -1366,11 +1414,13 @@ function reconnectDrive(){
 // Override the Google button click to use our token client
 document.addEventListener('DOMContentLoaded', ()=>{
   // Wait for GIS + gapi, then wire login + auto-resume session
+  let tries = 0;
   const check = setInterval(()=>{
-    if(window.google && google.accounts && window.gapi){
+    tries++;
+    if(window.google && google.accounts && google.accounts.oauth2){
       clearInterval(check);
       initGis();
-      initGapi().catch(()=>{});
+      initGapi().catch(e=>console.warn('gapi init', e));
 
       const btn = document.querySelector('.g_id_signin');
       if(btn){
@@ -1380,9 +1430,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
           requestGoogleLogin();
         }, true);
       }
-      // manualSignInBtn is in HTML; ensure handler
       const man = document.getElementById('manualSignInBtn');
-      if(man) man.onclick = requestGoogleLogin;
+      if(man){
+        man.onclick = (e)=>{ e.preventDefault(); requestGoogleLogin(); };
+      }
 
       // Auto login if previously signed in this browser
       if(sessionStorage.getItem('nw_logged_in') === '1'){
@@ -1407,8 +1458,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
           });
         }, 500);
       }
+    } else if(tries > 40){
+      clearInterval(check);
+      const errEl = document.getElementById('loginError');
+      if(errEl && !tokenClient){
+        errEl.textContent = 'Google login script did not load. Check internet / adblock, then refresh.';
+      }
     }
-  }, 200);
+  }, 250);
 });
 
 async function ensureDriveStructure(){
