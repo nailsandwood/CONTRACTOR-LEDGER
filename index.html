@@ -58,7 +58,7 @@
   .btn-danger:hover{background:#8f2314;}
   .btn-block{width:100%;}
   .btn-sm{padding:5px 10px;font-size:.75rem;border-radius:3px;}
-  #loginError{color:var(--red-600);font-size:.82rem;margin-top:10px;min-height:1em;}
+  #loginError{color:var(--red-600);font-size:.88rem;margin-top:12px;min-height:1.4em;font-weight:600;line-height:1.4;}
   .login-note{font-size:.78rem;color:var(--ink-soft);margin-top:18px;line-height:1.5;background:var(--paper-dim);padding:12px;border-radius:4px;}
 
   #app{display:none;min-height:100vh;flex-direction:column;}
@@ -285,7 +285,8 @@
       Sign in with Google Drive
     </button>
     <p style="font-size:.75rem;color:var(--ink-soft);margin-top:8px;text-align:center;">
-      Click the green button, then Allow access to Google Drive.
+      Click the green button, then Allow access to Google Drive.<br>
+      <span id="loginOriginHint" style="font-size:.7rem;"></span>
     </p>
 
     <div id="loginError"></div>
@@ -1101,7 +1102,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.8.3-Drive';
+const APP_VERSION = '6.8.4-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1361,27 +1362,29 @@ async function afterGoogleLogin(){
   }
 }
 
-async function requestGoogleLogin(){
+function requestGoogleLogin(){
   const errEl = document.getElementById('loginError');
+  const setMsg = (t)=>{ if(errEl) errEl.textContent = t; console.log('[login]', t); };
   try{
-    if(errEl) errEl.textContent = 'Preparing Google sign-in…';
-    // Ensure scripts ready
-    if(!window.google || !google.accounts){
-      if(errEl) errEl.textContent = 'Google script not loaded. Check internet, then Ctrl+F5.';
+    setMsg('Site: ' + location.origin + ' — starting sign-in…');
+    if(!window.google || !google.accounts || !google.accounts.oauth2){
+      setMsg('Google script not loaded. Check internet / adblock, then Ctrl+F5.');
       return;
     }
-    if(!tokenClient) initGis();
-    await initGapi().catch(()=>{});
     if(!tokenClient){
-      if(errEl) errEl.textContent = 'Google client failed. Refresh (Ctrl+F5) and try again.';
+      try{ initGis(); }catch(e){ setMsg('Init GIS failed: ' + (e.message||e)); return; }
+    }
+    if(!tokenClient){
+      setMsg('Google client not ready. Wait 2 sec and click again, or Ctrl+F5.');
       return;
     }
-    if(errEl) errEl.textContent = 'Opening Google window… (allow popups if blocked)';
-    // consent forces account picker / permission UI
+    // IMPORTANT: requestAccessToken must run in the same click turn (no await before this)
+    // or Chrome blocks the popup.
+    setMsg('Google window opening… If nothing appears, allow popups for this site.');
     tokenClient.requestAccessToken({ prompt: 'consent' });
   }catch(e){
     console.error(e);
-    if(errEl) errEl.textContent = 'Sign-in error: ' + (e.message||e);
+    setMsg('Sign-in error: ' + (e.message||e));
   }
 }
 document.addEventListener('visibilitychange', ()=>{
@@ -1413,6 +1416,9 @@ function reconnectDrive(){
 
 // Override the Google button click to use our token client
 document.addEventListener('DOMContentLoaded', ()=>{
+  const oh = document.getElementById('loginOriginHint');
+  if(oh) oh.textContent = 'This page origin: ' + location.origin;
+
   // Wait for GIS + gapi, then wire login + auto-resume session
   let tries = 0;
   const check = setInterval(()=>{
@@ -2796,6 +2802,9 @@ function clearAccountEntries(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  const oh = document.getElementById('loginOriginHint');
+  if(oh) oh.textContent = 'This page origin: ' + location.origin;
+
   const tbody = document.getElementById('entriesTbody');
 
   tbody.addEventListener('input', e=>{
