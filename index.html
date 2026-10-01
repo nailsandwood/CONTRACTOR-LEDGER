@@ -1718,7 +1718,7 @@ function saveDB(immediate){
   saveTimer = setTimeout(()=> persistDBNow(), 800);
 }
 
-async async function forceSyncFromDrive(){
+async function forceSyncFromDrive(){
   if(!confirm('Reload the latest data from Google Drive? Unsaved local changes on this PC may be lost.')) return;
   localDirty = false;
   await loadDBFromDrive();
