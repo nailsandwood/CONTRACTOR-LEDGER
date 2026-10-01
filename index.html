@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -252,6 +252,8 @@
     .modal.modal-wide{max-width:100%;margin:8px;}
   }
 
+/* Prefer day-first where browser respects page locale */
+  input[type="date"]{min-width:9.5rem;}
 </style>
 </head>
 <body>
@@ -1092,7 +1094,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.7.3-Drive';
+const APP_VERSION = '6.8.1-Drive';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1205,6 +1207,9 @@ function handleGoogleCredential(response){
 }
 
 let tokenClient = null;
+let driveFileModifiedTime = null; // last known Drive file modifiedTime
+let localDirty = false;           // local unsaved / pending changes since last pull
+let drivePollTimer = null;
 
 function initGis(){
   tokenClient = google.accounts.oauth2.initTokenClient({
@@ -1281,6 +1286,8 @@ function silentRefreshToken(){
 
 async function afterGoogleLogin(){
   try{
+    const errEl = document.getElementById('loginError');
+    if(errEl) errEl.textContent = 'Connecting…';
     setDriveStatus('Drive: connecting…', 'syncing');
     // Get user email
     const userInfo = await gapi.client.request({path:'https://www.googleapis.com/oauth2/v2/userinfo'});
@@ -1295,6 +1302,7 @@ async function afterGoogleLogin(){
     sessionStorage.setItem('nw_logged_in','1');
     initApp();
     setDriveStatus('Drive: connected');
+    startDrivePolling();
     toast('Connected to Google Drive');
   }catch(err){
     console.error(err);
@@ -1311,17 +1319,29 @@ function requestGoogleLogin(){
   tokenClient.requestAccessToken({prompt: 'consent'});
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible' && accessToken && tokenObtainedAt){
-    const ageMin = (Date.now() - tokenObtainedAt) / 60000;
-    if(ageMin > 50) silentRefreshToken();
+  if(document.visibilityState === 'visible' && accessToken){
+    if(tokenObtainedAt){
+      const ageMin = (Date.now() - tokenObtainedAt) / 60000;
+      if(ageMin > 45) silentRefreshToken();
+    }
+    // Multi-PC: pick up changes saved from another computer
+    pullDriveIfNewer({toast:true});
   }
+});
+window.addEventListener('focus', ()=>{
+  if(accessToken && driveFileId) pullDriveIfNewer({toast:false});
 });
 
 function reconnectDrive(){
   if(!tokenClient){ toast('Google client not ready.'); return; }
-  toast('Reconnecting to Google Drive…');
-  silentRefreshToken().then(ok=>{
-    if(!ok) tokenClient.requestAccessToken({prompt: 'consent'});
+  toast('Checking Google Drive…');
+  silentRefreshToken().then(async ok=>{
+    if(!ok){
+      tokenClient.requestAccessToken({prompt: 'consent'});
+      return;
+    }
+    await pullDriveIfNewer({toast:true, force:false});
+    setDriveStatus('Drive: connected');
   });
 }
 
@@ -1358,13 +1378,23 @@ document.addEventListener('DOMContentLoaded', ()=>{
         const errEl = document.getElementById('loginError');
         if(errEl) errEl.textContent = 'Reconnecting to Google Drive…';
         setTimeout(()=>{
-          silentRefreshToken().then(ok=>{
-            if(!ok){
-              // try once with consent if silent failed
-              if(errEl) errEl.textContent = 'Please sign in again.';
+          silentRefreshToken().then(async ok=>{
+            if(ok){
+              try{
+                if(errEl) errEl.textContent = 'Loading your data…';
+                await afterGoogleLogin();
+                if(errEl) errEl.textContent = '';
+              }catch(e){
+                console.error(e);
+                if(errEl) errEl.textContent = 'Reconnect failed. Please sign in again.';
+                sessionStorage.removeItem('nw_logged_in');
+              }
+            } else {
+              if(errEl) errEl.textContent = 'Session expired. Please sign in again.';
+              sessionStorage.removeItem('nw_logged_in');
             }
           });
-        }, 400);
+        }, 500);
       }
     }
   }, 200);
@@ -1431,18 +1461,65 @@ async function ensureDriveStructure(){
 async function loadDBFromDrive(){
   if(!driveFileId) throw new Error('No Drive file');
   setDriveStatus('Drive: loading…', 'syncing');
+  try{
+    const meta = await gapi.client.drive.files.get({
+      fileId: driveFileId,
+      fields: 'id,modifiedTime'
+    });
+    if(meta.result && meta.result.modifiedTime) driveFileModifiedTime = meta.result.modifiedTime;
+  }catch(e){}
   const res = await gapi.client.drive.files.get({
     fileId: driveFileId,
     alt: 'media'
   });
-  // res.body is the raw text when alt=media
   try{
     DB = typeof res.body === 'string' ? JSON.parse(res.body) : res.result;
   }catch(e){
     DB = defaultDB();
   }
   applyMigrations();
+  localDirty = false;
   setDriveStatus('Drive: connected');
+}
+
+/** Check if Drive has newer data; if so, reload (unless local dirty). */
+async function pullDriveIfNewer(opts){
+  opts = opts || {};
+  if(!driveFileId || !accessToken || isSyncing) return false;
+  try{
+    const meta = await gapi.client.drive.files.get({
+      fileId: driveFileId,
+      fields: 'id,modifiedTime'
+    });
+    const remote = meta.result && meta.result.modifiedTime;
+    if(!remote) return false;
+    if(driveFileModifiedTime && remote <= driveFileModifiedTime) return false;
+    // remote is newer
+    if(localDirty && !opts.force){
+      setDriveStatus('Drive: newer on another PC', 'syncing');
+      if(opts.toast) toast('Newer data on Drive. Click Drive status or Sync to load.');
+      return false;
+    }
+    await loadDBFromDrive();
+    // refresh visible UI
+    try{
+      const active = document.querySelector('nav.tabs button.active');
+      const tab = active ? active.dataset.tab : 'summary';
+      if(typeof showTab === 'function') showTab(tab);
+    }catch(e){}
+    if(opts.toast) toast('Updated from Google Drive');
+    return true;
+  }catch(e){
+    console.warn('pullDriveIfNewer', e);
+    return false;
+  }
+}
+
+function startDrivePolling(){
+  if(drivePollTimer) clearInterval(drivePollTimer);
+  drivePollTimer = setInterval(()=>{
+    if(document.visibilityState === 'visible') pullDriveIfNewer({toast:false});
+  }, 5000);
 }
 
 function refreshGoogleTokenSilent(){
@@ -1483,6 +1560,11 @@ async function persistDBNow(){
     }
     if(!res.ok) throw new Error('HTTP ' + res.status);
     updateSavedIndicator(true);
+    localDirty = false;
+    try{
+      const meta = await gapi.client.drive.files.get({ fileId: driveFileId, fields: 'modifiedTime' });
+      if(meta.result && meta.result.modifiedTime) driveFileModifiedTime = meta.result.modifiedTime;
+    }catch(e){}
     setDriveStatus('Drive: connected');
     isSyncing = false;
     return true;
@@ -1553,6 +1635,7 @@ async function uploadBlobToDrive(filename, blob, mimeType){
 }
 
 function saveDB(immediate){
+  localDirty = true;
   if(immediate){
     clearTimeout(saveTimer);
     return persistDBNow();
@@ -1561,8 +1644,9 @@ function saveDB(immediate){
   saveTimer = setTimeout(()=> persistDBNow(), 800);
 }
 
-async function forceSyncFromDrive(){
-  if(!confirm('Reload the latest data from Google Drive? Any unsaved local changes will be lost.')) return;
+async async function forceSyncFromDrive(){
+  if(!confirm('Reload the latest data from Google Drive? Unsaved local changes on this PC may be lost.')) return;
+  localDirty = false;
   await loadDBFromDrive();
   currentAccountId = null;
   showTab('summary');
@@ -1578,6 +1662,14 @@ window.addEventListener('beforeunload', ()=>{
 });
 
 function fmtMoney(n){ n=Number(n)||0; return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+/** Display ISO YYYY-MM-DD as DD/MM/YYYY */
+function fmtDate(iso){
+  if(!iso) return '';
+  const s = String(iso).slice(0,10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m) return m[3] + '/' + m[2] + '/' + m[1];
+  return s;
+}
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -2430,7 +2522,7 @@ function openMemoLookup(memoFilter){
     tbody.innerHTML = matches.map(({e,idx})=>`
       <tr tabindex="0" style="cursor:pointer;" onclick="if(!event.target.closest('button')) jumpToEntryFromLookup(${idx})" onkeydown="if(event.key==='Enter' && !event.target.closest('button')) jumpToEntryFromLookup(${idx})">
         <td class="mono">${idx+1}</td>
-        <td class="mono">${escapeHtml(e.date||'')}</td>
+        <td class="mono">${fmtDate(e.date)}</td>
         <td class="mono">${escapeHtml(e.memo||'')}</td>
         <td class="mono">${fmtMoney(e.amount)}</td>
         <td>${escapeHtml(e.inCharge||'')}</td>
@@ -3977,7 +4069,7 @@ function renderSavings(){
     const amt = Number(t.amount)||0;
     if(t.type==='deposit') allDep += amt;
     if(t.type==='withdraw') allWd += amt;
-    const m = t.method || 'Other';
+    const m = normalizeSavMethod(t.method);
     if(meth[m] !== undefined) meth[m] += amt; else meth.Other += amt;
     if((t.date||'').startsWith(ym)){
       if(t.type==='deposit') monthIn += amt;
@@ -4023,7 +4115,7 @@ function renderSavings(){
       return `<tr>
         <td class="no-print"><input type="checkbox" ${ck} onchange="savToggleOne('${t.uid}',this.checked)"></td>
         <td class="mono">${idx+1}</td>
-        <td class="mono">${escapeHtml(t.date||'')}</td>
+        <td class="mono">${fmtDate(t.date)}</td>
         <td class="mono">${idCell}</td>
         <td>${nameAddr}</td>
         <td>${savTypePill(t.type)}</td>
@@ -4094,7 +4186,7 @@ function renderSavingsBalances(){
       <td class="mono">${fmtMoney(r.deposited + r.helpIn)}</td>
       <td class="mono">${fmtMoney(r.withdrawn + r.helpOut)}</td>
       <td class="mono" style="font-weight:700;color:${r.balance>=0?'#0f8a34':'#b3311c'}">${fmtMoney(r.balance)}</td>
-      <td class="mono">${escapeHtml(r.lastDate||'—')}</td>
+      <td class="mono">${r.lastDate ? fmtDate(r.lastDate) : '—'}</td>
       <td class="no-print"><button class="icon-btn" onclick="openSavStatement('${r.c.id}')">Open</button></td>
     </tr>`;
     }).join('');
@@ -4158,7 +4250,7 @@ function printSavBalances(){
     <td>${escapeHtml(r.c.address||'')}</td><td>${escapeHtml(r.c.nid||'')}</td>
     <td>${r.c.ranking||'—'}</td>
     <td>${fmtMoney(r.deposited+r.helpIn)}</td><td>${fmtMoney(r.withdrawn+r.helpOut)}</td>
-    <td>${fmtMoney(r.balance)}</td><td>${escapeHtml(r.lastDate||'')}</td>
+    <td>${fmtMoney(r.balance)}</td><td>${r.lastDate?fmtDate(r.lastDate):''}</td>
   </tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Welfare Fund</h2></div>
     <div class="pr-meta" style="font-size:12px;">Balances report · Printed: ${new Date().toLocaleString()}<br>
@@ -4266,7 +4358,7 @@ function renderSavStatementBody(){
   window.__lastSavStmt = { contactId, from, to, data };
   const rows = data.lines.map((l,i)=>`<tr>
     <td>${i+1}</td>
-    <td class="mono">${escapeHtml(l.date||'')}</td>
+    <td class="mono">${fmtDate(l.date)}</td>
     <td>${escapeHtml(l.type)}</td>
     <td>${escapeHtml(normalizeSavMethod(l.method))}</td>
     <td class="mono">${l.inn?fmtMoney(l.inn):'—'}</td>
@@ -4310,7 +4402,7 @@ function printSavStatement(){
   const data = savStatementLines(contactId, from||null, to||null);
   const rows = data.lines.map((l,i)=>`<tr>
     <td>${i+1}</td>
-    <td>${escapeHtml(l.date||'')}</td><td>${escapeHtml(l.type)}</td>
+    <td>${fmtDate(l.date)}</td><td>${escapeHtml(l.type)}</td>
     <td>${escapeHtml(normalizeSavMethod(l.method))}</td><td>${l.inn?fmtMoney(l.inn):'—'}</td>
     <td>${l.out?fmtMoney(l.out):'—'}</td><td>${fmtMoney(l.bal)}</td><td>${escapeHtml(l.note||'')}</td>
   </tr>`).join('');
@@ -4354,7 +4446,7 @@ function printSavingsHistory(){
     let who = (c?c.name:'') + ' ('+t.contactId+')';
     if(c && c.address) who += ' · ' + c.address;
     if(t.type==='help') who += ' → ' + t.toContactId;
-    return `<tr><td>${i+1}</td><td>${escapeHtml(t.date||'')}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(savTypeLabel(t.type))}</td>
+    return `<tr><td>${i+1}</td><td>${fmtDate(t.date)}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(savTypeLabel(t.type))}</td>
       <td>${escapeHtml(normalizeSavMethod(t.method))}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(t.note||'')}</td></tr>`;
   }).join('');
   const fromF = (document.getElementById('savFromFilter')||{}).value || '';
@@ -4443,7 +4535,7 @@ function printAccountReport(){
   const c = DB.contacts.find(x=>x.id===currentAccountId);
   const acc = DB.accounts[currentAccountId];
   if(!c || !acc){ toast('Open a contractor account first.'); return; }
-  const rows = acc.entries.map((e,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(e.date||'')}</td>
+  const rows = acc.entries.map((e,i)=>`<tr><td>${i+1}</td><td>${fmtDate(e.date)}</td>
     <td>${escapeHtml(e.memo||'')}</td><td>${fmtMoney(e.amount)}</td><td>${escapeHtml(e.inCharge||'')}</td>
     <td>${escapeHtml(e.remark||'')}</td></tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Account — ${escapeHtml(c.id)}</h2></div>
@@ -4472,7 +4564,7 @@ function printFullBackupPDF(){
 
   list.forEach(c=>{
     const acc = DB.accounts[c.id] || {entries:[], grandTotal:0};
-    const rows = acc.entries.map((e,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(e.date||'')}</td>
+    const rows = acc.entries.map((e,i)=>`<tr><td>${i+1}</td><td>${fmtDate(e.date)}</td>
       <td>${escapeHtml(e.memo||'')}</td><td>${fmtMoney(e.amount)}</td><td>${escapeHtml(e.inCharge||'')}</td>
       <td>${escapeHtml(e.remark||'')}</td></tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:#888;">No entries yet</td></tr>`;
     html += `<div style="page-break-before:always;">
@@ -4539,7 +4631,7 @@ function renderGlobalSearch(){
     if(acc){
       acc.entries.forEach((e,idx)=>{
         if((e.memo||'').toLowerCase().includes(q)){
-          items.push({type:'entry', id:c.id, idx, title:`Memo ${e.memo} — ${c.name}`, sub:`${c.id} · ${e.date||'no date'} · ${fmtMoney(e.amount)}`});
+          items.push({type:'entry', id:c.id, idx, title:`Memo ${e.memo} — ${c.name}`, sub:`${c.id} · ${fmtDate(e.date)||'no date'} · ${fmtMoney(e.amount)}`});
         }
       });
     }
