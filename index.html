@@ -289,6 +289,11 @@
       <span id="loginOriginHint" style="font-size:.7rem;"></span>
     </p>
 
+    <button type="button" id="offlineBtn" class="btn btn-ghost" style="margin-top:10px;width:100%;padding:10px 16px;" onclick="startOfflineMode()">
+      Work Offline (use data saved on this PC)
+    </button>
+    <p id="offlineHint" style="font-size:.7rem;color:var(--ink-soft);margin-top:6px;text-align:center;"></p>
+
     <div id="loginError"></div>
     
     <div class="login-note">
@@ -875,6 +880,12 @@
           <button class="btn btn-ghost" style="margin-top:8px;" onclick="printFullBackupPDF()">🖨 Save Backup as PDF</button>
         </div>
         <div class="card">
+          <h3>Safety copies on this PC</h3>
+          <p style="font-size:.85rem;color:var(--ink-soft);">The software keeps the last 10 copies of your data inside this browser while you work. If something ever goes wrong, download one and use "Restore from Computer File".</p>
+          <div id="snapshotList" style="font-size:.82rem;max-height:180px;overflow:auto;"></div>
+          <button class="btn btn-ghost" style="margin-top:8px;" onclick="takeLocalSnapshot(true).then(renderSnapshotList)">+ Make a safety copy now</button>
+        </div>
+        <div class="card">
           <h3>Restore from Computer File</h3>
           <p style="font-size:.85rem;color:var(--ink-soft);">Choose a backup file to restore. This replaces all current data and uploads it to Drive.</p>
           <input type="file" id="restoreFile" accept="application/json" class="input-sm" style="margin-bottom:10px;"><br>
@@ -1102,7 +1113,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.8.4-Drive';
+const APP_VERSION = '6.9.0-Drive-Offline';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1119,6 +1130,217 @@ let saveTimer = null;
 let isSyncing = false;
 let tokenRefreshTimer = null;
 let tokenObtainedAt = 0;
+
+/** Today's date as YYYY-MM-DD in THIS computer's local time (toISOString() uses UTC and is a day behind after midnight in Bangladesh) */
+function localISODate(d){
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+/* ================= OFFLINE SUPPORT ================= */
+let offlineMode = false;
+let _cacheTimer = null;
+let _cacheBlocked = false; // true after a clean logout so late writes cannot recreate the copy
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB){ rej(new Error('no idb')); return; }
+    const r = indexedDB.open('nw_ledger', 1);
+    r.onupgradeneeded = ()=> r.result.createObjectStore('kv');
+    r.onsuccess = ()=> res(r.result);
+    r.onerror = ()=> rej(r.error);
+  });
+}
+async function localCacheGet(){
+  try{
+    const db = await idbOpen();
+    return await new Promise((res,rej)=>{
+      const r = db.transaction('kv').objectStore('kv').get('state');
+      r.onsuccess = ()=> res(r.result || null);
+      r.onerror = ()=> rej(r.error);
+    });
+  }catch(e){
+    try{ const t = localStorage.getItem('nw_offline_state'); return t ? JSON.parse(t) : null; }catch(_){ return null; }
+  }
+}
+async function localCacheSetNow(){
+  if(!DB || _cacheBlocked) return;
+  const state = { data: DB, savedAt: Date.now(), dirty: !!localDirty, baseTime: driveFileModifiedTime || null, email: currentUserEmail || '' };
+  try{
+    const db = await idbOpen();
+    await new Promise((res,rej)=>{
+      const tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(state,'state');
+      tx.oncomplete = ()=> res();
+      tx.onerror = ()=> rej(tx.error);
+    });
+  }catch(e){
+    try{ localStorage.setItem('nw_offline_state', JSON.stringify(state)); }catch(_){ console.warn('local cache failed', _); }
+  }
+}
+/** Keep a copy of the data on this PC so the software still works without internet */
+function cacheLocal(immediate){
+  clearTimeout(_cacheTimer);
+  if(immediate) return localCacheSetNow();
+  _cacheTimer = setTimeout(localCacheSetNow, 300);
+}
+function downloadJSONFile(obj, name){
+  const blob = new Blob([JSON.stringify(obj)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function startOfflineMode(){
+  const errEl = document.getElementById('loginError');
+  const c = await localCacheGet();
+  if(!c || !c.data){
+    if(errEl) errEl.textContent = 'No saved data on this PC yet. Sign in with Google Drive once (with internet) first.';
+    return;
+  }
+  DB = c.data;
+  applyMigrations();
+  localDirty = !!c.dirty;
+  driveFileModifiedTime = c.baseTime || null;
+  currentUserEmail = c.email || '';
+  offlineMode = true;
+  _cacheBlocked = false;
+  document.getElementById('userEmailLabel').textContent = currentUserEmail ? currentUserEmail + ' (offline)' : 'Offline';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initApp();
+  setDriveStatus('Offline mode — tap to connect', 'offline');
+  updateSavedIndicator(false, {offline:true});
+  toast('Offline mode: working with data saved on this PC (' + new Date(c.savedAt).toLocaleString() + ')');
+}
+/** Load Google sign-in scripts on demand (needed when the page was opened without internet) */
+async function ensureGoogleScripts(){
+  const load = (src)=> new Promise((res,rej)=>{
+    const sc = document.createElement('script');
+    sc.src = src; sc.async = true;
+    sc.onload = ()=> res();
+    sc.onerror = ()=> rej(new Error('Could not load ' + src));
+    document.head.appendChild(sc);
+  });
+  if(!window.google || !google.accounts || !google.accounts.oauth2) await load('https://accounts.google.com/gsi/client');
+  if(!window.gapi) await load('https://apis.google.com/js/api.js');
+  if(!tokenClient) initGis();
+  if(!gapiLoaded) gapiReadyPromise = null;
+  initGapi().catch(e=>console.warn('gapi init', e));
+}
+/* ---------- Auto reconnect, unsynced banner, local safety snapshots ---------- */
+let _autoTrying = false, _lastAutoTry = 0;
+let driveSaveFailing = false;
+/** After internet returns, try to sign in to Drive again so offline work uploads by itself.
+ *  Silent first (works if Google session is still active); a tap anywhere gives it permission to open the popup. */
+async function tryAutoReconnect(fromGesture){
+  if(!DB || !navigator.onLine || _autoTrying) return;
+  if(!(offlineMode || !accessToken)) return;
+  if(!fromGesture && Date.now() - _lastAutoTry < 25000) return;
+  _autoTrying = true; _lastAutoTry = Date.now();
+  try{
+    await ensureGoogleScripts();
+    if(tokenClient){
+      tokenClient.requestAccessToken({ prompt: fromGesture ? '' : '' });
+    }
+  }catch(e){ console.warn('auto reconnect', e); }
+  setTimeout(()=>{ _autoTrying = false; }, 8000);
+}
+// First tap/click after being offline = user gesture -> allowed to open Google's small window if needed
+document.addEventListener('click', ()=>{
+  if(DB && navigator.onLine && (offlineMode || !accessToken)) tryAutoReconnect(true);
+}, true);
+setInterval(()=>{
+  if(DB && navigator.onLine && (offlineMode || !accessToken)) tryAutoReconnect(false);
+}, 30000);
+
+/** Banner that stays visible while changes exist only on this PC */
+function updateSyncBanner(){
+  let el = document.getElementById('syncBanner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'syncBanner';
+    el.className = 'no-print';
+    el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:150;background:#8a6d1f;color:#fff;padding:8px 14px;border-radius:8px;font-size:.8rem;box-shadow:0 4px 14px rgba(0,0,0,.35);display:none;cursor:pointer;max-width:92vw;text-align:center;';
+    el.onclick = ()=>{ if(navigator.onLine) tryAutoReconnect(true); else toast('No internet yet. Your data is safe on this PC.'); };
+    document.body.appendChild(el);
+  }
+  const app = document.getElementById('app');
+  const visible = !!DB && app && app.style.display !== 'none' && localDirty && (offlineMode || !accessToken || !driveFileId || driveSaveFailing || !navigator.onLine);
+  if(!visible){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = navigator.onLine
+    ? '⚠ Changes are only on this PC. Tap here to sync with Google Drive'
+    : '💾 Offline — changes are safe on this PC and will upload when internet returns';
+}
+setInterval(updateSyncBanner, 2000);
+
+/** Rolling safety copies on this PC (last 10, at most one every 10 minutes while edits happen) */
+let _lastSnapAt = 0;
+async function takeLocalSnapshot(force){
+  if(!DB || _cacheBlocked) return;
+  if(!force && Date.now() - _lastSnapAt < 10*60*1000) return;
+  _lastSnapAt = Date.now();
+  try{
+    const db = await idbOpen();
+    await new Promise((res,rej)=>{
+      const tx = db.transaction('kv','readwrite');
+      const st = tx.objectStore('kv');
+      const key = 'snap:' + String(Date.now()).padStart(15,'0');
+      st.put({ data: DB, savedAt: Date.now() }, key);
+      const rq = st.getAllKeys();
+      rq.onsuccess = ()=>{
+        const keys = (rq.result||[]).filter(k=>String(k).startsWith('snap:')).sort();
+        while(keys.length > 10) st.delete(keys.shift());
+      };
+      tx.oncomplete = ()=> res(); tx.onerror = ()=> rej(tx.error);
+    });
+  }catch(e){ console.warn('snapshot failed', e); }
+}
+async function listLocalSnapshots(){
+  try{
+    const db = await idbOpen();
+    return await new Promise((res,rej)=>{
+      const out = [];
+      const rq = db.transaction('kv').objectStore('kv').openCursor();
+      rq.onsuccess = ()=>{
+        const c = rq.result;
+        if(c){ if(String(c.key).startsWith('snap:')) out.push({key:c.key, savedAt:c.value.savedAt, data:c.value.data}); c.continue(); }
+        else res(out.sort((a,b)=>b.savedAt-a.savedAt));
+      };
+      rq.onerror = ()=> rej(rq.error);
+    });
+  }catch(e){ return []; }
+}
+async function downloadLocalSnapshot(key){
+  const all = await listLocalSnapshots();
+  const sn = all.find(x=>x.key===key);
+  if(!sn){ toast('Snapshot not found'); return; }
+  downloadJSONFile(sn.data, 'pc-safety-copy-' + new Date(sn.savedAt).toISOString().slice(0,16).replace(/[:T]/g,'-') + '.json');
+}
+async function renderSnapshotList(){
+  const box = document.getElementById('snapshotList');
+  if(!box) return;
+  const list = await listLocalSnapshots();
+  box.innerHTML = list.length
+    ? list.map(x=>`<div class="kv"><span>${new Date(x.savedAt).toLocaleString()}</span><button class="btn btn-ghost btn-sm" onclick="downloadLocalSnapshot('${x.key}')">Download</button></div>`).join('')
+    : '<div class="kv"><span>No safety copies yet. They are created automatically while you work.</span></div>';
+}
+// snapshot while working, and once right before any offline copy is replaced by Drive data
+setInterval(()=>{ if(localDirty) takeLocalSnapshot(false); }, 60*1000);
+
+
+window.addEventListener('online', ()=>{
+  ensureGoogleScripts().then(()=>tryAutoReconnect(false)).catch(()=>{});
+  if(!DB) return;
+  if(offlineMode || !accessToken){
+    toast('Internet is back. Tap the Drive status (top) to connect and sync.');
+  } else if(localDirty){
+    persistDBNow({silent:true});
+  }
+});
+window.addEventListener('offline', ()=>{
+  if(DB) setDriveStatus('Offline — working on this PC', 'offline');
+});
 
 function defaultDB(){
   return {
@@ -1184,7 +1406,12 @@ function setDriveStatus(text, cls){
 function updateSavedIndicator(ok, err){
   const el = document.getElementById('savedIndicator');
   if(!el) return;
-  if(ok===false){
+  if(ok===false && err && err.offline){
+    el.textContent = '💾 Saved on this PC — not synced to Drive yet';
+    el.style.background = 'var(--yellow-100)';
+    el.style.color = 'var(--yellow-700)';
+    el.title = 'Data is kept safely on this computer and will upload to Google Drive when you connect.';
+  } else if(ok===false){
     el.textContent = '⚠ Save FAILED';
     el.style.background = 'var(--red-100)';
     el.style.color = 'var(--red-600)';
@@ -1273,9 +1500,10 @@ function initGis(){
       }
       scheduleTokenRefresh();
       const appEl = document.getElementById('app');
-      if(appEl && appEl.style.display !== 'none' && DB){
+      if(appEl && appEl.style.display !== 'none' && DB && !offlineMode){
         setDriveStatus('Drive: connected');
         toast('Drive reconnected');
+        if(localDirty) persistDBNow();
         return;
       }
       if(errEl) errEl.textContent = 'Signed in — loading Drive data…';
@@ -1331,7 +1559,14 @@ function silentRefreshToken(){
   });
 }
 
+let _afterLoginRunning = false;
 async function afterGoogleLogin(){
+  // Guard: a double click / double token must not run the Drive load + offline reconcile twice
+  if(_afterLoginRunning) return;
+  _afterLoginRunning = true;
+  try{ await _afterGoogleLoginInner(); } finally { _afterLoginRunning = false; }
+}
+async function _afterGoogleLoginInner(){
   try{
     const errEl = document.getElementById('loginError');
     if(errEl) errEl.textContent = 'Connecting to Google Drive…';
@@ -1345,7 +1580,30 @@ async function afterGoogleLogin(){
 
     // Find or create folder + file
     await ensureDriveStructure();
-    await loadDBFromDrive();
+    // Reconcile offline changes made on this PC with Drive
+    let usedLocal = false;
+    try{
+      const cache = await localCacheGet();
+      if(cache && cache.dirty && cache.data && (!cache.email || cache.email === currentUserEmail)){
+        const remote = await getRemoteModifiedTime();
+        if(!remote || !cache.baseTime || remote === cache.baseTime){
+          usedLocal = true; // nobody else changed Drive -> safe to upload offline work
+        } else {
+          downloadJSONFile(cache.data, 'offline-backup-' + new Date().toISOString().slice(0,16).replace(/[:T]/g,'-') + '.json');
+          const keepDrive = confirm('This PC has offline changes AND Google Drive was changed from another PC.\n\nA backup of this PC\'s offline data was just downloaded.\n\nOK = use the Google Drive data\nCancel = upload this PC\'s offline data to Drive (overwrites Drive)');
+          if(!keepDrive){ usedLocal = true; }
+        }
+        if(usedLocal){
+          DB = cache.data;
+          applyMigrations();
+          driveFileModifiedTime = remote || null;
+          localDirty = true;
+        }
+      }
+    }catch(e){ console.warn('offline reconcile', e); usedLocal = false; }
+    if(!usedLocal) await loadDBFromDrive();
+    offlineMode = false;
+    _cacheBlocked = false;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     sessionStorage.setItem('nw_logged_in','1');
@@ -1353,7 +1611,8 @@ async function afterGoogleLogin(){
     setDriveStatus('Drive: connected');
     startDrivePolling();
     if(errEl) errEl.textContent = '';
-    toast('Connected to Google Drive');
+    if(usedLocal){ await persistDBNow(); toast('Offline changes uploaded to Google Drive'); }
+    else toast('Connected to Google Drive');
   }catch(err){
     console.error(err);
     const errEl2 = document.getElementById('loginError');
@@ -1368,7 +1627,10 @@ function requestGoogleLogin(){
   try{
     setMsg('Site: ' + location.origin + ' — starting sign-in…');
     if(!window.google || !google.accounts || !google.accounts.oauth2){
-      setMsg('Google script not loaded. Check internet / adblock, then Ctrl+F5.');
+      setMsg('Loading Google sign-in…');
+      ensureGoogleScripts()
+        .then(()=> setMsg('Google sign-in ready — click the green button again.'))
+        .catch(()=> setMsg('Google script not loaded. Check internet / adblock, then Ctrl+F5.'));
       return;
     }
     if(!tokenClient){
@@ -1402,6 +1664,14 @@ window.addEventListener('focus', ()=>{
 });
 
 function reconnectDrive(){
+  if(!navigator.onLine){ toast('No internet. Working offline on this PC.'); return; }
+  if(offlineMode || !accessToken){
+    if(!window.google || !tokenClient){
+      ensureGoogleScripts().then(()=>toast('Google sign-in ready. Tap the Drive status again.')).catch(()=>toast('Could not load Google sign-in. Check internet.'));
+      return;
+    }
+    requestGoogleLogin(); return;
+  }
   if(!tokenClient){ toast('Google client not ready.'); return; }
   toast('Checking Google Drive…');
   silentRefreshToken().then(async ok=>{
@@ -1418,6 +1688,19 @@ function reconnectDrive(){
 document.addEventListener('DOMContentLoaded', ()=>{
   const oh = document.getElementById('loginOriginHint');
   if(oh) oh.textContent = 'This page origin: ' + location.origin;
+  localCacheGet().then(c=>{
+    const h = document.getElementById('offlineHint');
+    if(!h) return;
+    h.textContent = (c && c.data) ? ('Offline data on this PC: ' + new Date(c.savedAt).toLocaleString() + (c.dirty ? ' (has changes not yet on Drive)' : ''))
+                                  : 'Offline data will be available after your first sign-in.';
+    if(!navigator.onLine){
+      const e = document.getElementById('loginError');
+      if(e) e.textContent = 'No internet — tap "Work Offline" to continue.';
+    }
+  });
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw', e));
+  }
 
   // Wait for GIS + gapi, then wire login + auto-resume session
   let tries = 0;
@@ -1555,8 +1838,12 @@ async function getRemoteModifiedTime(){
   return j.modifiedTime || null;
 }
 
-async function loadDBFromDrive(){
+async function loadDBFromDrive(opts){
+  opts = opts || {};
   if(!driveFileId) throw new Error('No Drive file');
+  // never replace unsynced local work without keeping a safety copy first
+  if(DB && localDirty) await takeLocalSnapshot(true);
+  const verAtStart = dirtyVersion;
   setDriveStatus('Drive: loading…', 'syncing');
   let remoteTime = null;
   try{ remoteTime = await getRemoteModifiedTime(); }catch(e){}
@@ -1564,17 +1851,26 @@ async function loadDBFromDrive(){
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
   // Never replace data with an empty DB if the file cannot be read
-  DB = JSON.parse(text);
+  const parsed = JSON.parse(text);
+  // Background refresh only: if the user typed something while this was downloading, keep their edit
+  if(opts.onlyIfClean && (localDirty || dirtyVersion !== verAtStart)){
+    setDriveStatus('Drive: newer on another PC', 'syncing');
+    return false;
+  }
+  DB = parsed;
   if(remoteTime) driveFileModifiedTime = remoteTime;
   applyMigrations();
   localDirty = false;
   setDriveStatus('Drive: connected');
+  cacheLocal(true);
+  return true;
 }
 
 /** Check if Drive has newer data; if so, reload (unless local dirty). */
 async function pullDriveIfNewer(opts){
   opts = opts || {};
   if(!driveFileId || !accessToken || isSyncing) return false;
+  if(!navigator.onLine){ setDriveStatus('Offline — working on this PC', 'offline'); return false; }
   try{
     const remote = await getRemoteModifiedTime();
     if(!remote) return false;
@@ -1585,7 +1881,8 @@ async function pullDriveIfNewer(opts){
       if(opts.toast) toast('Newer data on Drive. Click Drive status or Sync to load.');
       return false;
     }
-    await loadDBFromDrive();
+    const applied = await loadDBFromDrive({onlyIfClean: !opts.force});
+    if(!applied) return false;
     // refresh visible UI
     try{
       const active = document.querySelector('nav.tabs button.active');
@@ -1615,13 +1912,15 @@ function refreshGoogleTokenSilent(){
 async function persistDBNow(opts){
   opts = opts || {};
   if(!driveFileId || !accessToken){
-    updateSavedIndicator(false, new Error('Not connected to Drive'));
+    cacheLocal(true);
+    updateSavedIndicator(false, {offline:true});
     return false;
   }
   if(isSyncing) return false;
   // Nothing changed on this PC -> do NOT overwrite Drive (it may hold newer data from another PC)
   if(!localDirty) return true;
   isSyncing = true;
+  const myVer = dirtyVersion;
   setDriveStatus('Drive: saving…', 'syncing');
   try{
     // Conflict check: did another PC save after we last synced?
@@ -1669,18 +1968,24 @@ async function persistDBNow(opts){
     }
     if(!res.ok) throw new Error('HTTP ' + res.status);
     updateSavedIndicator(true);
-    localDirty = false;
+    // Only clear the dirty flag if nothing was edited while this upload was running
+    if(dirtyVersion === myVer) localDirty = false;
     try{
       const t = await getRemoteModifiedTime();
       if(t) driveFileModifiedTime = t;
     }catch(e){}
     setDriveStatus('Drive: connected');
     isSyncing = false;
+    driveSaveFailing = false;
+    cacheLocal(true);
+    if(localDirty) setTimeout(()=>persistDBNow(opts), 300); // edits arrived during upload -> save them too
     return true;
   }catch(err){
     console.error('Drive save failed', err);
-    updateSavedIndicator(false, err);
-    setDriveStatus('Drive: save failed — tap status to re-login', 'offline');
+    driveSaveFailing = true;
+    cacheLocal(true);
+    updateSavedIndicator(false, {offline:true});
+    setDriveStatus(navigator.onLine ? 'Drive: not synced — tap status to re-login' : 'Offline — working on this PC', 'offline');
     isSyncing = false;
     return false;
   }
@@ -1743,8 +2048,11 @@ async function uploadBlobToDrive(filename, blob, mimeType){
   }
 }
 
+let dirtyVersion = 0;
 function saveDB(immediate){
   localDirty = true;
+  dirtyVersion++;
+  cacheLocal();
   if(immediate){
     clearTimeout(saveTimer);
     return persistDBNow();
@@ -1790,16 +2098,37 @@ function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;
 /* =========================================================
    AUTH / LOGOUT
    ========================================================= */
-function doLogout(){
-  saveDB(true);
+async function clearLocalCache(){
+  _cacheBlocked = true;
+  clearTimeout(_cacheTimer);
+  await new Promise(r=>setTimeout(r,150)); // let any write already in flight finish, then delete
+  try{
+    const db = await idbOpen();
+    await new Promise((res,rej)=>{
+      const tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').delete('state');
+      tx.oncomplete = ()=> res(); tx.onerror = ()=> rej(tx.error);
+    });
+  }catch(e){}
+  try{ localStorage.removeItem('nw_offline_state'); }catch(e){}
+}
+async function doLogout(){
+  // Upload anything unsaved first (needs the token), then sign out
+  try{ if(DB && accessToken && localDirty) await persistDBNow(); }catch(e){}
+  const fullySynced = !localDirty;
   accessToken = null;
   driveFileId = null;
-  gapi.client.setToken(null);
+  try{ gapi.client.setToken(null); }catch(e){}
+  // After a clean logout, remove the offline copy so nobody can open data from this PC without signing in.
+  // If some changes could not be uploaded, keep the copy so nothing is lost.
+  if(fullySynced) await clearLocalCache();
+  offlineMode = false;
   sessionStorage.removeItem('nw_logged_in');
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginError').textContent = fullySynced ? '' : 'Logged out. Some changes are kept on this PC and will upload next time you sign in.';
   setDriveStatus('Drive: disconnected', 'offline');
+  localCacheGet().then(c=>{ const h=document.getElementById('offlineHint'); if(h) h.textContent = (c&&c.data)?'Offline data on this PC: '+new Date(c.savedAt).toLocaleString()+' (has changes not yet on Drive)':'Offline data will be available after your first sign-in.'; });
 }
 
 /* =========================================================
@@ -1815,7 +2144,7 @@ function showTab(tab){
   if(tab==='savings') renderSavings();
   if(tab==='announce') renderAnnouncements();
   if(tab==='settings') renderSettings();
-  if(tab==='backup'){ /* drive info refreshed on connect */ }
+  if(tab==='backup'){ renderSnapshotList(); }
 }
 
 function rankedContacts(){
@@ -1917,15 +2246,28 @@ function primaryMobile(c){
   const list = getContactMobiles(c);
   return list[0] || '';
 }
-function renderMobileRows(numbers){
+/** Which of the contractor's numbers is used for WhatsApp (remembered per contractor). */
+function waNumberIndex(c){
+  const n = getContactMobiles(c).length;
+  const i = Number(c && c.waIdx) || 0;
+  return (i >= 0 && i < n) ? i : 0;
+}
+function waMobile(c){
+  const list = getContactMobiles(c);
+  return list[waNumberIndex(c)] || '';
+}
+function mobileRowHtml(num, checked, canRemove){
+  return `<input type="text" class="m-mobile-input" placeholder="e.g. 017XXXXXXXX" value="${escapeHtml(num)}" style="flex:1;">
+      <label title="Send WhatsApp to this number first" style="display:flex;align-items:center;gap:4px;font-size:.78rem;white-space:nowrap;cursor:pointer;"><input type="radio" name="mWaPick" class="m-wa-pick" ${checked?'checked':''}> WA</label>
+      <button type="button" class="btn btn-ghost btn-sm" style="padding:4px 10px;" title="Remove" onclick="removeMobileRow(this)" ${canRemove?'':'disabled'}>✕</button>`;
+}
+function renderMobileRows(numbers, waIdx){
   const wrap = document.getElementById('mMobileList');
   if(!wrap) return;
   const list = (numbers && numbers.length) ? numbers : [''];
+  const pick = (Number(waIdx)>=0 && Number(waIdx)<list.length) ? Number(waIdx) : 0;
   wrap.innerHTML = list.map((num,i)=>`
-    <div style="display:flex;gap:8px;align-items:center;" data-mobile-row>
-      <input type="text" class="m-mobile-input" placeholder="e.g. 017XXXXXXXX" value="${escapeHtml(num)}" style="flex:1;">
-      <button type="button" class="btn btn-ghost btn-sm" style="padding:4px 10px;" title="Remove" onclick="removeMobileRow(this)" ${list.length<=1?'disabled':''}>✕</button>
-    </div>
+    <div style="display:flex;gap:8px;align-items:center;" data-mobile-row>${mobileRowHtml(num, i===pick, list.length>1)}</div>
   `).join('');
 }
 function addMobileRow(){
@@ -1934,8 +2276,7 @@ function addMobileRow(){
   const div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:8px;align-items:center;';
   div.setAttribute('data-mobile-row','');
-  div.innerHTML = `<input type="text" class="m-mobile-input" placeholder="e.g. 017XXXXXXXX" value="" style="flex:1;">
-    <button type="button" class="btn btn-ghost btn-sm" style="padding:4px 10px;" title="Remove" onclick="removeMobileRow(this)">✕</button>`;
+  div.innerHTML = mobileRowHtml('', false, true);
   wrap.appendChild(div);
   // enable all remove buttons
   wrap.querySelectorAll('button').forEach(b=> b.disabled = wrap.querySelectorAll('[data-mobile-row]').length<=1);
@@ -1952,6 +2293,20 @@ function removeMobileRow(btn){
     const b = left[0].querySelector('button');
     if(b) b.disabled = true;
   }
+  if(!wrap.querySelector('.m-wa-pick:checked')){ const r = wrap.querySelector('.m-wa-pick'); if(r) r.checked = true; }
+}
+/** Index (inside the cleaned number list) of the number marked "WA" in the form */
+function collectWaPickIndex(nums){
+  const rows = document.querySelectorAll('#mMobileList [data-mobile-row]');
+  for(const row of rows){
+    const r = row.querySelector('.m-wa-pick');
+    if(r && r.checked){
+      const v = (row.querySelector('.m-mobile-input').value||'').trim();
+      const i = nums.indexOf(v);
+      return i >= 0 ? i : 0;
+    }
+  }
+  return 0;
 }
 function collectMobilesFromForm(){
   const inputs = document.querySelectorAll('#mMobileList .m-mobile-input');
@@ -1984,7 +2339,7 @@ function openEditContactModal(id){
   document.getElementById('mName').value = c.name;
   document.getElementById('mAddress').value = c.address;
   document.getElementById('mNid').value = c.nid;
-  renderMobileRows(getContactMobiles(c));
+  renderMobileRows(getContactMobiles(c), waNumberIndex(c));
   document.getElementById('contactModalOverlay').classList.add('open');
 }
 function closeContactModal(){ document.getElementById('contactModalOverlay').classList.remove('open'); }
@@ -1996,6 +2351,7 @@ function saveContactModal(){
   const name = document.getElementById('mName').value.trim();
   const mobiles = collectMobilesFromForm();
   const mobile = mobiles[0] || '';
+  const waIdx = collectWaPickIndex(mobiles);
   const address = document.getElementById('mAddress').value.trim();
   const nid = document.getElementById('mNid').value.trim();
   if(!name){ toast('Name is required.'); return; }
@@ -2012,9 +2368,21 @@ function saveContactModal(){
       c.id = idInput;
       DB.accounts[idInput] = DB.accounts[oldId] || {entries:[], grandTotal:0};
       delete DB.accounts[oldId];
+      // Welfare Fund transactions + announcement marks must follow the new ID, otherwise the fund history/balance is orphaned
+      try{
+        ensureSavings();
+        DB.savings.transactions.forEach(t=>{
+          if(t.contactId===oldId) t.contactId = idInput;
+          if(t.toContactId===oldId) t.toContactId = idInput;
+        });
+        if(DB.announcements && DB.announcements.sent && DB.announcements.sent[String(oldId)]){
+          DB.announcements.sent[String(idInput)] = DB.announcements.sent[String(oldId)];
+          delete DB.announcements.sent[String(oldId)];
+        }
+      }catch(e){ console.warn('rename carry-over', e); }
       if(currentAccountId === oldId) currentAccountId = idInput;
     }
-    Object.assign(c, {name, mobile, mobiles, address, nid});
+    Object.assign(c, {name, mobile, mobiles, address, nid, waIdx});
     toast('Contractor updated.');
     saveDB(true); closeContactModal(); renderSummary(); renderAccountsTab();
     return;
@@ -2024,7 +2392,7 @@ function saveContactModal(){
   if(DB.contacts.some(c=>c.id.toLowerCase()===idInput.toLowerCase())){
     toast('That Contractor ID already exists — please choose a different one.'); return;
   }
-  const c = {id:idInput,name,mobile,mobiles,address,nid,totalAmount:0,ranking:0};
+  const c = {id:idInput,name,mobile,mobiles,address,nid,waIdx,totalAmount:0,ranking:0};
   DB.contacts.push(c);
   DB.accounts[idInput] = {entries:[], grandTotal:0};
   toast('New contractor created: ' + idInput);
@@ -2038,7 +2406,12 @@ function saveContactModal(){
 }
 function deleteContact(id){
   if(!requireEditor('Delete')) return;
-  if(!confirm('Delete this contractor and its entire account? This cannot be undone.')) return;
+  ensureSavings();
+  const savN = DB.savings.transactions.filter(t=>t.contactId===id || t.toContactId===id).length;
+  const savBal = savN ? savingsBalance(id) : 0;
+  const savWarn = savN ? ('\n\nThis contractor has ' + savN + ' Welfare Fund transaction(s) (balance ' + fmtMoney(savBal) + '). They will stay in the Welfare Fund history but will no longer count in balances.') : '';
+  if(!confirm('Delete this contractor and its entire account? This cannot be undone.' + savWarn)) return;
+  takeLocalSnapshot(true);
   DB.contacts = DB.contacts.filter(c=>c.id!==id);
   delete DB.accounts[id];
   if(currentAccountId===id) currentAccountId=null;
@@ -2233,12 +2606,14 @@ function normalizeBdMobile(mobile){
   if(m.length===11 && m.startsWith('01')) m = '88' + m;
   return m;
 }
-function openWhatsAppToContact(contactId, customText){
+function openWhatsAppToContact(contactId, customText, forceIdx){
   const c = DB.contacts.find(x=>x.id===contactId);
   if(!c){ toast('Contractor not found.'); return false; }
-  const phone = normalizeBdMobile(primaryMobile(c));
+  const list = getContactMobiles(c);
+  const idx = (typeof forceIdx === 'number' && forceIdx >= 0 && forceIdx < list.length) ? forceIdx : waNumberIndex(c);
+  const phone = normalizeBdMobile(list[idx] || '');
   if(!phone){ toast('No mobile number for this contractor.'); return false; }
-  const text = customText || 'মেমো জমা হয়েছে, ধন্যবাদ।';
+  const text = customText || 'মেমো জমা হয়েছে, ধন্যবাদ।';
   const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
   const w = window.open(url, 'contractor_ledger_whatsapp');
   if(!w || w.closed || typeof w.closed === 'undefined'){
@@ -2250,7 +2625,50 @@ function openWhatsAppToContact(contactId, customText){
     return false;
   }
   try{ w.focus(); }catch(e){}
+  // A web page cannot know whether a number has WhatsApp, so for contractors with 2+ numbers
+  // offer a one-tap switch to the next number (and remember the one that works).
+  if(list.length > 1) showWaTryNext(contactId, customText, idx);
   return true;
+}
+function showWaTryNext(contactId, text, idx){
+  const c = DB.contacts.find(x=>x.id===contactId);
+  if(!c) return;
+  const list = getContactMobiles(c);
+  if(list.length < 2) return;
+  let bar = document.getElementById('waOfferBar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'waOfferBar';
+    document.body.appendChild(bar);
+  }
+  bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#128C7E;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:94vw;font-size:.9rem;flex-wrap:wrap;';
+  bar.innerHTML = '';
+  const nextIdx = (idx + 1) % list.length;
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;min-width:180px;';
+  info.innerHTML = '<strong>WhatsApp opened: ' + escapeHtml(list[idx]) + '</strong> <span style="opacity:.85;">(number ' + (idx+1) + ' of ' + list.length + ')</span>' +
+    '<div style="opacity:.9;font-size:.78rem;margin-top:2px;">' + escapeHtml(c.name) + ' · If WhatsApp says this number is not on WhatsApp, tap "Try next number".</div>';
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Try next number (' + list[nextIdx] + ')';
+  nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  nextBtn.onclick = ()=>{
+    c.waIdx = nextIdx; saveDB();          // remember: this number is used first next time
+    openWhatsAppToContact(contactId, text, nextIdx);
+  };
+  const okBtn = document.createElement('button');
+  okBtn.textContent = 'This number worked ✓';
+  okBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
+  okBtn.onclick = ()=>{
+    c.waIdx = idx; saveDB();
+    bar.style.display = 'none';
+    toast('Saved: ' + list[idx] + ' will be used first for ' + c.name + '.');
+  };
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;';
+  closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
+  bar.appendChild(info); bar.appendChild(nextBtn); bar.appendChild(okBtn); bar.appendChild(closeBtn);
+  bar.style.display = 'flex';
 }
 function openWhatsAppAfterEntries(contactId, count){
   const c = DB.contacts.find(x=>x.id===contactId);
@@ -2302,14 +2720,15 @@ function showWhatsAppOffer(contactId, msg, c){
   const info = document.createElement('div');
   info.style.cssText = 'flex:1;min-width:0;';
   info.innerHTML = '<strong>Send WhatsApp?</strong><div style="opacity:.9;font-size:.8rem;margin-top:2px;">' +
-    escapeHtml((c && c.name) || '') + ' · ' + escapeHtml(primaryMobile(c) || '') + '</div>';
+    escapeHtml((c && c.name) || '') + ' · ' + escapeHtml(waMobile(c) || '') + '</div>';
   const sendBtn = document.createElement('button');
   sendBtn.className = 'btn btn-sm';
   sendBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
   sendBtn.textContent = 'Send WA';
   sendBtn.onclick = ()=>{
     openWhatsAppToContact(contactId, msg);
-    bar.style.display = 'none';
+    // contractors with 2+ numbers: the "try next number" bar replaces this bar, so do not hide it
+    if(getContactMobiles(c).length <= 1) bar.style.display = 'none';
   };
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px 6px;';
@@ -2692,7 +3111,7 @@ function openAddEntryModal(){
   if(!c) return;
   document.getElementById('aeContractorId').textContent = 'ID: ' + c.id;
   document.getElementById('aeContractorName').textContent = c.name;
-  document.getElementById('aeDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('aeDate').value = localISODate();
   document.getElementById('aeMemo').value = '';
   document.getElementById('aeAmount').value = '';
   document.getElementById('aeInCharge').innerHTML = '<option value="">—</option>' + inChargeOptionsHtml('');
@@ -2829,6 +3248,7 @@ function clearAccountEntries(){
   const acc = DB.accounts[currentAccountId];
   if(!acc) return;
   if(!confirm('Clear all date, memo number, total amount, in-charge and remark data for this contractor? Contractor info (ID, name, mobile, address, Section) will be kept.')) return;
+  takeLocalSnapshot(true);
   acc.entries = [];
   syncGrandTotalToSummary(currentAccountId);
   saveDB(true);
@@ -2940,11 +3360,11 @@ function applyReportPeriodPreset(){
   if(!from||!to) return;
   const now = new Date();
   if(p==='month'){
-    from.value = now.toISOString().slice(0,7)+'-01';
-    to.value = now.toISOString().slice(0,10);
+    from.value = localISODate(now).slice(0,7)+'-01';
+    to.value = localISODate(now);
   } else if(p==='year'){
     from.value = now.getFullYear()+'-01-01';
-    to.value = now.toISOString().slice(0,10);
+    to.value = localISODate(now);
   } else {
     from.value = ''; to.value = '';
   }
@@ -3297,7 +3717,7 @@ function startAnnounceSend(){
   if(!body){ toast('Message is empty.'); return; }
   const ids = [...__annSelected].map(String);
   if(!ids.length){ toast('Select at least one recipient.'); return; }
-  const queue = ids.map(id=> DB.contacts.find(c=> String(c.id)===String(id))).filter(c=> c && primaryMobile(c));
+  const queue = ids.map(id=> DB.contacts.find(c=> String(c.id)===String(id))).filter(c=> c && waMobile(c));
   const skipped = ids.length - queue.length;
   if(!queue.length){ toast('No selected contractor has a mobile number.'); return; }
   if(skipped) toast(skipped + ' skipped (no mobile).');
@@ -3311,7 +3731,7 @@ function runAnnounceQueue(queue, body, index){
     return;
   }
   const c = queue[index];
-  const phone = normalizeBdMobile(primaryMobile(c));
+  const phone = normalizeBdMobile(waMobile(c));
   if(!phone){
     if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
     return;
@@ -3330,7 +3750,7 @@ function runAnnounceQueue(queue, body, index){
   const info = document.createElement('div');
   info.style.cssText = 'flex:1;min-width:160px;';
   info.innerHTML = '<strong>WhatsApp ' + (index+1) + ' / ' + queue.length + '</strong><div style="opacity:.9;font-size:.78rem;margin-top:2px;">' +
-    escapeHtml(c.name) + ' · ID ' + escapeHtml(String(c.id)) + ' · ' + escapeHtml(primaryMobile(c)||'') +
+    escapeHtml(c.name) + ' · ID ' + escapeHtml(String(c.id)) + ' · ' + escapeHtml(waMobile(c)||'') +
     '</div><div style="opacity:.85;font-size:.72rem;">1) Press Send in WhatsApp &nbsp; 2) Click Next here</div>';
   const nextBtn = document.createElement('button');
   nextBtn.textContent = index+1 < queue.length ? ('Next (' + (index+2) + '/' + queue.length + ')') : 'Done';
@@ -3340,6 +3760,19 @@ function runAnnounceQueue(queue, body, index){
     if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
     else { bar.style.display = 'none'; toast('All chats processed. Sent log updated.'); renderAnnounceRecipients(); }
   };
+  const otherNums = getContactMobiles(c);
+  let otherBtn = null;
+  if(otherNums.length > 1){
+    otherBtn = document.createElement('button');
+    otherBtn.textContent = 'No WhatsApp? Try next number';
+    otherBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
+    otherBtn.onclick = ()=>{
+      c.waIdx = (waNumberIndex(c) + 1) % otherNums.length; saveDB();
+      const ph = normalizeBdMobile(otherNums[c.waIdx]);
+      window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(body), 'contractor_ledger_whatsapp');
+      otherBtn.textContent = 'Opened ' + otherNums[c.waIdx] + ' — tap again for next';
+    };
+  }
   const skipBtn = document.createElement('button');
   skipBtn.textContent = 'Skip';
   skipBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
@@ -3352,7 +3785,7 @@ function runAnnounceQueue(queue, body, index){
   closeBtn.textContent = '×';
   closeBtn.style.cssText = 'background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;';
   closeBtn.onclick = ()=>{ bar.style.display = 'none'; };
-  bar.appendChild(info); bar.appendChild(nextBtn); bar.appendChild(skipBtn); bar.appendChild(closeBtn);
+  bar.appendChild(info); bar.appendChild(nextBtn); if(otherBtn) bar.appendChild(otherBtn); bar.appendChild(skipBtn); bar.appendChild(closeBtn);
   bar.style.display = 'flex';
 }
 
@@ -3429,7 +3862,7 @@ function makeBackupBlob(){
 }
 function exportBackup(){
   const blob = makeBackupBlob();
-  const name = `contractor-ledger-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const name = `contractor-ledger-backup-${localISODate()}.json`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = name;
@@ -3439,7 +3872,7 @@ function exportBackup(){
 }
 async function exportBackupToDrive(){
   const blob = makeBackupBlob();
-  const name = `contractor-ledger-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const name = `contractor-ledger-backup-${localISODate()}.json`;
   const ok = await uploadBlobToDrive(name, blob, 'application/json');
   if(ok) markBackupDone();
 }
@@ -3498,6 +3931,7 @@ function importBackup(){
   const file = document.getElementById('restoreFile').files[0];
   if(!file){ toast('Choose a backup file first.'); return; }
   if(!confirm('This will replace all current data with the backup file and upload it to Google Drive. Continue?')) return;
+  takeLocalSnapshot(true);
   const reader = new FileReader();
   reader.onload = function(e){
     try{
@@ -3517,9 +3951,12 @@ function importBackup(){
 function clearAllContractors(){
   const count = DB.contacts.length;
   if(count === 0){ toast('There are no contractors to clear.'); return; }
-  if(!confirm(`This will permanently delete all ${count} contractors and every account/entry under them. Continue?`)) return;
+  ensureSavings();
+  const savAll = DB.savings.transactions.length ? `\n\nNote: ${DB.savings.transactions.length} Welfare Fund transactions will stay in the Welfare Fund history but will no longer count in balances.` : '';
+  if(!confirm(`This will permanently delete all ${count} contractors and every account/entry under them. Continue?${savAll}`)) return;
   const typed = prompt(`To confirm, type CLEAR (in capital letters) below.`);
   if(typed !== 'CLEAR'){ toast('Cancelled — nothing was cleared.'); return; }
+  takeLocalSnapshot(true);
   DB.contacts = [];
   DB.accounts = {};
   currentAccountId = null;
@@ -3538,6 +3975,7 @@ function closeSessionClearAllEntries(){
   if(!confirm(`This clears the ledger for all ${contractorCount} contractors — ${entryCount} entries. Continue?`)) return;
   const typed = prompt(`To confirm, type CLOSE (in capital letters) below.`);
   if(typed !== 'CLOSE'){ toast('Cancelled — nothing was cleared.'); return; }
+  takeLocalSnapshot(true);
 
   Object.keys(DB.accounts).forEach(id=>{
     DB.accounts[id].entries = [];
@@ -3566,13 +4004,13 @@ function makeContactsCSVBlob(){
 }
 function downloadContactsCSV(){
   const blob = makeContactsCSVBlob();
-  const name = `contractor-ledger-contractors-${new Date().toISOString().slice(0,10)}.csv`;
+  const name = `contractor-ledger-contractors-${localISODate()}.csv`;
   downloadBlob(name, blob);
   toast('Contractor list downloaded.');
 }
 async function downloadContactsCSVToDrive(){
   const blob = makeContactsCSVBlob();
-  const name = `contractor-ledger-contractors-${new Date().toISOString().slice(0,10)}.csv`;
+  const name = `contractor-ledger-contractors-${localISODate()}.csv`;
   await uploadBlobToDrive(name, blob, 'text/csv');
 }
 
@@ -3834,7 +4272,7 @@ async function exportSummaryExcelToDrive(){
   const list = window.__lastSummaryFiltered || rankedContacts();
   const headers = ['Rank','ID','Name','Mobile','Address','Section','Total Amount'];
   const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',fmtMoney(c.totalAmount)]);
-  const name = `contractor-ledger-summary-${new Date().toISOString().slice(0,10)}.xls`;
+  const name = `contractor-ledger-summary-${localISODate()}.xls`;
   await uploadBlobToDrive(name, buildExcelBlob(headers, rows), 'application/vnd.ms-excel');
 }
 function exportAccountExcel(){
@@ -3852,7 +4290,7 @@ async function exportAccountExcelToDrive(){
   if(!c||!acc){ toast('Open a contractor account first.'); return; }
   const headers = ['SN','Date','Memo No.','Total Amount','In Charge','Remark'];
   const rows = acc.entries.map((e,i)=>[i+1, e.date||'', e.memo||'', fmtMoney(e.amount), e.inCharge||'', e.remark||'']);
-  const name = `contractor-ledger-${c.id}-${new Date().toISOString().slice(0,10)}.xls`;
+  const name = `contractor-ledger-${c.id}-${localISODate()}.xls`;
   await uploadBlobToDrive(name, buildExcelBlob(headers, rows), 'application/vnd.ms-excel');
 }
 function exportReportsExcel(){
@@ -3872,7 +4310,7 @@ async function exportReportsExcelToDrive(){
   });
   const headers = ['Rank','ID','Name','Mobile','Address','Section','Entries','Total Amount','Status'];
   const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',c.entries,fmtMoney(c.totalAmount),statusActiveHtml(c.status, c.statusDetail)]);
-  const name = `contractor-ledger-report-${new Date().toISOString().slice(0,10)}.xls`;
+  const name = `contractor-ledger-report-${localISODate()}.xls`;
   await uploadBlobToDrive(name, buildExcelBlob(headers, rows, [8]), 'application/vnd.ms-excel');
 }
 
@@ -3902,40 +4340,37 @@ function ensureSavings(){
   if(!DB.announcements.templates.length) DB.announcements.templates = defaultAnnounceTemplates();
 }
 
-function resolveContactQuery(q){
+function resolveContactQuery(q, info){
   q = String(q||'').trim();
+  if(info) info.exact = false;
   if(!q) return null;
-  // Datalist format: "1004 — Mr. Name" or "1004 - Mr. Name"
-  let idPart = q;
-  const sep = q.match(/\s*[—–\-]\s*/);
-  if(sep){
-    idPart = q.slice(0, sep.index).trim();
+  const ql = q.toLowerCase();
+  const hit = (c)=>{ if(info) info.exact = true; return c; };
+  // 1) exact ID (also works for IDs that contain a hyphen, e.g. C-001)
+  let c = DB.contacts.find(x=> String(x.id).toLowerCase()===ql);
+  if(c) return hit(c);
+  // 2) list format "ID — Name"
+  const m = q.match(/^(.*?)(?:\s+-\s+|\s*[—–]\s*)(.*)$/);
+  if(m){
+    const idl = m[1].trim().toLowerCase();
+    c = DB.contacts.find(x=> String(x.id).toLowerCase()===idl);
+    if(c) return hit(c);
   }
-  const idLower = idPart.toLowerCase();
-  let c = DB.contacts.find(x=> String(x.id).toLowerCase()===idLower);
-  if(c) return c;
-  const qLower = q.toLowerCase();
-  c = DB.contacts.find(x=> String(x.name||'').toLowerCase()===qLower);
-  if(c) return c;
-  // unique partial match on id or name
-  const matches = DB.contacts.filter(x=>{
-    const id = String(x.id).toLowerCase();
-    const name = String(x.name||'').toLowerCase();
-    return id===idLower || id.startsWith(idLower) || name===qLower || name.includes(qLower) ||
-      (idPart && name.includes(idPart.toLowerCase()));
-  });
-  // Prefer exact id start
-  const byId = matches.filter(x=> String(x.id).toLowerCase()===idLower);
-  if(byId.length===1) return byId[0];
-  if(matches.length===1) return matches[0];
-  return null;
+  // 3) exact name
+  c = DB.contacts.find(x=> String(x.name||'').toLowerCase()===ql);
+  if(c) return hit(c);
+  // 4) one single partial match (ID starts with / name contains) - caller should confirm with the user
+  const matches = DB.contacts.filter(x=>
+    String(x.id).toLowerCase().startsWith(ql) || String(x.name||'').toLowerCase().includes(ql));
+  return matches.length===1 ? matches[0] : null;
 }
 
-function savingsEffectsForContact(contactId){
+function savingsEffectsForContact(contactId, excludeUid){
   ensureSavings();
   let deposited = 0, withdrawn = 0, helpIn = 0, helpOut = 0;
   let lastDate = null;
   DB.savings.transactions.forEach(t=>{
+    if(excludeUid && t.uid===excludeUid) return;
     const amt = Number(t.amount)||0;
     if(t.type==='deposit' && t.contactId===contactId){
       deposited += amt;
@@ -3958,8 +4393,8 @@ function savingsEffectsForContact(contactId){
   return { deposited, withdrawn, helpIn, helpOut, balance, lastDate };
 }
 
-function savingsBalance(contactId){
-  return savingsEffectsForContact(contactId).balance;
+function savingsBalance(contactId, excludeUid){
+  return savingsEffectsForContact(contactId, excludeUid).balance;
 }
 
 function fillSavContactList(){
@@ -4001,7 +4436,7 @@ function updateSavFormBalanceHint(){
 function resetSavForm(){
   document.getElementById('savFormContact').value = '';
   document.getElementById('savFormToContact').value = '';
-  document.getElementById('savFormDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('savFormDate').value = localISODate();
   document.getElementById('savFormAmount').value = '';
   document.getElementById('savFormMethod').value = 'Bkash';
   document.getElementById('savFormNote').value = '';
@@ -4023,24 +4458,31 @@ function submitSavForm(){
   ensureSavings();
   const type = document.getElementById('savFormType').value;
   const editUid = (document.getElementById('savFormEditUid').value||'').trim();
-  const fromC = resolveContactQuery(document.getElementById('savFormContact').value);
+  const fromInfo = {}, toInfo = {};
+  const fromC = resolveContactQuery(document.getElementById('savFormContact').value, fromInfo);
   if(!fromC){ toast('Select a valid contractor (ID or full name).'); return; }
   let toC = null;
   if(type==='help'){
-    toC = resolveContactQuery(document.getElementById('savFormToContact').value);
+    toC = resolveContactQuery(document.getElementById('savFormToContact').value, toInfo);
     if(!toC){ toast('Select a valid receiver contractor for Help.'); return; }
     if(toC.id===fromC.id){ toast('Cannot help the same contractor.'); return; }
   }
+  // Money safety: if the typed text was only a partial match, make the user confirm WHO it is
+  if(!fromInfo.exact && !confirm('You typed "' + document.getElementById('savFormContact').value.trim() + '".\nSave for: ' + fromC.name + ' (ID ' + fromC.id + ')?')) return;
+  if(type==='help' && !toInfo.exact && !confirm('You typed "' + document.getElementById('savFormToContact').value.trim() + '".\nReceiver: ' + toC.name + ' (ID ' + toC.id + ')?')) return;
   const date = document.getElementById('savFormDate').value;
   const amount = Number(document.getElementById('savFormAmount').value);
   const method = normalizeSavMethod(document.getElementById('savFormMethod').value || 'Cash');
   const note = document.getElementById('savFormNote').value.trim();
   if(!date){ toast('Date is required.'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount.'); return; }
-  const txnId = 'TXN-' + Date.now().toString(36).toUpperCase().slice(-6);
+  const existingTxn = editUid ? DB.savings.transactions.find(x=>x.uid===editUid) : null;
+  // editing keeps the original transaction ID (receipt reference must not change)
+  const txnId = (existingTxn && existingTxn.txnId) ? existingTxn.txnId : ('TXN-' + Date.now().toString(36).toUpperCase().slice(-6));
 
   if(type==='withdraw' || type==='help'){
-    const bal = savingsBalance(fromC.id);
+    // when editing, the old version of this same transaction must not count against the balance
+    const bal = savingsBalance(fromC.id, editUid || undefined);
     if(amount > bal + 1e-9){
       if(!confirm('Balance is only ' + fmtMoney(bal) + '. Save anyway?')) return;
     }
@@ -4162,13 +4604,13 @@ function renderSavings(){
   ensureSavings();
   fillSavContactList();
   if(!document.getElementById('savFormDate').value){
-    document.getElementById('savFormDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('savFormDate').value = localISODate();
   }
   setSavFormType(document.getElementById('savFormType').value||'deposit');
 
   // Stats
   const now = new Date();
-  const ym = now.toISOString().slice(0,7);
+  const ym = localISODate(now).slice(0,7);
   let totalBal = 0, monthIn = 0, monthOut = 0, active = 0;
   let allDep = 0, allWd = 0;
   const meth = { Cash:0, Bkash:0, Nagad:0, Rocket:0, Bank:0, Other:0 };
@@ -4251,15 +4693,16 @@ function renderSavingsBalances(){
   const secEl = document.getElementById('savBalSection');
   const addrEl = document.getElementById('savBalAddress');
   const stEl = document.getElementById('savBalStatus');
-  // fill section/address options once
-  if(secEl && secEl.options.length<=1){
-    const sections = [...new Set(DB.contacts.map(c=>(c.nid||'').trim()).filter(Boolean))].sort();
-    sections.forEach(x=>{ const o=document.createElement('option'); o.value=x; o.textContent=x; secEl.appendChild(o); });
-  }
-  if(addrEl && addrEl.options.length<=1){
-    const addrs = [...new Set(DB.contacts.map(c=>(c.address||'').trim()).filter(Boolean))].sort();
-    addrs.forEach(x=>{ const o=document.createElement('option'); o.value=x; o.textContent=x; addrEl.appendChild(o); });
-  }
+  // (re)build section/address options every time, keeping the current selection
+  const fillOpts = (el, values)=>{
+    if(!el) return;
+    const cur = el.value;
+    while(el.options.length > 1) el.remove(1);
+    values.forEach(x=>{ const o=document.createElement('option'); o.value=x; o.textContent=x; el.appendChild(o); });
+    el.value = values.includes(cur) ? cur : 'all';
+  };
+  fillOpts(secEl, [...new Set(DB.contacts.map(c=>(c.nid||'').trim()).filter(Boolean))].sort());
+  fillOpts(addrEl, [...new Set(DB.contacts.map(c=>(c.address||'').trim()).filter(Boolean))].sort());
   const sec = secEl ? secEl.value : 'all';
   const addr = addrEl ? addrEl.value : 'all';
   const st = stEl ? stEl.value : 'all';
@@ -4313,13 +4756,13 @@ function setSavPeriodPreset(kind){
   const month = document.getElementById('savMonthFilter');
   if(!from||!to) return;
   const now = new Date();
-  const iso = d => d.toISOString().slice(0,10);
+  const iso = d => localISODate(d);
   if(kind==='week'){
     const day = now.getDay() || 7;
     const start = new Date(now); start.setDate(now.getDate() - day + 1);
     from.value = iso(start); to.value = iso(now); if(month) month.value='';
   } else if(kind==='month'){
-    from.value = now.toISOString().slice(0,7)+'-01'; to.value = iso(now); if(month) month.value='';
+    from.value = localISODate(now).slice(0,7)+'-01'; to.value = iso(now); if(month) month.value='';
   } else if(kind==='year'){
     from.value = now.getFullYear()+'-01-01'; to.value = iso(now); if(month) month.value='';
   } else {
@@ -4613,7 +5056,48 @@ function exportSavStatementCSV(){
 /* =========================================================
    PRINT
    ========================================================= */
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent) ||
+         (window.matchMedia && matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 900);
+}
+/** Build a standalone page that contains ONLY the report (no software screens) */
+function buildPrintDocument(html, title){
+  const styles = Array.from(document.querySelectorAll('head style')).map(x=>x.textContent).join('\n');
+  const links = Array.from(document.querySelectorAll('head link[rel="stylesheet"], head link[href*="fonts.googleapis"]'))
+    .map(l=>'<link rel="stylesheet" href="'+l.href+'">').join('');
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=860">' +
+    '<title>'+escapeHtml(title||'Report')+'</title>' + links +
+    '<style>'+styles+'</style>' +
+    '<style>' +
+    'html,body{background:#fff !important;margin:0;padding:0;color:#1c2224;}' +
+    'body{min-height:0 !important;display:block !important;}' +
+    '#printStage{display:block !important;padding:14px 16px 40px;}' +
+    '#printStage table{width:100%;}' +
+    '.ps-bar{position:sticky;top:0;z-index:20;background:#14181a;color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:Inter,Arial,sans-serif;font-size:14px;}' +
+    '.ps-bar button{background:#2cbf83;color:#10231a;border:0;border-radius:6px;padding:9px 16px;font-weight:700;font-size:14px;}' +
+    '.ps-bar button.sec{background:#3a4448;color:#fff;}' +
+    '.ps-bar span{opacity:.8;font-size:12px;}' +
+    '@media print{.ps-bar{display:none !important;} html,body{background:#fff !important;} #printStage{padding:0 !important;} @page{margin:12mm;}}' +
+    '</style></head><body>' +
+    '<div class="ps-bar no-print"><button onclick="window.print()">Print / Save as PDF</button>' +
+    '<button class="sec" onclick="window.close();history.back();">Close</button>' +
+    '<span>In the print window choose &quot;Save as PDF&quot; to get a PDF file.</span></div>' +
+    '<div id="printStage">'+html+'</div>' +
+    '<script>window.addEventListener("load",function(){setTimeout(function(){try{window.print();}catch(e){}},700);});<\/script>' +
+    '</body></html>';
+}
 function enterPrintMode(html, docTitle){
+  // Phones/tablets: print from a separate clean page. Printing the live app on mobile shows the whole software.
+  if(isMobileDevice()){
+    try{
+      const doc = buildPrintDocument(html, docTitle);
+      const url = URL.createObjectURL(new Blob([doc], {type:'text/html;charset=utf-8'}));
+      const w = window.open(url, '_blank');
+      if(w){ setTimeout(()=>URL.revokeObjectURL(url), 5*60*1000); return; }
+      toast('Please allow popups for this site to print on mobile.');
+    }catch(e){ console.warn('mobile print window failed', e); }
+  }
   const stage = document.getElementById('printStage');
   stage.innerHTML = html;
   const prevTitle = document.title;
@@ -4624,9 +5108,13 @@ function enterPrintMode(html, docTitle){
   window.__printPrevTitle = prevTitle;
 }
 window.addEventListener('afterprint', ()=>{
-  document.body.classList.remove('print-mode');
-  document.getElementById('printStage').innerHTML = '';
-  if(window.__printPrevTitle){ document.title = window.__printPrevTitle; window.__printPrevTitle = null; }
+  // Mobile browsers can fire this too early; wait a little before restoring the normal screen
+  const restore = ()=>{
+    document.body.classList.remove('print-mode');
+    document.getElementById('printStage').innerHTML = '';
+    if(window.__printPrevTitle){ document.title = window.__printPrevTitle; window.__printPrevTitle = null; }
+  };
+  if(isMobileDevice()) setTimeout(restore, 4000); else restore();
 });
 
 function printSummaryReport(){
