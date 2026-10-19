@@ -1130,6 +1130,10 @@ let saveTimer = null;
 let isSyncing = false;
 let tokenRefreshTimer = null;
 let tokenObtainedAt = 0;
+let tokenExpiresAt = 0;        // when the current Google access token stops working
+let driveAuthExpired = false;  // true when Drive rejected our token and a silent renew failed
+let _silentFailedAt = 0;
+let _lastGestureTry = 0, _gestureRefreshing = false;
 
 /** Today's date as YYYY-MM-DD in THIS computer's local time (toISOString() uses UTC and is a day behind after midnight in Bangladesh) */
 function localISODate(d){
@@ -1190,7 +1194,8 @@ function downloadJSONFile(obj, name){
   a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
 }
-async function startOfflineMode(){
+async function startOfflineMode(opts){
+  opts = opts || {};
   const errEl = document.getElementById('loginError');
   const c = await localCacheGet();
   if(!c || !c.data){
@@ -1208,9 +1213,15 @@ async function startOfflineMode(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   initApp();
-  setDriveStatus('Offline mode — tap to connect', 'offline');
-  updateSavedIndicator(false, {offline:true});
-  toast('Offline mode: working with data saved on this PC (' + new Date(c.savedAt).toLocaleString() + ')');
+  if(opts.resume){
+    // page was reloaded while signed in: keep the user working from the PC copy while Google reconnects
+    setDriveStatus('Drive: reconnecting…', 'syncing');
+    if(errEl) errEl.textContent = '';
+  } else {
+    setDriveStatus('Offline mode — tap to connect', 'offline');
+    updateSavedIndicator(false, {offline:true});
+    toast('Offline mode: working with data saved on this PC (' + new Date(c.savedAt).toLocaleString() + ')');
+  }
 }
 /** Load Google sign-in scripts on demand (needed when the page was opened without internet) */
 async function ensureGoogleScripts(){
@@ -1491,6 +1502,8 @@ function initGis(){
       }
       accessToken = tokenResponse.access_token;
       tokenObtainedAt = Date.now();
+      tokenExpiresAt = Date.now() + ((tokenResponse.expires_in || 3600) * 1000) - 60000;
+      driveAuthExpired = false; _silentFailedAt = 0;
       try{
         await initGapi();
         gapi.client.setToken({access_token: accessToken});
@@ -1520,10 +1533,10 @@ function initGis(){
 
 function scheduleTokenRefresh(){
   if(tokenRefreshTimer) clearInterval(tokenRefreshTimer);
-  // Access tokens last ~60 min; refresh silently every 45 min
+  // Access tokens last ~60 min; try a silent renew every 30 min (a click while working also renews it, see below)
   tokenRefreshTimer = setInterval(()=>{
     silentRefreshToken();
-  }, 45 * 60 * 1000);
+  }, 30 * 60 * 1000);
 }
 
 function silentRefreshToken(){
@@ -1541,16 +1554,19 @@ function silentRefreshToken(){
       if(tokenResponse && tokenResponse.access_token && !tokenResponse.error){
         accessToken = tokenResponse.access_token;
         tokenObtainedAt = Date.now();
-        gapi.client.setToken({access_token: accessToken});
+        tokenExpiresAt = Date.now() + ((tokenResponse.expires_in || 3600) * 1000) - 60000;
+        driveAuthExpired = false; _silentFailedAt = 0;
+        try{ gapi.client.setToken({access_token: accessToken}); }catch(e){}
         setDriveStatus('Drive: connected');
         finish(true);
       } else {
-        setDriveStatus('Drive: session expired', 'offline');
+        _silentFailedAt = Date.now();
+        setDriveStatus('Drive: tap anywhere to reconnect', 'offline');
         finish(false);
       }
     };
     try{
-      tokenClient.requestAccessToken({prompt: ''});
+      tokenClient.requestAccessToken(currentUserEmail ? {prompt: '', hint: currentUserEmail} : {prompt: ''});
       // safety timeout
       setTimeout(()=>finish(false), 15000);
     }catch(e){
@@ -1695,7 +1711,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
                                   : 'Offline data will be available after your first sign-in.';
     if(!navigator.onLine){
       const e = document.getElementById('loginError');
-      if(e) e.textContent = 'No internet — tap "Work Offline" to continue.';
+      if(sessionStorage.getItem('nw_logged_in') === '1' && c && c.data){ startOfflineMode({resume:true}).then(()=>setDriveStatus('Offline — working on this PC','offline')); }
+      else if(e) e.textContent = 'No internet — tap "Work Offline" to continue.';
     }
   });
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
@@ -1724,28 +1741,44 @@ document.addEventListener('DOMContentLoaded', ()=>{
         man.onclick = (e)=>{ e.preventDefault(); requestGoogleLogin(); };
       }
 
-      // Auto login if previously signed in this browser
+      // Auto login if previously signed in this browser (page reload / tab restored by the browser)
       if(sessionStorage.getItem('nw_logged_in') === '1'){
         const errEl = document.getElementById('loginError');
-        if(errEl) errEl.textContent = 'Reconnecting to Google Drive…';
-        setTimeout(()=>{
-          silentRefreshToken().then(async ok=>{
-            if(ok){
-              try{
-                if(errEl) errEl.textContent = 'Loading your data…';
-                await afterGoogleLogin();
-                if(errEl) errEl.textContent = '';
-              }catch(e){
-                console.error(e);
-                if(errEl) errEl.textContent = 'Reconnect failed. Please sign in again.';
+        (async ()=>{
+          // Do NOT throw the user back to the login screen: reopen from the copy on this PC right away
+          let resumed = false;
+          try{
+            const c = await localCacheGet();
+            if(c && c.data){ await startOfflineMode({resume:true}); resumed = true; }
+          }catch(e){ console.warn('resume failed', e); }
+          if(!resumed && errEl) errEl.textContent = 'Reconnecting to Google Drive…';
+          setTimeout(()=>{
+            silentRefreshToken().then(async ok=>{
+              if(ok){
+                try{
+                  if(!resumed && errEl) errEl.textContent = 'Loading your data…';
+                  await afterGoogleLogin();
+                  if(errEl) errEl.textContent = '';
+                }catch(e){
+                  console.error(e);
+                  if(resumed){
+                    setDriveStatus('Drive: tap to reconnect', 'offline');
+                  } else {
+                    if(errEl) errEl.textContent = 'Reconnect failed. Please sign in again.';
+                    sessionStorage.removeItem('nw_logged_in');
+                  }
+                }
+              } else if(resumed){
+                // Google wants a click before giving a new token: keep working, reconnect on the next tap
+                setDriveStatus('Drive: tap to reconnect', 'offline');
+                toast('Working from the copy saved on this PC. Tap anywhere to reconnect to Google Drive.');
+              } else {
+                if(errEl) errEl.textContent = 'Session expired. Please sign in again.';
                 sessionStorage.removeItem('nw_logged_in');
               }
-            } else {
-              if(errEl) errEl.textContent = 'Session expired. Please sign in again.';
-              sessionStorage.removeItem('nw_logged_in');
-            }
-          });
-        }, 500);
+            });
+          }, 500);
+        })();
       }
     } else if(tries > 40){
       clearInterval(check);
@@ -1824,7 +1857,7 @@ async function driveFetch(url, init){
   }));
   let res = await go();
   if(res.status === 401 || res.status === 403){
-    const ok = await refreshGoogleTokenSilent();
+    const ok = await refreshTokenThrottled();
     if(!ok) throw new Error('Drive session expired');
     res = await go();
   }
@@ -1893,7 +1926,7 @@ async function pullDriveIfNewer(opts){
     return true;
   }catch(e){
     console.warn('pullDriveIfNewer', e);
-    setDriveStatus('Drive: cannot check updates — tap status to re-login', 'offline');
+    setDriveStatus(driveAuthExpired ? 'Drive: tap anywhere to reconnect' : 'Drive: cannot check updates — tap status to re-login', 'offline');
     return false;
   }
 }
@@ -1908,6 +1941,35 @@ function startDrivePolling(){
 function refreshGoogleTokenSilent(){
   return silentRefreshToken();
 }
+/** Silent renew, but do not hammer Google every 5 seconds after it has just refused */
+async function refreshTokenThrottled(){
+  if(Date.now() - _silentFailedAt < 60000){ driveAuthExpired = true; return false; }
+  const ok = await silentRefreshToken();
+  if(!ok){ _silentFailedAt = Date.now(); driveAuthExpired = true; }
+  return ok;
+}
+/** Google only renews tokens reliably when the user has just clicked/typed. So renew during normal work:
+ *  any click/key while the token is close to expiring (or already rejected) renews it in the background. */
+function tokenRemainingMs(){
+  if(tokenExpiresAt) return tokenExpiresAt - Date.now();
+  return tokenObtainedAt ? (tokenObtainedAt + 55*60000 - Date.now()) : Infinity;
+}
+function maybeRefreshOnGesture(){
+  if(!accessToken || !tokenClient || _gestureRefreshing || !navigator.onLine || offlineMode) return;
+  if(!(tokenRemainingMs() < 20*60*1000 || driveAuthExpired)) return;
+  if(Date.now() - _lastGestureTry < 15000) return;
+  _lastGestureTry = Date.now();
+  _gestureRefreshing = true;
+  silentRefreshToken().then(async ok=>{
+    if(ok){
+      setDriveStatus('Drive: connected');
+      try{ if(localDirty) await persistDBNow({silent:true}); await pullDriveIfNewer({toast:true}); }catch(e){}
+    } else {
+      driveAuthExpired = true;
+    }
+  }).finally(()=>{ _gestureRefreshing = false; });
+}
+['pointerdown','keydown'].forEach(ev=> document.addEventListener(ev, maybeRefreshOnGesture, true));
 
 async function persistDBNow(opts){
   opts = opts || {};
@@ -1954,7 +2016,7 @@ async function persistDBNow(opts){
     });
     if(res.status === 401 || res.status === 403){
       setDriveStatus('Drive: re-connecting…', 'syncing');
-      const ok = await refreshGoogleTokenSilent();
+      const ok = await refreshTokenThrottled();
       if(ok){
         res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
           method: 'PATCH',
@@ -1985,7 +2047,7 @@ async function persistDBNow(opts){
     driveSaveFailing = true;
     cacheLocal(true);
     updateSavedIndicator(false, {offline:true});
-    setDriveStatus(navigator.onLine ? 'Drive: not synced — tap status to re-login' : 'Offline — working on this PC', 'offline');
+    setDriveStatus(!navigator.onLine ? 'Offline — working on this PC' : (driveAuthExpired ? 'Drive: tap anywhere to reconnect' : 'Drive: not synced — tap status to re-login'), 'offline');
     isSyncing = false;
     return false;
   }
