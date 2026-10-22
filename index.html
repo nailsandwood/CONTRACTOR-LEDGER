@@ -362,6 +362,7 @@
         <div class="stat-box" style="border-left-color:var(--yellow-700);"><div class="label">Moderate (Yellow)</div><div class="value" id="statModerateContacts">0</div></div>
         <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Inactive (Red)</div><div class="value" id="statInactiveContacts">0</div></div>
       </div>
+      <div class="no-print" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px;"><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="statWelfareDepositors">0</div></div><div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Welfare — Not deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="statWelfareNot">0</div></div><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Total deposit <span class="welfarePeriodLbl"></span></div><div class="value" id="statWelfareTotal">0</div></div></div>
 
       <div class="toolbar no-print" style="margin-bottom:14px;">
         <div class="search-bar"><input id="summarySearch" placeholder="Search name, mobile, address, Section, ID…" oninput="renderSummary()"></div>
@@ -370,12 +371,18 @@
           <option value="marked">Mark: Marked only</option>
           <option value="unmarked">Mark: Unmarked only</option>
         </select>
+<select class="select-sm" id="summaryWelfarePeriod" onchange="setWelfarePeriod(this.value)" title="Which welfare deposits to count">
+          <option value="all">Welfare period: All time</option>
+          <option value="month">Welfare period: This month</option>
+          <option value="year">Welfare period: This year</option>
+        </select>
         <select class="select-sm" id="summarySortField" onchange="renderSummary()">
           <option value="ranking">Sort: Ranking</option>
           <option value="name">Sort: Name</option>
           <option value="address">Sort: Address</option>
           <option value="mobile">Sort: Mobile</option>
           <option value="totalAmount">Sort: Total Amount</option>
+          <option value="welfareAmount">Sort: Welfare Deposit</option>
           <option value="id">Sort: ID</option>
         </select>
         <select class="select-sm" id="summarySortDir" onchange="renderSummary()">
@@ -398,6 +405,8 @@
             <th onclick="quickSort('address')">Address</th>
             <th onclick="quickSort('nid')">Section</th>
             <th onclick="quickSort('totalAmount')">Total Amount</th>
+            <th onclick="quickSort('welfareAmount')" title="Welfare Fund deposits (period selected above)">Welfare Deposit</th>
+            <th>Welfare</th>
             <th class="no-print">Actions</th>
           </tr></thead>
           <tbody id="summaryTbody"></tbody>
@@ -509,6 +518,7 @@
         <div class="stat-box"><div class="label">Total Entries</div><div class="value" id="repEntries">0</div></div>
         <div class="stat-box"><div class="label">Grand Combined Total</div><div class="value" id="repCombined">0</div></div>
       </div>
+      <div class="no-print" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px;"><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="repWelfareDepositors">0</div></div><div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Welfare — Not deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="repWelfareNot">0</div></div><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Total deposit <span class="welfarePeriodLbl"></span></div><div class="value" id="repWelfareTotal">0</div></div></div>
 
       <div class="legend">
         <span><span class="dot dot-green"></span> Green — Active, Total Amount at/above the section's top threshold</span>
@@ -537,12 +547,18 @@
             <option value="unmarked">Mark: Unmarked only</option>
           </select>
           <button class="btn btn-ghost btn-sm" onclick="clearAllMarks()">Clear all marks</button>
-          <select class="select-sm" id="reportSortField" onchange="renderReports()">
+<select class="select-sm" id="reportWelfarePeriod" onchange="setWelfarePeriod(this.value)" title="Which welfare deposits to count">
+          <option value="all">Welfare period: All time</option>
+          <option value="month">Welfare period: This month</option>
+          <option value="year">Welfare period: This year</option>
+        </select>
+        <select class="select-sm" id="reportSortField" onchange="renderReports()">
             <option value="ranking">Sort: Ranking</option>
             <option value="id">Sort: ID</option>
             <option value="name">Sort: Name</option>
             <option value="address">Sort: Address</option>
             <option value="mobile">Sort: Mobile</option>
+            <option value="welfareAmount">Sort: Welfare Deposit</option>
           </select>
           <select class="select-sm" id="reportSortDir" onchange="renderReports()">
             <option value="asc">Ascending</option><option value="desc">Descending</option>
@@ -564,6 +580,8 @@
               <th onclick="reportSort('nid')">Section</th>
               <th onclick="reportSort('entries')">Entries</th>
               <th onclick="reportSort('totalAmount')">Total Amount</th>
+              <th onclick="reportSort('welfareAmount')" title="Welfare Fund deposits (period selected above)">Welfare Deposit</th>
+              <th>Welfare</th>
               <th onclick="reportSort('status')">Status</th>
               <th class="no-print">WA</th>
             </tr></thead>
@@ -2518,7 +2536,73 @@ const MSEL_FIELDS = [
   {field:'nid', label:'Section'},
   {field:'status', label:'Status'},
   {field:'totalAmountRange', label:'Total Amount'},
+  {field:'welfareStatus', label:'Welfare'},
+  {field:'welfareRange', label:'Welfare Amount'},
 ];
+/* ---------- Welfare Fund columns for Summary + Reports ---------- */
+let welfarePeriod = 'all';   // all | month | year  (which deposits count)
+function welfarePeriodLabel(){ return ({all:'All time', month:'This month', year:'This year'})[welfarePeriod] || 'All time'; }
+function setWelfarePeriod(v){
+  welfarePeriod = v;
+  ['summaryWelfarePeriod','reportWelfarePeriod'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value = v; });
+  renderSummary(); renderReports();
+}
+/** contractor id -> total welfare deposits (only deposits count) inside the chosen period */
+function welfareDepositMap(){
+  ensureSavings();
+  const today = localISODate(), ym = today.slice(0,7), yr = today.slice(0,4);
+  const m = new Map();
+  DB.savings.transactions.forEach(t=>{
+    if(t.type !== 'deposit') return;
+    const d = String(t.date || '');
+    if(welfarePeriod==='month' && d.slice(0,7) !== ym) return;
+    if(welfarePeriod==='year' && d.slice(0,4) !== yr) return;
+    const r = m.get(t.contactId) || {amount:0, count:0, last:''};
+    r.amount += Number(t.amount) || 0; r.count++; if(d > r.last) r.last = d;
+    m.set(t.contactId, r);
+  });
+  return m;
+}
+const WELFARE_BUCKETS = [
+  {key:'w0', label:'Not deposited',   min:-Infinity, max:0},
+  {key:'w1', label:'Up to 1,000',     min:0,     max:1000},
+  {key:'w2', label:'1,000–5,000',     min:1000,  max:5000},
+  {key:'w3', label:'5,000–10,000',    min:5000,  max:10000},
+  {key:'w4', label:'10,000–50,000',   min:10000, max:50000},
+  {key:'w5', label:'50,000+',         min:50000, max:Infinity},
+];
+function welfareBucketKey(a){
+  const n = Number(a) || 0;
+  if(n <= 0) return 'w0';
+  return (WELFARE_BUCKETS.find(b=> b.key!=='w0' && n > b.min && n <= b.max) || WELFARE_BUCKETS[1]).key;
+}
+/** copy of the contractor + welfare fields (never written into the saved data) */
+function withWelfare(c, wmap){
+  const w = wmap.get(c.id);
+  const amt = w ? w.amount : 0;
+  return Object.assign({}, c, {welfareAmount: amt, welfareStatus: amt>0 ? 'deposited' : 'not', welfareCount: w ? w.count : 0, welfareLast: w ? w.last : ''});
+}
+function ensureWelfareFields(list){
+  const wm = welfareDepositMap();
+  return list.map(c=> c.welfareAmount !== undefined ? c : withWelfare(c, wm));
+}
+function welfareCellsHtml(c){
+  const amt = c.welfareAmount > 0
+    ? `<td class="mono" style="font-weight:700;color:var(--green-700);" title="Welfare balance now: ${fmtMoney(savingsBalance(c.id))}${c.welfareLast?' · last deposit '+escapeHtml(c.welfareLast):''}">${fmtMoney(c.welfareAmount)}</td>`
+    : `<td class="mono" style="color:var(--ink-soft);">—</td>`;
+  const st = c.welfareAmount > 0
+    ? `<td><span class="pill pill-green">✓ Deposited</span></td>`
+    : `<td><span class="pill pill-red">✗ Not deposited</span></td>`;
+  return amt + st;
+}
+function welfareSummaryStats(list){
+  const dep = list.filter(c=>c.welfareAmount>0);
+  return {depositors: dep.length, notDep: list.length - dep.length, total: dep.reduce((s,c)=>s+c.welfareAmount,0)};
+}
+function welfareMetaLine(list){
+  const st = welfareSummaryStats(list);
+  return `Welfare Fund (${welfarePeriodLabel()}): Deposited <strong>${st.depositors}</strong> &nbsp;·&nbsp; Not deposited <strong>${st.notDep}</strong> &nbsp;·&nbsp; Total deposit <strong>${fmtMoney(st.total)}</strong>`;
+}
 const TOTAL_AMOUNT_BUCKETS = [
   {key:'b0',  label:'Up to 1 Lac', min:-Infinity, max:100000},
   {key:'b1',  label:'1–5 Lac',     min:100000,    max:500000},
@@ -2547,6 +2631,8 @@ function mselValues(field){
   if(field==='ranking') return DB.contacts.map((_,i)=>String(i+1));
   if(field==='status') return ['green','yellow','red'];
   if(field==='totalAmountRange') return TOTAL_AMOUNT_BUCKETS.map(b=>b.key);
+  if(field==='welfareStatus') return ['deposited','not'];
+  if(field==='welfareRange') return WELFARE_BUCKETS.map(b=>b.key);
   const arr = Array.from(new Set(DB.contacts.map(c=>c[field]).filter(v=>v!==undefined&&v!==null&&v!=='').map(String)));
   arr.sort((a,b)=> a.localeCompare(b));
   return arr;
@@ -2555,6 +2641,8 @@ function mselDisplayLabel(field, v){
   if(field==='ranking') return 'Rank '+v;
   if(field==='status') return v.charAt(0).toUpperCase()+v.slice(1);
   if(field==='totalAmountRange') return (TOTAL_AMOUNT_BUCKETS.find(b=>b.key===v)||{}).label || v;
+  if(field==='welfareStatus') return v==='deposited' ? 'Deposited' : 'Not deposited';
+  if(field==='welfareRange') return (WELFARE_BUCKETS.find(b=>b.key===v)||{}).label || v;
   return v;
 }
 function mountMselFilters(scope, containerId){
@@ -2804,7 +2892,8 @@ function showWhatsAppOffer(contactId, msg, c){
 
 function renderSummary(){
   ensureMselMounted('summary','summaryFilterRow');
-  const list = rankedContacts().filter(c=>!c.died);
+  const __wm = welfareDepositMap();
+  const list = rankedContacts().filter(c=>!c.died).map(c=>withWelfare(c, __wm));
   const q = (document.getElementById('summarySearch').value||'').toLowerCase().trim();
   const F = msFilterState.summary;
   const markF = (document.getElementById('summaryMarkFilter')||{}).value || 'all';
@@ -2820,6 +2909,8 @@ function renderSummary(){
     if(F.nid.size && !F.nid.has(c.nid)) return false;
     if(F.status.size && !F.status.has(contactStatus(c))) return false;
     if(F.totalAmountRange.size && !F.totalAmountRange.has(totalAmountBucketKey(c.totalAmount))) return false;
+    if(F.welfareStatus.size && !F.welfareStatus.has(c.welfareStatus)) return false;
+    if(F.welfareRange.size && !F.welfareRange.has(welfareBucketKey(c.welfareAmount))) return false;
     return true;
   });
 
@@ -2828,7 +2919,7 @@ function renderSummary(){
   summarySortState = {field,dir};
   filtered.sort((a,b)=>{
     let av=a[field], bv=b[field];
-    if(field==='totalAmount'||field==='ranking'){ av=Number(av)||0; bv=Number(bv)||0; }
+    if(field==='totalAmount'||field==='ranking'||field==='welfareAmount'){ av=Number(av)||0; bv=Number(bv)||0; }
     else { av=String(av||'').toLowerCase(); bv=String(bv||'').toLowerCase(); }
     if(av<bv) return dir==='asc'?-1:1;
     if(av>bv) return dir==='asc'?1:-1;
@@ -2851,6 +2942,7 @@ function renderSummary(){
       <td>${escapeHtml(c.address||'')}</td>
       <td class="mono">${escapeHtml(c.nid||'')}</td>
       <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
+      ${welfareCellsHtml(c)}
       <td class="no-print"><div class="row-actions">
         <button class="icon-btn" onclick="jumpToAccount('${c.id}')">Open</button>
         <button class="icon-btn" onclick="openEditContactModal('${c.id}')">Edit</button>
@@ -2869,6 +2961,11 @@ function renderSummary(){
   document.getElementById('statActiveContacts').textContent = summaryStatusCounts.green;
   document.getElementById('statModerateContacts').textContent = summaryStatusCounts.yellow;
   document.getElementById('statInactiveContacts').textContent = summaryStatusCounts.red;
+  const __ws = welfareSummaryStats(list);
+  document.getElementById('statWelfareDepositors').textContent = __ws.depositors;
+  document.getElementById('statWelfareNot').textContent = __ws.notDep;
+  document.getElementById('statWelfareTotal').textContent = fmtMoney(__ws.total);
+  document.querySelectorAll('.welfarePeriodLbl').forEach(e=> e.textContent = '(' + welfarePeriodLabel() + ')');
   updateSessionLabels();
   refreshAccountPicker();
 }
@@ -3436,10 +3533,11 @@ function renderReports(){
   ensureMselMounted('reports','reportFilterRow');
   const meetingDateEl = document.getElementById('reportMeetingDate');
   if(meetingDateEl) meetingDateEl.value = DB.session.meetingDate || '';
+  const __wm = welfareDepositMap();
   const list = rankedContacts().filter(c=>!c.died).map(c=>{
     const acc = DB.accounts[c.id] || {entries:[]};
     const detail = contactStatusDetail(c);
-    return {...c, entries: acc.entries.length, status: detail.status, statusDetail: detail};
+    return {...withWelfare(c, __wm), entries: acc.entries.length, status: detail.status, statusDetail: detail};
   });
   const q = (document.getElementById('reportSearch').value||'').toLowerCase().trim();
   const F = msFilterState.reports;
@@ -3460,12 +3558,14 @@ function renderReports(){
     if(F.nid.size && !F.nid.has(c.nid)) return false;
     if(F.status.size && !F.status.has(c.status)) return false;
     if(F.totalAmountRange.size && !F.totalAmountRange.has(totalAmountBucketKey(c.totalAmount))) return false;
+    if(F.welfareStatus.size && !F.welfareStatus.has(c.welfareStatus)) return false;
+    if(F.welfareRange.size && !F.welfareRange.has(welfareBucketKey(c.welfareAmount))) return false;
     return true;
   });
   const {field,dir} = reportSortState;
   filtered.sort((a,b)=>{
     let av=a[field], bv=b[field];
-    if(['totalAmount','ranking','entries'].includes(field)){ av=Number(av)||0; bv=Number(bv)||0; }
+    if(['totalAmount','ranking','entries','welfareAmount'].includes(field)){ av=Number(av)||0; bv=Number(bv)||0; }
     else { av=String(av||'').toLowerCase(); bv=String(bv||'').toLowerCase(); }
     if(av<bv) return dir==='asc'?-1:1;
     if(av>bv) return dir==='asc'?1:-1;
@@ -3478,6 +3578,11 @@ function renderReports(){
   document.getElementById('repInactive').textContent = list.filter(c=>c.status==='red').length;
   document.getElementById('repEntries').textContent = list.reduce((s,c)=>s+c.entries,0);
   document.getElementById('repCombined').textContent = fmtMoney(list.reduce((s,c)=>s+(c.totalAmount||0),0));
+  const __rws = welfareSummaryStats(list);
+  document.getElementById('repWelfareDepositors').textContent = __rws.depositors;
+  document.getElementById('repWelfareNot').textContent = __rws.notDep;
+  document.getElementById('repWelfareTotal').textContent = fmtMoney(__rws.total);
+  document.querySelectorAll('.welfarePeriodLbl').forEach(e=> e.textContent = '(' + welfarePeriodLabel() + ')');
 
   const tbody = document.getElementById('reportTbody');
   tbody.innerHTML = '';
@@ -3491,6 +3596,7 @@ function renderReports(){
       <td class="mono">${escapeHtml(formatMobilesDisplay(c))}</td><td>${escapeHtml(c.address||'')}</td>
       <td class="mono">${escapeHtml(c.nid||'')}</td><td class="mono">${c.entries}</td>
       <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
+      ${welfareCellsHtml(c)}
       <td>${statusPillHtml(c.status, c.statusDetail)}</td>
       <td class="no-print"><button class="icon-btn" onclick="openWhatsAppToContact('${c.id}')" title="WhatsApp">WA</button></td>`;
     tbody.appendChild(tr);
@@ -4324,16 +4430,16 @@ function exportTableAsExcel(filename, headers, rows, rawCols){
   downloadBlob(filename, blob);
 }
 function exportSummaryExcel(){
-  const list = window.__lastSummaryFiltered || rankedContacts();
-  const headers = ['Rank','ID','Name','Mobile','Address','Section','Total Amount'];
-  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',fmtMoney(c.totalAmount)]);
+  const list = ensureWelfareFields(window.__lastSummaryFiltered || rankedContacts());
+  const headers = ['Rank','ID','Name','Mobile','Address','Section','Total Amount','Welfare Deposit','Welfare'];
+  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',fmtMoney(c.totalAmount),c.welfareAmount>0?fmtMoney(c.welfareAmount):'0',c.welfareAmount>0?'Deposited':'Not deposited']);
   exportTableAsExcel('contractor-ledger-summary.xls', headers, rows);
   toast('Excel file downloaded.');
 }
 async function exportSummaryExcelToDrive(){
-  const list = window.__lastSummaryFiltered || rankedContacts();
-  const headers = ['Rank','ID','Name','Mobile','Address','Section','Total Amount'];
-  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',fmtMoney(c.totalAmount)]);
+  const list = ensureWelfareFields(window.__lastSummaryFiltered || rankedContacts());
+  const headers = ['Rank','ID','Name','Mobile','Address','Section','Total Amount','Welfare Deposit','Welfare'];
+  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',fmtMoney(c.totalAmount),c.welfareAmount>0?fmtMoney(c.welfareAmount):'0',c.welfareAmount>0?'Deposited':'Not deposited']);
   const name = `contractor-ledger-summary-${localISODate()}.xls`;
   await uploadBlobToDrive(name, buildExcelBlob(headers, rows), 'application/vnd.ms-excel');
 }
@@ -4356,24 +4462,24 @@ async function exportAccountExcelToDrive(){
   await uploadBlobToDrive(name, buildExcelBlob(headers, rows), 'application/vnd.ms-excel');
 }
 function exportReportsExcel(){
-  const list = window.__lastReportFiltered || rankedContacts().map(c=>{
+  const list = ensureWelfareFields(window.__lastReportFiltered || rankedContacts().map(c=>{
     const detail = contactStatusDetail(c);
     return {...c, entries:(DB.accounts[c.id]?.entries||[]).length, status:detail.status, statusDetail:detail};
-  });
-  const headers = ['Rank','ID','Name','Mobile','Address','Section','Entries','Total Amount','Status'];
-  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',c.entries,fmtMoney(c.totalAmount),statusActiveHtml(c.status, c.statusDetail)]);
-  exportTableAsExcel('contractor-ledger-report.xls', headers, rows, [8]);
+  }));
+  const headers = ['Rank','ID','Name','Mobile','Address','Section','Entries','Total Amount','Welfare Deposit','Welfare','Status'];
+  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',c.entries,fmtMoney(c.totalAmount),c.welfareAmount>0?fmtMoney(c.welfareAmount):'0',c.welfareAmount>0?'Deposited':'Not deposited',statusActiveHtml(c.status, c.statusDetail)]);
+  exportTableAsExcel('contractor-ledger-report.xls', headers, rows, [10]);
   toast('Excel file downloaded.');
 }
 async function exportReportsExcelToDrive(){
-  const list = window.__lastReportFiltered || rankedContacts().map(c=>{
+  const list = ensureWelfareFields(window.__lastReportFiltered || rankedContacts().map(c=>{
     const detail = contactStatusDetail(c);
     return {...c, entries:(DB.accounts[c.id]?.entries||[]).length, status:detail.status, statusDetail:detail};
-  });
-  const headers = ['Rank','ID','Name','Mobile','Address','Section','Entries','Total Amount','Status'];
-  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',c.entries,fmtMoney(c.totalAmount),statusActiveHtml(c.status, c.statusDetail)]);
+  }));
+  const headers = ['Rank','ID','Name','Mobile','Address','Section','Entries','Total Amount','Welfare Deposit','Welfare','Status'];
+  const rows = list.map(c=>[c.ranking,c.id,c.name,c.mobile||'',c.address||'',c.nid||'',c.entries,fmtMoney(c.totalAmount),c.welfareAmount>0?fmtMoney(c.welfareAmount):'0',c.welfareAmount>0?'Deposited':'Not deposited',statusActiveHtml(c.status, c.statusDetail)]);
   const name = `contractor-ledger-report-${localISODate()}.xls`;
-  await uploadBlobToDrive(name, buildExcelBlob(headers, rows, [8]), 'application/vnd.ms-excel');
+  await uploadBlobToDrive(name, buildExcelBlob(headers, rows, [10]), 'application/vnd.ms-excel');
 }
 
 
@@ -5180,16 +5286,16 @@ window.addEventListener('afterprint', ()=>{
 });
 
 function printSummaryReport(){
-  const list = window.__lastSummaryFiltered || rankedContacts();
+  const list = ensureWelfareFields(window.__lastSummaryFiltered || rankedContacts());
   const {from,to} = DB.session;
   const combined = list.reduce((s,c)=>s+(c.totalAmount||0),0);
   const rows = list.map(c=>`<tr><td>${c.ranking}</td><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.name)}</td>
     <td>${escapeHtml(c.mobile||'')}</td><td>${escapeHtml(c.address||'')}</td><td>${escapeHtml(c.nid||'')}</td>
-    <td>${fmtMoney(c.totalAmount)}</td></tr>`).join('');
+    <td>${fmtMoney(c.totalAmount)}</td><td>${c.welfareAmount>0?fmtMoney(c.welfareAmount):'—'}</td><td>${c.welfareAmount>0?'Deposited':'Not deposited'}</td></tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Summary</h2></div>
     <div class="pr-meta">Session: ${from||'…'} → ${to||'…'} &nbsp;·&nbsp; Printed: ${new Date().toLocaleString()}<br>
-    Showing: <strong>${list.length}</strong> contractor${list.length===1?'':'s'} &nbsp;·&nbsp; Combined Total: <strong>${fmtMoney(combined)}</strong></div>
-    <table><thead><tr><th>Rank</th><th>ID</th><th>Name</th><th>Mobile</th><th>Address</th><th>Section</th><th>Total Amount</th></tr></thead>
+    Showing: <strong>${list.length}</strong> contractor${list.length===1?'':'s'} &nbsp;·&nbsp; Combined Total: <strong>${fmtMoney(combined)}</strong><br>${welfareMetaLine(list)}</div>
+    <table><thead><tr><th>Rank</th><th>ID</th><th>Name</th><th>Mobile</th><th>Address</th><th>Section</th><th>Total Amount</th><th>Welfare Deposit</th><th>Welfare</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
   enterPrintMode(html);
 }
@@ -5247,10 +5353,11 @@ function printFullBackupPDF(){
 }
 
 function printReportsPanel(){
-  const list = window.__lastReportFiltered || rankedContacts().map(c=>{
+  const list0 = window.__lastReportFiltered || rankedContacts().map(c=>{
     const detail = contactStatusDetail(c);
     return {...c, entries:(DB.accounts[c.id]?.entries||[]).length, status:detail.status, statusDetail:detail};
   });
+  const list = ensureWelfareFields(list0);
   const combined = list.reduce((s,c)=>s+(c.totalAmount||0),0);
   const activeCount = list.filter(c=>c.status==='green').length;
   const moderateCount = list.filter(c=>c.status==='yellow').length;
@@ -5259,13 +5366,13 @@ function printReportsPanel(){
   const meetingDate = DB.session.meetingDate || '';
   const rows = list.map(c=>`<tr><td>${c.ranking}</td><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.name)}</td>
     <td>${escapeHtml(c.mobile||'')}</td><td>${escapeHtml(c.address||'')}</td><td>${escapeHtml(c.nid||'')}</td>
-    <td>${c.entries}</td><td>${fmtMoney(c.totalAmount)}</td><td>${statusActiveHtml(c.status, c.statusDetail)}</td></tr>`).join('');
+    <td>${c.entries}</td><td>${fmtMoney(c.totalAmount)}</td><td>${c.welfareAmount>0?fmtMoney(c.welfareAmount):'—'}</td><td>${c.welfareAmount>0?'Deposited':'Not deposited'}</td><td>${statusActiveHtml(c.status, c.statusDetail)}</td></tr>`).join('');
   const html = `<div class="pr-head"><h2>All Contractors Report</h2></div>
     <div class="pr-meta">Printed: ${new Date().toLocaleString()}${meetingDate? ' &nbsp;·&nbsp; Meeting Date: <strong>'+escapeHtml(meetingDate)+'</strong>':''}<br>
     Showing: <strong>${list.length}</strong> contractor${list.length===1?'':'s'} &nbsp;·&nbsp; Active: <strong>${activeCount}</strong>
     &nbsp;·&nbsp; Moderate: <strong>${moderateCount}</strong> &nbsp;·&nbsp; Inactive: <strong>${inactiveCount}</strong>
-    &nbsp;·&nbsp; Entries: <strong>${totalEntries}</strong> &nbsp;·&nbsp; Combined Total: <strong>${fmtMoney(combined)}</strong></div>
-    <table><thead><tr><th>Rank</th><th>ID</th><th>Name</th><th>Mobile</th><th>Address</th><th>Section</th><th>Entries</th><th>Total Amount</th><th>Status</th></tr></thead>
+    &nbsp;·&nbsp; Entries: <strong>${totalEntries}</strong> &nbsp;·&nbsp; Combined Total: <strong>${fmtMoney(combined)}</strong><br>${welfareMetaLine(list)}</div>
+    <table><thead><tr><th>Rank</th><th>ID</th><th>Name</th><th>Mobile</th><th>Address</th><th>Section</th><th>Entries</th><th>Total Amount</th><th>Welfare Deposit</th><th>Welfare</th><th>Status</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
   enterPrintMode(html);
 }
