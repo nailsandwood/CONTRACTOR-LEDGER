@@ -366,7 +366,8 @@ tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,.12),transparen
 .dlink{color:var(--green-700);font-weight:700;cursor:pointer;margin-left:auto;background:none;border:0;font:inherit;font-weight:700;}
 .dqa{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px;}
 @media(max-width:1100px){.dg.c3,.dg.c3b,.dg.c2{grid-template-columns:1fr;} .dg.c4{grid-template-columns:1fr 1fr;} .login-split{grid-template-columns:1fr;} .login-hero{display:none;}}
-#demoRibbon{display:none;align-items:center;justify-content:space-between;gap:12px;background:#fdf0c8;color:#6b4e00;border-radius:14px;padding:10px 16px;margin:0 8px 14px 0;font-size:.85rem;}\n/* phone: sidebar becomes a bottom bar */
+#demoRibbon{display:none;align-items:center;justify-content:space-between;gap:12px;background:#fdf0c8;color:#6b4e00;border-radius:14px;padding:10px 16px;margin:0 8px 14px 0;font-size:.85rem;}
+/* phone: sidebar becomes a bottom bar */
 @media(max-width:900px){
   .shell{grid-template-columns:1fr;padding:10px 12px 86px;gap:0;}
   .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;border-radius:22px 22px 0 0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:120;flex-direction:row;box-shadow:0 -10px 30px -12px rgba(0,0,0,.45);}
@@ -452,6 +453,22 @@ body.dark-mode .card h3[style],body.dark-mode .dcard h3[style]{color:var(--ink) 
 body.dark-mode .danger-card h3{color:#ff8f7c !important;}
 body.dark-mode .btn-danger,body.dark-mode .btn.btn-danger{background:#b3311c !important;color:#fff !important;}
 body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,.16),transparent);}
+
+/* ===== collapsible sidebar (v7.3) ===== */
+.side-toggle{border:0;cursor:pointer;} .side-toggle:hover{filter:brightness(1.18);}
+.shell{transition:grid-template-columns .25s ease;}
+body.side-collapsed .shell{grid-template-columns:76px 1fr;}
+body.side-collapsed .side{padding:22px 10px 14px;align-items:center;}
+body.side-collapsed .side-brand{padding:0 0 18px;justify-content:center;}
+body.side-collapsed .side-name,body.side-collapsed nav.tabs button span,body.side-collapsed .side-user > div{display:none;}
+body.side-collapsed nav.tabs{width:100%;}
+body.side-collapsed nav.tabs button{justify-content:center;padding:12px 0;}
+body.side-collapsed .side-user{padding:6px;background:transparent;}
+@media(max-width:900px){
+  body.side-collapsed .shell{grid-template-columns:1fr;}
+  body.side-collapsed nav.tabs button span{display:inline;} body.side-collapsed nav.tabs button{padding:8px 12px;}
+  .side-toggle{display:none;}
+}
 </style>
 </head>
 <body>
@@ -517,6 +534,7 @@ body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,
 
 <div id="app">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="ni-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
 <symbol id="ni-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
 <symbol id="ni-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 <symbol id="ni-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
@@ -530,16 +548,16 @@ body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,
 </defs></svg>
 <div class="shell">
   <aside class="side no-print">
-    <div class="side-brand"><span class="lm"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg></span>Contractor Ledger</div>
+    <div class="side-brand"><button type="button" class="lm side-toggle" id="sideToggle" onclick="toggleSidebar()" title="Hide / show the menu" aria-label="Hide or show the menu" aria-expanded="true"><svg class="ic" aria-hidden="true"><use href="#ni-menu"/></svg></button><span class="side-name">Contractor Ledger</span></div>
     <nav class="tabs">
-      <button data-tab="dashboard" onclick="showTab('dashboard')"><svg class="ic" aria-hidden="true"><use href="#ni-home"/></svg><span>Dashboard</span></button>
-      <button data-tab="summary" onclick="showTab('summary')"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Contractor Summary</span></button>
-      <button data-tab="accounts" onclick="showTab('accounts')"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Contractor Accounts</span></button>
-      <button data-tab="reports" onclick="showTab('reports')"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Reports</span></button>
-      <button data-tab="savings" onclick="showTab('savings')"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span></button>
-      <button data-tab="announce" onclick="showTab('announce')"><svg class="ic" aria-hidden="true"><use href="#ni-mega"/></svg><span>Announcements</span></button>
-      <button data-tab="backup" onclick="showTab('backup')"><svg class="ic" aria-hidden="true"><use href="#ni-cloud"/></svg><span>Backup &amp; Files</span></button>
-      <button data-tab="settings" onclick="showTab('settings')"><svg class="ic" aria-hidden="true"><use href="#ni-gear"/></svg><span>Settings</span></button>
+      <button data-tab="dashboard" onclick="showTab('dashboard')" title="Dashboard"><svg class="ic" aria-hidden="true"><use href="#ni-home"/></svg><span>Dashboard</span></button>
+      <button data-tab="summary" onclick="showTab('summary')" title="Contractor Summary"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Contractor Summary</span></button>
+      <button data-tab="accounts" onclick="showTab('accounts')" title="Contractor Accounts"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Contractor Accounts</span></button>
+      <button data-tab="reports" onclick="showTab('reports')" title="Reports"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Reports</span></button>
+      <button data-tab="savings" onclick="showTab('savings')" title="Welfare Fund"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span></button>
+      <button data-tab="announce" onclick="showTab('announce')" title="Announcements"><svg class="ic" aria-hidden="true"><use href="#ni-mega"/></svg><span>Announcements</span></button>
+      <button data-tab="backup" onclick="showTab('backup')" title="Backup &amp; Files"><svg class="ic" aria-hidden="true"><use href="#ni-cloud"/></svg><span>Backup &amp; Files</span></button>
+      <button data-tab="settings" onclick="showTab('settings')" title="Settings"><svg class="ic" aria-hidden="true"><use href="#ni-gear"/></svg><span>Settings</span></button>
     </nav>
     <div class="side-user"><span class="av">S</span><div style="min-width:0;"><b>Shah Amanat Traders</b><span id="userEmailLabel" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span></div></div>
   </aside>
@@ -962,7 +980,7 @@ body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,
             <button class="btn btn-ghost btn-sm" onclick="printSavingsHistory()">Print history / PDF</button>
           </div>
           <div class="card" style="padding:0;margin-bottom:18px;">
-            <div class="table-wrap" style="max-height:320px;overflow:auto;">
+            <div class="table-wrap" style="max-height:82vh;overflow:auto;">
               <table>
                 <thead>
                   <tr>
@@ -1007,7 +1025,7 @@ body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,
             </select>
           </div>
           <div class="card" style="padding:0;">
-            <div class="table-wrap" style="max-height:360px;overflow:auto;">
+            <div class="table-wrap" style="max-height:82vh;overflow:auto;">
               <table>
                 <thead>
                   <tr>
@@ -1115,7 +1133,7 @@ body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,
             <button class="btn btn-ghost btn-sm" onclick="annClearSentLog()">Clear sent log</button>
             <span id="annSelCount" style="font-size:.82rem;align-self:center;color:var(--ink-soft);">0 selected</span>
           </div>
-          <div class="table-wrap" style="max-height:380px;overflow:auto;">
+          <div class="table-wrap" style="max-height:78vh;overflow:auto;">
             <table>
               <thead><tr>
                 <th class="no-print">✓</th>
@@ -1389,7 +1407,7 @@ body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '7.2.0-New-Layout';
+const APP_VERSION = '7.3.0-New-Layout';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -2721,6 +2739,17 @@ function updateCashOutField(){
   const type = (document.getElementById('savFormType')||{}).value || 'deposit';
   const ok = type==='deposit' && savIsOnlineMethod(document.getElementById('savFormMethod').value);
   f.style.display = ok ? 'block' : 'none'; if(!ok) cb.checked = false;
+}
+
+function applySidebarState(){
+  let c=false; try{ c = localStorage.getItem('nw_side_collapsed')==='1'; }catch(e){}
+  document.body.classList.toggle('side-collapsed', c);
+  const b=document.getElementById('sideToggle'); if(b) b.setAttribute('aria-expanded', String(!c));
+}
+function toggleSidebar(){
+  const c = !document.body.classList.contains('side-collapsed');
+  try{ localStorage.setItem('nw_side_collapsed', c?'1':'0'); }catch(e){}
+  applySidebarState();
 }
 
 function showTab(tab){
@@ -6016,6 +6045,7 @@ document.addEventListener('keydown', e=>{
    INIT
    ========================================================= */
 function initApp(){
+  applySidebarState();
   showTab('dashboard');
   renderSettings();
   applyDarkModeFromStorage();
