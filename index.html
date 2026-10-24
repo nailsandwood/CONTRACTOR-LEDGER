@@ -254,13 +254,223 @@
 
 /* Prefer day-first where browser respects page locale */
   input[type="date"]{min-width:9.5rem;}
+
+/* ===================== NEW LAYOUT (v7) ===================== */
+:root{
+  --walnut-950:#0b1210; --walnut-900:#14201b; --walnut-800:#1f3329; --walnut-700:#35503f;
+  --amber-600:#17794f; --amber-500:#22a06b; --amber-200:#dff3ea;
+  --paper:#e9efec; --paper-dim:#f0f5f2; --ring-line:#d6e0db;
+  --ink:#14201b; --ink-soft:#5f6d67;
+  --green-700:#0f5a39; --green-100:#dff3ea; --yellow-700:#6b4e00; --yellow-100:#fdf0c8; --red-600:#b3311c; --red-100:#fde0da;
+  --shadow: 0 1px 2px rgba(15,30,25,.06), 0 12px 28px -16px rgba(15,30,25,.22);
+  --brand-grad: linear-gradient(135deg,#17794f,#0f5a39);
+}
+body{background:var(--paper);}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+/* login */
+#loginScreen{padding:0;background:var(--paper);align-items:stretch;justify-content:stretch;}
+.login-split{display:grid;grid-template-columns:1.1fr 1fr;width:100%;min-height:100vh;}
+.login-hero{background:linear-gradient(135deg,#0b4a2f,#17794f 55%,#2fb37a);color:#fff;padding:64px;display:flex;flex-direction:column;justify-content:center;gap:26px;}
+.login-hero .lh-brand{display:flex;align-items:center;gap:12px;font:700 22px 'Fraunces',serif;}
+.login-hero h2{font:700 42px/1.12 'Fraunces',serif;max-width:480px;margin:0;}
+.login-hero ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;opacity:.95;}
+.login-hero li{display:flex;gap:10px;align-items:center;}
+.login-pane{display:flex;align-items:center;justify-content:center;padding:32px;}
+.login-card{border-radius:24px;border-top:0;max-width:430px;padding:36px 34px 28px;background:#fff;box-shadow:var(--shadow);}
+.login-greet{font:700 24px 'Fraunces',serif;margin:0 0 6px;color:var(--ink);}
+.login-brand h1{font-size:1.15rem;}
+/* shell */
+#app{min-height:100vh;display:none;flex-direction:column;}
+.shell{display:grid;grid-template-columns:262px 1fr;gap:20px;padding:16px;align-items:start;min-height:100vh;}
+.side{position:sticky;top:16px;height:calc(100vh - 32px);background:linear-gradient(180deg,#0f1a16,#0b1210);border-radius:24px;padding:22px 14px 14px;display:flex;flex-direction:column;gap:4px;color:#b9c9c1;}
+.side-brand{display:flex;align-items:center;gap:10px;color:#fff;font:700 19px 'Fraunces',serif;padding:0 10px 18px;}
+.side-brand .lm{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#22a06b,#0f5a39);display:grid;place-items:center;color:#fff;flex:none;}
+nav.tabs{display:flex;flex-direction:column;gap:3px;background:transparent;padding:0;overflow:visible;}
+nav.tabs button{display:flex;align-items:center;gap:12px;text-align:left;padding:11px 14px;border-radius:12px;color:#b9c9c1;font-weight:500;font-size:.9rem;}
+nav.tabs button:hover{background:rgba(255,255,255,.06);}
+nav.tabs button.active{background:rgba(34,160,107,.2);color:#fff;box-shadow:inset 0 0 0 1px rgba(34,160,107,.5);}
+.side-user{margin-top:auto;display:flex;gap:10px;align-items:center;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);font-size:.74rem;color:#9fb2a9;overflow:hidden;}
+.side-user .av{width:34px;height:34px;border-radius:50%;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:700;flex:none;}
+.side-user b{color:#fff;font-size:.82rem;display:block;}
+.mainwrap{min-width:0;display:flex;flex-direction:column;}
+header.topbar{position:sticky;top:0;z-index:50;background:var(--paper);color:var(--ink);height:auto;padding:6px 8px 14px 0;box-shadow:none;gap:12px;flex-wrap:wrap;}
+.m-brand{display:none;align-items:center;gap:10px;font:700 18px 'Fraunces',serif;}
+.top-search{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:0 14px;height:44px;min-width:280px;flex:1;max-width:420px;color:var(--ink-soft);cursor:pointer;box-shadow:0 1px 2px rgba(15,30,25,.06);border:0;font:inherit;text-align:left;}
+.top-search .kbd{margin-left:auto;font-size:.72rem;background:var(--paper-dim);padding:2px 8px;border-radius:7px;font-family:'IBM Plex Mono',monospace;}
+.topbar-right{margin-left:auto;flex-wrap:wrap;gap:8px;}
+.drive-status{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;padding:9px 14px;border-radius:999px;background:#fff;color:var(--green-700);font-weight:600;box-shadow:0 1px 2px rgba(15,30,25,.06);}
+.drive-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#22a06b;box-shadow:0 0 0 4px rgba(34,160,107,.2);}
+.drive-status.offline{background:#fff;color:var(--red-600);} .drive-status.offline::before{background:var(--red-600);box-shadow:0 0 0 4px rgba(179,49,28,.18);}
+.drive-status.syncing{background:#fff;color:var(--yellow-700);} .drive-status.syncing::before{background:#e0a526;box-shadow:0 0 0 4px rgba(224,165,38,.25);}
+.kbd-hint{background:#fff;border:0;border-radius:999px;padding:9px 12px;box-shadow:0 1px 2px rgba(15,30,25,.06);font-size:.72rem;}
+.topbar-right .who{color:var(--ink-soft);}
+.bell{width:44px;height:44px;border-radius:14px;background:#fff;display:grid;place-items:center;position:relative;border:0;cursor:pointer;color:var(--ink);box-shadow:0 1px 2px rgba(15,30,25,.06);}
+.bell i{display:none;position:absolute;top:10px;right:11px;width:9px;height:9px;border-radius:50%;background:#e0a526;border:2px solid #fff;}
+.bell.on i{display:block;}
+main{max-width:none;margin:0;padding:6px 8px 60px 0;width:100%;}
+#backupReminderBar{border-radius:14px;border:0;margin:0 8px 14px 0;background:#fdf0c8;}
+footer.appfoot{padding:10px 0 0;}
+/* page heads, cards, stats */
+.section-head h2{font-size:1.65rem;letter-spacing:-.01em;}
+.card{border:0;border-radius:20px;box-shadow:var(--shadow);padding:22px;}
+.card h3{font-family:'Fraunces',serif;}
+.stat-box{background:#fff;border:0;border-left:4px solid var(--amber-600);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;}
+.stat-box .label{font-weight:600;letter-spacing:.08em;}
+.stat-box .value{font-weight:700;font-size:1.6rem;}
+/* buttons */
+.btn{border-radius:12px;padding:10px 16px;font-size:.86rem;box-shadow:0 1px 2px rgba(15,30,25,.05);}
+.btn-accent{background:var(--brand-grad);color:#fff;box-shadow:0 8px 18px -8px rgba(15,90,57,.7);}
+.btn-accent:hover{filter:brightness(1.08);background:var(--brand-grad);}
+.btn-primary{background:#14201b;color:#dff3ea;}
+.btn-ghost{background:#fff;border:1px solid var(--ring-line);color:var(--ink);}
+.btn-ghost:hover{background:var(--paper-dim);}
+.btn-danger{background:#b3311c;}
+.btn-sm{border-radius:9px;padding:6px 12px;}
+.icon-btn{border-radius:9px;padding:5px 10px;background:#fff;}
+/* inputs */
+.search-bar input,select.select-sm,input.input-sm,.field input,.field select,.msel-btn{border-radius:12px;border:1px solid var(--ring-line);}
+.search-bar input{padding:11px 12px 11px 34px;} select.select-sm,input.input-sm{padding:10px 12px;}
+.msel-btn{border-radius:999px;padding:7px 14px;font-weight:500;} .msel-btn.has-selection{background:var(--amber-200);border-color:#9fd8bf;color:var(--green-700);}
+.msel-panel{border-radius:14px;border:0;box-shadow:var(--shadow);}
+/* tables */
+.table-wrap{border:0;border-radius:18px;box-shadow:var(--shadow);background:#fff;}
+thead th{background:#f3f7f5;color:#6b7a73;font-size:.7rem;letter-spacing:.07em;padding:12px 12px;}
+thead th:hover{background:#e8efeb;}
+tbody td{padding:11px 12px;border-bottom:1px solid #edf2ef;}
+tbody tr:hover{background:#f6faf8;}
+tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,.12),transparent);}
+.pill{padding:4px 11px;font-size:.74rem;}
+.pill-gold{background:#fdf0c8;color:#6b4e00;}
+/* modals, toast, search */
+.modal-overlay{background:rgba(10,20,16,.6);} .modal{border-radius:22px;padding:28px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);}
+.toast{border-radius:14px;background:#14201b;}
+.gs-box{border-radius:20px;} .dup-banner{border-radius:12px;}
+.kv{border-bottom:1px dashed var(--ring-line);}
+/* dashboard */
+.dg{display:grid;gap:18px;margin-bottom:18px;}
+.dg.c3{grid-template-columns:1.7fr 1fr 1fr;} .dg.c4{grid-template-columns:repeat(4,1fr);} .dg.c3b{grid-template-columns:1.3fr 1fr 1fr;} .dg.c2{grid-template-columns:1.6fr 1fr;}
+.hero{background:linear-gradient(135deg,#0b4a2f,#17794f 55%,#2fb37a);color:#fff;border-radius:22px;padding:26px;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.hero .mu{color:rgba(255,255,255,.8);font-size:.82rem;}
+.hero .big{font:700 40px 'Fraunces',serif;margin:8px 0 2px;letter-spacing:-.01em;}
+.hero .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.2);padding:4px 11px;border-radius:999px;font-size:.76rem;font-weight:600;}
+.dcard{background:#fff;border-radius:20px;padding:20px;box-shadow:var(--shadow);}
+.dcard h3{margin:0 0 12px;font:700 1.02rem 'Fraunces',serif;}
+.dk-l{font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);}
+.dk-v{font:700 1.8rem 'Fraunces',serif;margin-top:8px;letter-spacing:-.01em;}
+.dk-s{font-size:.78rem;color:var(--ink-soft);}
+.dk-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;}
+.drow{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #edf2ef;font-size:.86rem;}
+.drow:first-of-type{border-top:0;}
+.dav{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:.74rem;flex:none;}
+.dpb{height:7px;border-radius:9px;background:#e6eeea;overflow:hidden;width:130px;flex:none;} .dpb i{display:block;height:100%;border-radius:9px;}
+.dlink{color:var(--green-700);font-weight:700;cursor:pointer;margin-left:auto;background:none;border:0;font:inherit;font-weight:700;}
+.dqa{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px;}
+@media(max-width:1100px){.dg.c3,.dg.c3b,.dg.c2{grid-template-columns:1fr;} .dg.c4{grid-template-columns:1fr 1fr;} .login-split{grid-template-columns:1fr;} .login-hero{display:none;}}
+#demoRibbon{display:none;align-items:center;justify-content:space-between;gap:12px;background:#fdf0c8;color:#6b4e00;border-radius:14px;padding:10px 16px;margin:0 8px 14px 0;font-size:.85rem;}\n/* phone: sidebar becomes a bottom bar */
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;padding:10px 12px 86px;gap:0;}
+  .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;border-radius:22px 22px 0 0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:120;flex-direction:row;box-shadow:0 -10px 30px -12px rgba(0,0,0,.45);}
+  .side-brand,.side-user{display:none;}
+  nav.tabs{flex-direction:row;overflow-x:auto;gap:2px;width:100%;-webkit-overflow-scrolling:touch;}
+  nav.tabs button{flex:0 0 auto;flex-direction:column;gap:3px;padding:8px 12px;font-size:.66rem;min-width:66px;align-items:center;text-align:center;}
+  .m-brand{display:flex;} .top-search{min-width:0;flex:1 1 100%;max-width:none;order:5;} .topbar-right .who{display:none;}
+  main{padding-right:0;} header.topbar{padding-right:0;position:static;}
+  .hero .big{font-size:30px;}
+}
+.pill{white-space:nowrap;}
+table{font-size:.82rem;} tbody td{padding:10px 10px;}
+.row-actions{flex-wrap:wrap;gap:4px;max-width:200px;}
+.icon-btn{padding:4px 8px;font-size:.74rem;}
+.top-search span:first-of-type{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+@media(max-width:900px){
+  .kbd-hint,.top-search .kbd{display:none;}
+  .topbar-right{flex-wrap:nowrap;gap:6px;margin-left:auto;} .drive-status{padding:8px 10px;font-size:.7rem;}
+  .top-search{height:42px;} .dg.c4{grid-template-columns:1fr 1fr;} .section-head h2{font-size:1.35rem;}
+}
+body.dark-mode .side{background:linear-gradient(180deg,#0a0e0d,#070a09);}
+body.dark-mode .card,body.dark-mode .dcard,body.dark-mode .stat-box,body.dark-mode .top-search,body.dark-mode .bell,body.dark-mode .drive-status,body.dark-mode .kbd-hint,body.dark-mode .login-card{background:#1a1f21;color:var(--ink);}
+body.dark-mode thead th{background:#151a1c;color:#9fb2a9;}
+body.dark-mode header.topbar{background:var(--paper);}
+@media print{ .side,.m-brand,.bell,.top-search,#syncBanner,#waOfferBar,#demoRibbon{display:none !important;} .shell{display:block !important;padding:0 !important;} }
+
+/* ===== page designs (v7.1) ===== */
+.avt{width:36px;height:36px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-weight:700;font-size:.72rem;flex:none;}
+.who-cell{display:flex;align-items:center;gap:10px;min-width:170px;} .who-cell b{display:block;line-height:1.25;} .who-cell small{color:var(--ink-soft);font-size:.72rem;}
+.status-pills{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;}
+.spill{border:0;background:#fff;border-radius:999px;padding:9px 18px;font:600 .84rem 'Inter',sans-serif;cursor:pointer;box-shadow:0 1px 2px rgba(15,30,25,.08);color:var(--ink);}
+.spill.on{background:var(--amber-200);color:var(--green-700);box-shadow:inset 0 0 0 1.5px #9fd8bf;} .spill small{opacity:.7;margin-left:5px;font-weight:600;}
+.tbar{height:6px;border-radius:6px;background:#e6eeea;margin-top:5px;overflow:hidden;width:110px;} .tbar i{display:block;height:100%;border-radius:6px;background:var(--amber-500);}
+.rowmenu{position:relative;display:inline-block;} .rowmenu summary{list-style:none;cursor:pointer;border:1px solid var(--ring-line);background:#fff;border-radius:9px;padding:4px 10px;font-size:.8rem;} .rowmenu summary::-webkit-details-marker{display:none;}
+.rowmenu .rm-pop{position:absolute;right:0;top:110%;z-index:40;background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:6px;min-width:140px;display:flex;flex-direction:column;gap:2px;}
+.rowmenu .rm-pop button{border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;font:600 .8rem 'Inter',sans-serif;} .rowmenu .rm-pop button:hover{background:var(--paper-dim);} .rowmenu .rm-pop button.danger{color:var(--red-600);}
+.acc-hero{display:flex;align-items:center;gap:18px;background:linear-gradient(135deg,#0b4a2f,#17794f 55%,#2fb37a);color:#fff;border-radius:22px;padding:22px 26px;margin-bottom:16px;box-shadow:var(--shadow);flex-wrap:wrap;}
+.acc-av{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font:700 1.4rem 'Fraunces',serif;flex:none;}
+.acc-main{flex:1;min-width:220px;} .acc-name{font:700 1.7rem 'Fraunces',serif;line-height:1.15;}
+.acc-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;} .achip{background:rgba(255,255,255,.2);border-radius:999px;padding:4px 11px;font-size:.78rem;font-weight:600;}
+.acc-chips #accStatusChip div{display:none;}
+.acc-total{text-align:right;} .acc-total .lbl{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;opacity:.85;} .acc-total .amt{font:700 2.4rem 'Fraunces',serif;letter-spacing:-.01em;}
+.acc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+.acc-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;} .acc-side{display:flex;flex-direction:column;gap:16px;}
+@media(max-width:1180px){.acc-grid{grid-template-columns:1fr;} .acc-stats{grid-template-columns:1fr 1fr;} .stmt-kpis{grid-template-columns:1fr 1fr !important;}}
+.seg{display:inline-flex;background:#dfe8e3;border-radius:12px;padding:4px;margin-bottom:14px;} .seg button{border:0;background:transparent;padding:8px 18px;border-radius:9px;font:600 .84rem 'Inter',sans-serif;color:var(--ink-soft);cursor:pointer;} .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(15,30,25,.14);}
+.stat-hero{background:linear-gradient(135deg,#14201b,#2a4136) !important;color:#fff;border-left:0 !important;} .stat-hero .label{color:#a9bbb2;} .stat-hero .value{color:#fff;font-size:2rem;}
+.mixbar{display:flex;height:16px;border-radius:9px;overflow:hidden;margin:12px 0;} .mixbar i{display:block;}
+.wa-preview{background:#e7f6ee;border-radius:16px;padding:12px;margin-top:12px;} .wa-bubble{background:#fff;border-radius:4px 14px 14px 14px;padding:10px 12px;margin-top:8px;max-width:440px;white-space:pre-wrap;font-size:.9rem;line-height:1.5;}
+.stmt-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+.stmt-kpis .hero-k{background:linear-gradient(135deg,#14201b,#2a4136);color:#fff;border-radius:16px;padding:16px 18px;} .stmt-kpis .hero-k .label{color:#a9bbb2;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;} .stmt-kpis .hero-k .value{font:700 1.6rem 'Fraunces',serif;margin-top:4px;}
+.hero-card{background:linear-gradient(135deg,#0b4a2f,#17794f 55%,#2fb37a) !important;color:#fff;} .hero-card h3,.hero-card p,.hero-card .kv,.hero-card .k,.hero-card .v,.hero-card #driveInfoBox{color:#fff !important;} .hero-card .btn-accent{background:#fff;color:var(--green-700);box-shadow:none;}
+.danger-card{border:1.5px solid #f0c3bb !important;background:#fffaf9 !important;}
+.bal-bar{height:6px;border-radius:6px;background:#e6eeea;width:90px;margin-top:4px;overflow:hidden;} .bal-bar i{display:block;height:100%;background:var(--amber-500);}
+.pop-bell{position:absolute;right:0;top:52px;z-index:80;background:#fff;border-radius:16px;box-shadow:0 20px 40px -12px rgba(0,0,0,.35);padding:10px;width:320px;display:none;} .pop-bell.open{display:block;}
+.pop-bell .drow{padding:10px 6px;}
+body.dark-mode .spill,body.dark-mode .rowmenu summary,body.dark-mode .rowmenu .rm-pop,body.dark-mode .pop-bell{background:#1a1f21;color:var(--ink);}
+
+/* ===== dark mode fixes (v7.2) ===== */
+body.dark-mode{
+  --green-700:#5fd3a0; --green-100:#143d2b; --yellow-100:#3f3410; --yellow-700:#f3d479; --red-100:#4a211b; --red-600:#ff8f7c; --amber-200:#143d2b;
+  --surface:#1a1f21;
+}
+body.dark-mode h1,body.dark-mode h2,body.dark-mode h3,body.dark-mode h4,body.dark-mode .value,body.dark-mode .dk-v,body.dark-mode .section-head h2,body.dark-mode .card h3,body.dark-mode .dcard h3,body.dark-mode .modal h3,body.dark-mode .login-greet,body.dark-mode .login-brand h1,body.dark-mode .acc-stats .dk-v{color:var(--ink);}
+body.dark-mode .stat-box.stat-hero .value,body.dark-mode .hero .big,body.dark-mode .hero h2,body.dark-mode .acc-hero *,body.dark-mode .stmt-kpis .hero-k *,body.dark-mode .hero-card h3{color:#fff;}
+body.dark-mode .stat-box.stat-hero .label,body.dark-mode .stmt-kpis .hero-k .label{color:#a9bbb2;}
+body.dark-mode .msel-btn,body.dark-mode .spill,body.dark-mode .icon-btn,body.dark-mode .btn-ghost,body.dark-mode .rowmenu summary,body.dark-mode .msel-panel,body.dark-mode .rowmenu .rm-pop,body.dark-mode .pop-bell,body.dark-mode .gs-box{background:#1a1f21;color:var(--ink);border-color:var(--ring-line);}
+body.dark-mode .msel-btn.has-selection,body.dark-mode .spill.on{background:#143d2b;color:var(--green-700);border-color:#2f7a58;}
+body.dark-mode .seg{background:#0f1314;} body.dark-mode .seg button{color:var(--ink-soft);} body.dark-mode .seg button.on{background:#232b2e;color:var(--ink);}
+body.dark-mode .wa-preview{background:#12241c;} body.dark-mode .wa-bubble{background:#1f2c28;color:var(--ink);} body.dark-mode .dk-l,body.dark-mode .dk-s{color:var(--ink-soft);}
+body.dark-mode .danger-card{background:#241513 !important;border-color:#6b2a20 !important;} body.dark-mode .danger-card h3{color:#ff8f7c;} body.dark-mode .card p,body.dark-mode .card .sub{color:var(--ink-soft);}
+body.dark-mode .drow,body.dark-mode .rw,body.dark-mode .kv,body.dark-mode tbody td,body.dark-mode .gs-item{border-color:#2e3639;}
+body.dark-mode .tbar,body.dark-mode .dpb,body.dark-mode .bal-bar,body.dark-mode .pb{background:#2a3235;}
+body.dark-mode thead th:hover{background:#1d2427;} body.dark-mode tbody tr:hover{background:#1d2427;}
+body.dark-mode .gs-empty,body.dark-mode .gs-esc,body.dark-mode .gs-box span{color:var(--ink-soft);} body.dark-mode .gs-box input{background:transparent;color:var(--ink);}
+body.dark-mode .pill-gray{background:#2a3235;color:#c9d3cf;} body.dark-mode .pill-dark{background:#3a4448;color:#fff;}
+body.dark-mode #backupReminderBar,body.dark-mode #demoRibbon{background:#3f3410;color:#f3d479;}
+body.dark-mode .toast{background:#e8ecea;color:#14201b;}
+body.dark-mode .drive-status,body.dark-mode .kbd-hint{color:var(--green-700);} body.dark-mode .drive-status.offline{color:var(--red-600);}
+body.dark-mode .tag button{background:#b3311c;color:#fff;}
+body.dark-mode .rowmenu .rm-pop button{color:var(--ink);} body.dark-mode .rowmenu .rm-pop button.danger{color:var(--red-600);}
+body.dark-mode .card h3[style],body.dark-mode .dcard h3[style]{color:var(--ink) !important;}
+body.dark-mode .danger-card h3{color:#ff8f7c !important;}
+body.dark-mode .btn-danger,body.dark-mode .btn.btn-danger{background:#b3311c !important;color:#fff !important;}
+body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,.16),transparent);}
 </style>
 </head>
 <body>
 
 <div id="loginScreen">
+ <div class="login-split">
+  <div class="login-hero">
+    <div class="lh-brand"><span class="ring-badge" style="width:36px;height:36px;"></span>Contractor Ledger</div>
+    <h2>Every memo, every contractor, always in your hands.</h2>
+    <ul>
+      <li>☁ Safe in your own Google Drive</li>
+      <li>✓ Works offline, syncs when back online</li>
+      <li>✆ WhatsApp announcements in one tap</li>
+    </ul>
+  </div>
+  <div class="login-pane">
   <div class="login-card">
-    <div class="login-brand"><div class="ring-badge"></div><h1>Contractor Ledger</h1></div>
+    <h2 class="login-greet">Good Morning, Shah Amanat Traders</h2>
+    
     <p class="login-sub">Sign in with Google Drive</p>
     
     <!-- Google Sign-In button will be rendered here -->
@@ -293,44 +503,60 @@
       Work Offline (use data saved on this PC)
     </button>
     <p id="offlineHint" style="font-size:.7rem;color:var(--ink-soft);margin-top:6px;text-align:center;"></p>
+    
 
     <div id="loginError"></div>
     
     <div class="login-note">
-      <strong>Google Drive connected version</strong><br>
-      • Your data is stored in your own Google Drive (folder: <em>Contractor Ledger</em>)<br>
-      • Same design &amp; features as before<br>
-      • Works on any device after signing in with the same Google account<br>
-      • You need to put your Google Cloud OAuth Client ID in the code (see instructions at the bottom of this file)
+      <strong>Your data stays in your own Google Drive</strong> (folder: <em>Contractor Ledger</em>). Works on any device after signing in with the same Google account.
     </div>
   </div>
+  </div>
+ </div>
 </div>
 
 <div id="app">
-  <header class="topbar">
-    <div class="topbar-brand">
-      <div class="ring-badge"></div>
-      <div><h1>Contractor Ledger</h1></div>
-    </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="ni-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="ni-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="ni-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+<symbol id="ni-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+<symbol id="ni-heart" viewBox="0 0 24 24"><path d="M12 20s-8-4.6-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.4 12 20 12 20z"/></symbol>
+<symbol id="ni-mega" viewBox="0 0 24 24"><path d="M3 11v3l12 5V6zM18 9v7"/></symbol>
+<symbol id="ni-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5 4 4 0 0 1 17.5 18z"/></symbol>
+<symbol id="ni-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+<symbol id="ni-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+<symbol id="ni-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+</defs></svg>
+<div class="shell">
+  <aside class="side no-print">
+    <div class="side-brand"><span class="lm"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg></span>Contractor Ledger</div>
+    <nav class="tabs">
+      <button data-tab="dashboard" onclick="showTab('dashboard')"><svg class="ic" aria-hidden="true"><use href="#ni-home"/></svg><span>Dashboard</span></button>
+      <button data-tab="summary" onclick="showTab('summary')"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Contractor Summary</span></button>
+      <button data-tab="accounts" onclick="showTab('accounts')"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Contractor Accounts</span></button>
+      <button data-tab="reports" onclick="showTab('reports')"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Reports</span></button>
+      <button data-tab="savings" onclick="showTab('savings')"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span></button>
+      <button data-tab="announce" onclick="showTab('announce')"><svg class="ic" aria-hidden="true"><use href="#ni-mega"/></svg><span>Announcements</span></button>
+      <button data-tab="backup" onclick="showTab('backup')"><svg class="ic" aria-hidden="true"><use href="#ni-cloud"/></svg><span>Backup &amp; Files</span></button>
+      <button data-tab="settings" onclick="showTab('settings')"><svg class="ic" aria-hidden="true"><use href="#ni-gear"/></svg><span>Settings</span></button>
+    </nav>
+    <div class="side-user"><span class="av">S</span><div style="min-width:0;"><b>Shah Amanat Traders</b><span id="userEmailLabel" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span></div></div>
+  </aside>
+  <div class="mainwrap">
+  <header class="topbar no-print">
+    <div class="m-brand"><span class="ring-badge" style="width:30px;height:30px;"></span>Contractor Ledger</div>
+    <button type="button" class="top-search" onclick="openGlobalSearch()"><svg class="ic" aria-hidden="true"><use href="#ni-search"/></svg><span>Search contractor, ID, mobile, memo…</span><span class="kbd">Ctrl K</span></button>
     <div class="topbar-right">
       <span class="drive-status" id="driveStatus">Drive: connected</span>
       <span class="kbd-hint" title="Last save time" id="savedIndicator">not saved yet</span>
       <span class="who">Session: <strong id="sessionLabel">not set</strong></span>
-      <span class="who" id="userEmailLabel" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;"></span>
+      <span style="position:relative;"><button type="button" class="bell" id="bellBtn" title="Things that need attention" onclick="toggleBell(event)"><svg class="ic" aria-hidden="true"><use href="#ni-bell"/></svg><i></i></button><div class="pop-bell" id="bellPop"></div></span>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">Log out</button>
     </div>
   </header>
 
-  <nav class="tabs">
-    <button data-tab="summary" onclick="showTab('summary')">Contractor Summary</button>
-    <button data-tab="accounts" onclick="showTab('accounts')">Contractor Accounts</button>
-    <button data-tab="reports" onclick="showTab('reports')">Reports</button>
-    <button data-tab="savings" onclick="showTab('savings')">Welfare Fund</button>
-    <button data-tab="announce" onclick="showTab('announce')">Announcements</button>
-    <button data-tab="backup" onclick="showTab('backup')">Backup &amp; Files</button>
-    <button data-tab="settings" onclick="showTab('settings')">Settings</button>
-  </nav>
-
+  <div id="demoRibbon" class="no-print"><span><b>DEMO MODE</b> — sample data only. Nothing is saved, and your real data is not touched.</span><button class="btn btn-ghost btn-sm" onclick="exitDemoMode()">Exit demo</button></div>
   <div id="backupReminderBar">
     <span id="backupReminderMsg"></span>
     <div class="brb-actions">
@@ -340,6 +566,9 @@
   </div>
 
   <main>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="panel" id="panel-dashboard"><div id="dashBody"></div></section>
 
     <!-- ============ CONTRACTOR SUMMARY ============ -->
     <section class="panel" id="panel-summary">
@@ -355,7 +584,7 @@
       </div>
 
       <div class="grid-6 no-print" style="margin-bottom:18px;">
-        <div class="stat-box"><div class="label">Total Contractors</div><div class="value" id="statTotalContacts">0</div></div>
+        <div class="stat-box stat-hero"><div class="label">Total Contractors</div><div class="value" id="statTotalContacts">0</div></div>
         <div class="stat-box"><div class="label">Combined Total Amount</div><div class="value" id="statCombinedTotal">0</div></div>
         <div class="stat-box"><div class="label">Top Contractor</div><div class="value" id="statTopContact" style="font-size:1.1rem;">—</div></div>
         <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Active (Green)</div><div class="value" id="statActiveContacts">0</div></div>
@@ -363,6 +592,7 @@
         <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Inactive (Red)</div><div class="value" id="statInactiveContacts">0</div></div>
       </div>
       <div class="no-print" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px;"><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="statWelfareDepositors">0</div></div><div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Welfare — Not deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="statWelfareNot">0</div></div><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Total deposit <span class="welfarePeriodLbl"></span></div><div class="value" id="statWelfareTotal">0</div></div></div>
+      <div class="status-pills no-print" id="summaryStatusPills"></div>
 
       <div class="toolbar no-print" style="margin-bottom:14px;">
         <div class="search-bar"><input id="summarySearch" placeholder="Search name, mobile, address, Section, ID…" oninput="renderSummary()"></div>
@@ -399,11 +629,11 @@
           <thead><tr>
             <th class="no-print" title="Manual mark">✓</th>
             <th onclick="quickSort('ranking')">Rank</th>
-            <th onclick="quickSort('id')">ID</th>
-            <th onclick="quickSort('name')">Name</th>
+            <th onclick="quickSort('name')">Contractor</th>
             <th onclick="quickSort('mobile')">Mobile</th>
-            <th onclick="quickSort('address')">Address</th>
+            
             <th onclick="quickSort('nid')">Section</th>
+            <th>Status</th>
             <th onclick="quickSort('totalAmount')">Total Amount</th>
             <th onclick="quickSort('welfareAmount')" title="Welfare Fund deposits (period selected above)">Welfare Deposit</th>
             <th>Welfare</th>
@@ -445,19 +675,27 @@
       </div>
 
       <div id="accountView" style="display:none;">
-        <div class="card">
-          <div class="grid-5">
-            <div><div class="field-label">ID</div><div style="display:flex;align-items:center;gap:8px;"><span class="mono" id="accId" style="font-weight:700;"></span><span class="kbd-hint" id="accRankBadge"></span></div></div>
-            <div><div class="field-label">Name</div><div id="accName" style="font-weight:700;"></div></div>
-            <div><div class="field-label">Mobile</div><div id="accMobile"></div></div>
-            <div><div class="field-label">Section</div><div id="accNid"></div></div>
-            <div><div class="field-label">Grand Total</div><div id="accGrandTotal" style="font-weight:700;color:var(--walnut-900);"></div></div>
+        <div class="acc-hero">
+          <span class="acc-av" id="accAvatar">?</span>
+          <div class="acc-main">
+            <div class="acc-name" id="accName"></div>
+            <div class="acc-chips">
+              <span class="achip">ID <b class="mono" id="accId"></b></span>
+              <span class="achip" id="accRankBadge"></span>
+              <span class="achip">Section <b id="accNid"></b></span>
+              <span class="achip">📍 <span id="accAddress"></span></span>
+              <span id="accStatusChip"></span><span id="accDiedBadge"></span>
+            </div>
           </div>
-          <div style="margin-top:10px;font-size:.85rem;color:var(--ink-soft);">Address: <span id="accAddress"></span> <span id="accDiedBadge"></span></div>
+          <div class="acc-total"><div class="lbl">Grand total</div><div class="amt" id="accGrandTotal"></div></div>
         </div>
-
+        <div class="acc-stats no-print">
+          <div class="dcard"><div class="dk-l">Entries</div><div class="dk-v" id="accEntryCount">0</div></div>
+          <div class="dcard"><div class="dk-l">Last activity</div><div class="dk-v" id="accLastDate" style="font-size:1.35rem;">—</div></div>
+          <div class="dcard"><div class="dk-l">Welfare deposited</div><div class="dk-v" id="accWelDep">0</div></div>
+          <div class="dcard"><div class="dk-l">Welfare balance</div><div class="dk-v" id="accWelBal">0</div></div>
+        </div>
         <div id="dupBannerWrap"></div>
-
         <div class="toolbar no-print" style="margin-bottom:12px;">
           <button class="btn btn-accent btn-sm" onclick="openAddEntryModal()">+ Add Entry</button>
           <button class="btn btn-ghost btn-sm" onclick="openEditContactModal(currentAccountId)">✎ Edit Contractor Info</button>
@@ -470,6 +708,10 @@
           <button class="btn btn-danger btn-sm" onclick="clearAccountEntries()">🧹 Clear Entry Data</button>
         </div>
 
+        <div class="acc-grid">
+          <div style="min-width:0;">
+            <div class="seg no-print"><button id="accTabEntries" class="on" onclick="accTab('entries')">Entries</button><button id="accTabWelfare" onclick="accTab('welfare')">Welfare</button><button id="accTabInfo" onclick="accTab('info')">Info</button></div>
+            <div id="accPaneEntries">
         <div class="toolbar no-print" style="margin-bottom:12px;">
           <div class="search-bar" style="max-width:240px;">
             <input id="memoSearchInput" placeholder="Search memo #…" onkeydown="if(event.key==='Enter'){searchMemoAndGo(this.value);}">
@@ -484,6 +726,16 @@
             </tr></thead>
             <tbody id="entriesTbody"></tbody>
           </table>
+        </div>
+
+            </div>
+            <div id="accPaneWelfare" style="display:none;"></div>
+            <div id="accPaneInfo" style="display:none;"></div>
+          </div>
+          <div class="acc-side no-print">
+            <div class="dcard"><h3>WhatsApp numbers</h3><span id="accMobile" style="display:none;"></span><div id="accWaCard"></div></div>
+            <div class="dcard"><h3>Amount by month</h3><div id="accMonthChart"></div></div>
+          </div>
         </div>
       </div>
     </section>
@@ -519,6 +771,7 @@
         <div class="stat-box"><div class="label">Grand Combined Total</div><div class="value" id="repCombined">0</div></div>
       </div>
       <div class="no-print" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px;"><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="repWelfareDepositors">0</div></div><div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Welfare — Not deposited (contractors) <span class="welfarePeriodLbl"></span></div><div class="value" id="repWelfareNot">0</div></div><div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Welfare — Total deposit <span class="welfarePeriodLbl"></span></div><div class="value" id="repWelfareTotal">0</div></div></div>
+      <div class="dcard no-print" id="repStatusMix" style="margin-bottom:16px;"></div>
 
       <div class="legend">
         <span><span class="dot dot-green"></span> Green — Active, Total Amount at/above the section's top threshold</span>
@@ -573,10 +826,9 @@
             <thead><tr>
               <th class="no-print" title="Manual mark">✓</th>
               <th onclick="reportSort('ranking')">Rank</th>
-              <th onclick="reportSort('id')">ID</th>
-              <th onclick="reportSort('name')">Name</th>
+              <th onclick="reportSort('name')">Contractor</th>
               <th onclick="reportSort('mobile')">Mobile</th>
-              <th onclick="reportSort('address')">Address</th>
+              
               <th onclick="reportSort('nid')">Section</th>
               <th onclick="reportSort('entries')">Entries</th>
               <th onclick="reportSort('totalAmount')">Total Amount</th>
@@ -608,7 +860,7 @@
       </div>
 
       <div class="grid-4" style="margin-bottom:12px;">
-        <div class="stat-box"><div class="label">Total Balance</div><div class="value" id="savTotalBalance">0</div></div>
+        <div class="stat-box stat-hero"><div class="label">Total Balance</div><div class="value" id="savTotalBalance">0</div></div>
         <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">All Deposit</div><div class="value" id="savAllDeposit">0</div></div>
         <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">All Withdraw</div><div class="value" id="savAllWithdraw">0</div></div>
         <div class="stat-box"><div class="label">Depositors</div><div class="value" id="savActiveCount">0</div></div>
@@ -616,7 +868,7 @@
       <div class="grid-6" style="margin-bottom:14px;" id="savMethodStats">
         <div class="stat-box"><div class="label">This Month Deposit</div><div class="value" id="savMonthIn">0</div></div>
         <div class="stat-box"><div class="label">This Month Withdraw</div><div class="value" id="savMonthOut">0</div></div>
-        <div class="stat-box"><div class="label">Cash (all)</div><div class="value" id="savMethCash">0</div></div>
+        <div class="stat-box"><div class="label">Cash (all)</div><div class="value" id="savMethCash">0</div><div class="mu" id="savMethCashSub" style="font-size:.72rem;margin-top:2px;"></div></div>
         <div class="stat-box"><div class="label">Bkash (all)</div><div class="value" id="savMethBkash">0</div></div>
         <div class="stat-box"><div class="label">Nagad (all)</div><div class="value" id="savMethNagad">0</div></div>
         <div class="stat-box"><div class="label">Other methods</div><div class="value" id="savMethOther">0</div></div>
@@ -663,7 +915,7 @@
           <div class="field"><label>Amount (Tk)</label><input type="number" id="savFormAmount" class="mono sav-enter" placeholder="0" min="0" step="1"></div>
           <div class="field">
             <label>Payment method</label>
-            <select id="savFormMethod" class="sav-enter">
+            <select id="savFormMethod" class="sav-enter" onchange="updateCashOutField()">
               <option>Cash</option>
               <option selected>Bkash</option>
               <option>Nagad</option>
@@ -671,6 +923,9 @@
               <option>Bank</option>
               <option>Other</option>
             </select>
+          </div>
+          <div class="field" id="savCashOutField" style="display:none;">
+            <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-weight:600;"><input type="checkbox" id="savFormCashOut" style="margin-top:4px;"> <span>Cash Out <small style="display:block;font-weight:400;color:var(--ink-soft);">This amount was cashed out from the online account, so the fund totals count it as <b>Cash</b> (not Bkash/Nagad/Rocket/Bank). The contractor's statement stays the same and shows “Cash out” in the remark.</small></span></label>
           </div>
           <div class="field"><label>Note</label><input id="savFormNote" class="sav-enter" placeholder="Optional"></div>
           <div id="savFormBalanceHint" style="font-size:.8rem;color:var(--ink-soft);margin:8px 0;"></div>
@@ -756,8 +1011,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Name / Address</th>
+                    <th>Contractor</th>
                     <th>Section</th>
                     <th>Rank</th>
                     <th>Deposited</th>
@@ -810,7 +1064,8 @@
           </div>
           <div class="field">
             <label>Message (Bengali)</label>
-            <textarea id="annBody" rows="8" style="width:100%;padding:10px;border:1px solid var(--ring-line);border-radius:4px;font-size:.9rem;line-height:1.5;resize:vertical;"></textarea>
+            <textarea id="annBody" oninput="updateAnnPreview()" rows="8" style="width:100%;padding:10px;border:1px solid var(--ring-line);border-radius:4px;font-size:.9rem;line-height:1.5;resize:vertical;"></textarea>
+            <div class="wa-preview no-print"><div class="dk-l">WhatsApp preview</div><div class="wa-bubble" id="annPreview">Your message will appear here…</div></div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-accent btn-sm" onclick="saveAnnounceTemplate()">Save template</button>
@@ -834,6 +1089,7 @@
             </select>
             <input type="number" class="input-sm mono" id="annMinAmount" placeholder="Min amount" style="width:110px;" oninput="renderAnnounceRecipients()" title="Minimum total amount">
             <input type="number" class="input-sm mono" id="annMaxAmount" placeholder="Max amount" style="width:110px;" oninput="renderAnnounceRecipients()" title="Maximum total amount">
+            <select class="select-sm" id="annWelfareFilter" onchange="renderAnnounceRecipients()" title="Welfare Fund deposit status"><option value="all">Welfare: All</option><option value="dep">Welfare: Deposited</option><option value="not">Welfare: Not deposited</option></select>
             <select class="select-sm" id="annSentFilter" onchange="renderAnnounceRecipients()">
               <option value="all">Message: All</option>
               <option value="not_sent">Not sent yet</option>
@@ -884,7 +1140,7 @@
     <section class="panel" id="panel-backup">
       <div class="section-head"><div><h2>Backup &amp; Files</h2><div class="sub">Data is automatically saved to your Google Drive. You can also download a local copy or restore from a file.</div></div></div>
       <div class="grid-3">
-        <div class="card">
+        <div class="card hero-card">
           <h3>Google Drive Status</h3>
           <p style="font-size:.85rem;color:var(--ink-soft);">Your ledger is stored as <code>contractor-ledger-data.json</code> inside the folder <strong>Contractor Ledger</strong> in your Google Drive.</p>
           <div id="driveInfoBox" style="font-size:.82rem;margin-top:12px;"></div>
@@ -923,7 +1179,7 @@
         <button class="btn btn-danger" onclick="closeSessionClearAllEntries()">🗓 Close Session — Clear All Entries</button>
       </div>
 
-      <div class="card" style="border-color:#edb2a5;">
+      <div class="card danger-card" style="border-color:#edb2a5;">
         <h3 style="color:var(--red-600);">Clear Contractor Summary</h3>
         <p style="font-size:.85rem;color:var(--ink-soft);">Removes every contractor and their account. This cannot be undone, so save a backup first.</p>
         <button class="btn btn-danger" onclick="clearAllContractors()">🗑 Clear All Contractor Data</button>
@@ -990,6 +1246,8 @@
 
   </main>
   <footer class="appfoot no-print">Contractor Ledger — data stored securely in your Google Drive. <span id="appVersionFooter"></span></footer>
+  </div>
+</div>
 </div>
 
 <!-- ===================== CONTRACTOR MODAL ===================== -->
@@ -1090,7 +1348,7 @@
 <div class="modal-overlay" id="savStatementOverlay">
   <div class="modal modal-wide" style="max-width:900px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-      <h3 style="margin:0;" id="savStmtTitle">Savings Statement</h3>
+      <h3 style="margin:0;font-size:1.3rem;" id="savStmtTitle">Savings Statement</h3>
       <button class="btn btn-ghost btn-sm" onclick="closeSavStatement()" style="padding:4px 10px;">&times;</button>
     </div>
     <div class="toolbar no-print" style="margin:12px 0;flex-wrap:wrap;">
@@ -1131,7 +1389,7 @@
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '6.9.0-Drive-Offline';
+const APP_VERSION = '7.2.0-New-Layout';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1185,7 +1443,7 @@ async function localCacheGet(){
   }
 }
 async function localCacheSetNow(){
-  if(!DB || _cacheBlocked) return;
+  if(!DB || _cacheBlocked || demoMode) return;
   const state = { data: DB, savedAt: Date.now(), dirty: !!localDirty, baseTime: driveFileModifiedTime || null, email: currentUserEmail || '' };
   try{
     const db = await idbOpen();
@@ -1262,7 +1520,7 @@ let driveSaveFailing = false;
 /** After internet returns, try to sign in to Drive again so offline work uploads by itself.
  *  Silent first (works if Google session is still active); a tap anywhere gives it permission to open the popup. */
 async function tryAutoReconnect(fromGesture){
-  if(!DB || !navigator.onLine || _autoTrying) return;
+  if(!DB || demoMode || !navigator.onLine || _autoTrying) return;
   if(!(offlineMode || !accessToken)) return;
   if(!fromGesture && Date.now() - _lastAutoTry < 25000) return;
   _autoTrying = true; _lastAutoTry = Date.now();
@@ -1306,7 +1564,7 @@ setInterval(updateSyncBanner, 2000);
 /** Rolling safety copies on this PC (last 10, at most one every 10 minutes while edits happen) */
 let _lastSnapAt = 0;
 async function takeLocalSnapshot(force){
-  if(!DB || _cacheBlocked) return;
+  if(!DB || _cacheBlocked || demoMode) return;
   if(!force && Date.now() - _lastSnapAt < 10*60*1000) return;
   _lastSnapAt = Date.now();
   try{
@@ -1359,6 +1617,7 @@ setInterval(()=>{ if(localDirty) takeLocalSnapshot(false); }, 60*1000);
 
 
 window.addEventListener('online', ()=>{
+  if(demoMode) return;
   ensureGoogleScripts().then(()=>tryAutoReconnect(false)).catch(()=>{});
   if(!DB) return;
   if(offlineMode || !accessToken){
@@ -1991,6 +2250,7 @@ function maybeRefreshOnGesture(){
 
 async function persistDBNow(opts){
   opts = opts || {};
+  if(demoMode) return true;
   if(!driveFileId || !accessToken){
     cacheLocal(true);
     updateSavedIndicator(false, {offline:true});
@@ -2130,6 +2390,7 @@ async function uploadBlobToDrive(filename, blob, mimeType){
 
 let dirtyVersion = 0;
 function saveDB(immediate){
+  if(typeof demoMode !== 'undefined' && demoMode) return;   // demo: never save anything
   localDirty = true;
   dirtyVersion++;
   cacheLocal();
@@ -2168,6 +2429,7 @@ function fmtDate(iso){
   return s;
 }
 function toast(msg){
+  if(typeof demoMode !== 'undefined' && demoMode && /Drive|saved|Saved/.test(String(msg))) msg = 'Demo mode: nothing is saved.';
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(window.__toastTimer);
@@ -2193,6 +2455,7 @@ async function clearLocalCache(){
   try{ localStorage.removeItem('nw_offline_state'); }catch(e){}
 }
 async function doLogout(){
+  if(demoMode){ exitDemoMode(); return; }
   // Upload anything unsaved first (needs the token), then sign out
   try{ if(DB && accessToken && localDirty) await persistDBNow(); }catch(e){}
   const fullySynced = !localDirty;
@@ -2214,10 +2477,257 @@ async function doLogout(){
 /* =========================================================
    TABS + ALL ORIGINAL BUSINESS LOGIC (unchanged)
    ========================================================= */
+
+/* =========================================================
+   DASHBOARD (new landing page)
+   ========================================================= */
+const DASH_COL = ['#17794f','#2f6fb3','#b3541c','#7a4fb3','#b3311c','#0f8a8a','#8a6d1f'];
+function dashInitials(n){ return String(n||'?').replace(/^(Mr\\.|Md\\.|Mrs\\.|Ms\\.)\\s*/i,'').trim().split(/\\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?'; }
+function dashSpark(vals,w,h){
+  const mx=Math.max(...vals), mn=Math.min(...vals), span=(mx-mn)||1;
+  const pts=vals.map((x,i)=>[i*w/Math.max(vals.length-1,1), h-8-((x-mn)/span)*(h-20)]);
+  const p=pts.map(q=>q[0].toFixed(0)+','+q[1].toFixed(0)).join(' ');
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block;height:${h}px" aria-hidden="true"><defs><linearGradient id="dsp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><polygon points="0,${h} ${p} ${w},${h}" fill="url(#dsp)"/><polyline points="${p}" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function dashBars(vals,labels,w,h){
+  const mx=Math.max(...vals,1), bw=w/vals.length; let o='';
+  vals.forEach((x,i)=>{ const bh=(x/mx)*(h-34); o+=`<rect x="${(i*bw+bw*.2).toFixed(0)}" y="${(h-24-bh).toFixed(0)}" width="${(bw*.6).toFixed(0)}" height="${Math.max(bh,2).toFixed(0)}" rx="7" fill="${i===vals.length-1?'#17794f':'#cfe6db'}"/><text x="${(i*bw+bw/2).toFixed(0)}" y="${h-6}" font-size="11" fill="#7a8781" text-anchor="middle">${labels[i]}</text>`; });
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block" aria-hidden="true">${o}</svg>`;
+}
+function dashDonut(parts){
+  const r=54, C=2*Math.PI*r; let off=0, o='';
+  const tot=parts.reduce((s,p)=>s+p[0],0)||1;
+  parts.forEach(([v,c])=>{ const len=v/tot*C; o+=`<circle cx="75" cy="75" r="${r}" fill="none" stroke="${c}" stroke-width="18" stroke-dasharray="${len.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 75 75)"/>`; off+=len; });
+  return `<svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">${o}</svg>`;
+}
+function dashGoNotDeposited(){
+  msFilterState.summary.welfareStatus.clear(); msFilterState.summary.welfareStatus.add('not');
+  showTab('summary'); msUpdateButtonLabel('summary','welfareStatus'); renderSummary();
+}
+function dashCompute(){
+  ensureSavings();
+  const contacts = DB.contacts.filter(c=>!c.died);
+  const keep = welfarePeriod; welfarePeriod = 'all'; const wm = welfareDepositMap(); welfarePeriod = keep;
+  const months = {}; let memos = 0, memosThisMonth = 0; const recent = []; let dupContractors = 0;
+  const ym = localISODate().slice(0,7);
+  Object.keys(DB.accounts).forEach(id=>{
+    const acc = DB.accounts[id]; if(!acc || !acc.entries) return;
+    const c = DB.contacts.find(x=>x.id===id);
+    memos += acc.entries.length;
+    if(findDuplicateMemoIdx(acc.entries).size) dupContractors++;
+    acc.entries.forEach(e=>{
+      const m = String(e.date||'').slice(0,7);
+      if(m){ months[m] = (months[m]||0) + (Number(e.amount)||0); if(m===ym) memosThisMonth++; }
+      if(e.date && c) recent.push({date:e.date, memo:e.memo, amount:Number(e.amount)||0, name:c.name, by:e.inCharge});
+    });
+  });
+  const labels=[], vals=[]; const now=new Date();
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); labels.push(MN[d.getMonth()]); vals.push(months[k]||0); }
+  const cur = vals[vals.length-1], prev = vals[vals.length-2];
+  const delta = prev>0 ? Math.round((cur-prev)/prev*1000)/10 : null;
+  const st = {green:0,yellow:0,red:0}; contacts.forEach(c=>{ const k=contactStatus(c); if(st[k]!==undefined) st[k]++; });
+  const dep = contacts.filter(c=>(wm.get(c.id)||{}).amount>0);
+  const depTotal = [...wm.values()].reduce((s,r)=>s+r.amount,0);
+  const welfareBal = contacts.reduce((s,c)=>s+savingsBalance(c.id),0);
+  recent.sort((a,b)=> a.date<b.date?1:a.date>b.date?-1:0);
+  const txns = [...DB.savings.transactions].sort((a,b)=> String(b.date).localeCompare(String(a.date))).slice(0,3);
+  const unsent = contacts.filter(c=>waMobile(c) && !annIsSent(c.id)).length;
+  return {contacts, total: contacts.reduce((s,c)=>s+(Number(c.totalAmount)||0),0), memos, memosThisMonth, labels, vals, delta, st, depositors: dep.length, notDep: contacts.length-dep.length, depTotal, welfareBal, recent: recent.slice(0,4), txns, dupContractors, unsent, top: rankedContacts().filter(c=>!c.died).slice(0,5)};
+}
+function renderDashboard(){
+  const box = document.getElementById('dashBody'); if(!box) return;
+  const D = dashCompute();
+  const label = (DB.session && (DB.session.from||DB.session.to)) ? `${DB.session.from||'…'} → ${DB.session.to||'…'}` : 'not set';
+  const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const kpi = (l,v,sub,col,ic)=>`<div class="dcard"><div style="display:flex;align-items:center;gap:10px;"><span class="dk-ic" style="background:${col}1f;color:${col};"><svg class="ic" aria-hidden="true"><use href="#ni-${ic}"/></svg></span><span class="dk-l">${l}</span></div><div class="dk-v">${v}</div><div class="dk-s">${sub}</div></div>`;
+  const tot = Math.max(D.contacts.length,1), pct = x=>Math.round(x/tot*100);
+  const top = D.top.map((c,i)=>{ const mx=Math.max(D.top[0].totalAmount||1,1); return `<div class="drow"><span class="dav" style="background:${DASH_COL[i%7]}">${escapeHtml(dashInitials(c.name))}</span><div style="flex:1;min-width:0;"><b>${escapeHtml(c.name)}</b><div class="dk-s">ID ${escapeHtml(String(c.id))} · ${escapeHtml(c.nid||'')}</div></div><div class="dpb"><i style="width:${Math.round((c.totalAmount||0)/mx*100)}%;background:${DASH_COL[i%7]}"></i></div><b style="width:96px;text-align:right;">৳ ${fmtMoney(c.totalAmount)}</b></div>`; }).join('') || '<div class="dk-s">No contractors yet.</div>';
+  const act = D.recent.map(r=>`<div class="drow"><div style="flex:1;"><b>Memo ${escapeHtml(String(r.memo||'—'))} · ৳ ${fmtMoney(r.amount)}</b><div class="dk-s">${escapeHtml(r.name)}${r.by?' · '+escapeHtml(r.by):''}</div></div><span class="dk-s">${escapeHtml(fmtDate(r.date))}</span></div>`).join('')
+    + D.txns.map(t=>{ const c=DB.contacts.find(x=>x.id===t.contactId); return `<div class="drow"><div style="flex:1;"><b>${escapeHtml(savTypeLabel ? savTypeLabel(t.type) : t.type)} · ৳ ${fmtMoney(t.amount)}</b><div class="dk-s">Welfare · ${escapeHtml(c?c.name:t.contactId)}${t.method?' · '+escapeHtml(t.method):''}</div></div><span class="dk-s">${escapeHtml(fmtDate(t.date))}</span></div>`; }).join('');
+  box.innerHTML = `
+  <div class="section-head"><div><h2>Good Morning, Shah Amanat Traders</h2><div class="sub">${escapeHtml(today)} · Session ${escapeHtml(label)}</div></div>
+    <div class="dqa no-print" style="margin:0;"><button class="btn btn-accent" onclick="openNewContactModal()">+ New Contractor</button><button class="btn btn-ghost" onclick="showTab('savings')">♥ Welfare transaction</button><button class="btn btn-ghost" onclick="exportBackup()">⬇ Backup now</button></div></div>
+  <div class="dg c3">
+    <div class="hero"><div style="display:flex;align-items:center;gap:10px;"><span class="dk-l" style="color:rgba(255,255,255,.85);">Total amount · all contractors</span>${D.delta===null?'':`<span class="chip" style="margin-left:auto;">${D.delta>=0?'▲':'▼'} ${Math.abs(D.delta)}% vs last month</span>`}</div>
+      <div class="big">৳ ${fmtMoney(D.total)}</div><div class="mu">${D.memos.toLocaleString()} memos from ${D.contacts.length.toLocaleString()} contractors</div>
+      <div style="margin:10px -10px -14px;">${dashSpark(D.vals.some(v=>v>0)?D.vals:[1,1,1],560,92)}</div></div>
+    ${kpi('Contractors',D.contacts.length.toLocaleString(),`${D.st.green} active · ${D.st.yellow} moderate · ${D.st.red} inactive`,'#2f6fb3','user')}
+    ${kpi('Welfare balance','৳ '+fmtMoney(D.welfareBal),'Deposits − withdrawals','#b3541c','heart')}
+  </div>
+  <div class="dg c4">
+    ${kpi('Welfare — deposited',D.depositors.toLocaleString(),'contractors (all time)','#17794f','heart')}
+    ${kpi('Welfare — not deposited',D.notDep.toLocaleString(),'contractors (all time)','#b3311c','heart')}
+    ${kpi('Welfare — total deposit','৳ '+fmtMoney(D.depTotal),'all time','#17794f','heart')}
+    ${kpi('Memos this month',D.memosThisMonth.toLocaleString(),'entries dated this month','#2f6fb3','chart')}
+  </div>
+  <div class="dg c3b">
+    <div class="dcard"><h3>Monthly memo totals</h3>${dashBars(D.vals.slice(-8),D.labels.slice(-8),470,190)}</div>
+    <div class="dcard"><h3>Contractor status</h3><div style="display:flex;align-items:center;gap:16px;">${dashDonut([[D.st.green,'#17794f'],[D.st.yellow,'#e0a526'],[D.st.red,'#c8452b']])}<div style="display:flex;flex-direction:column;gap:10px;"><span class="pill pill-green">● Active ${D.st.green} (${pct(D.st.green)}%)</span><span class="pill pill-yellow">● Moderate ${D.st.yellow} (${pct(D.st.yellow)}%)</span><span class="pill pill-red">● Inactive ${D.st.red} (${pct(D.st.red)}%)</span></div></div></div>
+    <div class="dcard"><h3>Needs attention</h3>
+      <div class="drow"><span>⚠ ${D.dupContractors} contractor(s) with repeated memo numbers</span><button class="dlink" onclick="showTab('accounts')">View</button></div>
+      <div class="drow"><span>☁ ${demoMode?'Demo mode — nothing is saved':(localDirty?'Changes only on this PC':'Everything saved to Drive')}</span><button class="dlink" onclick="${localDirty?'tryAutoReconnect(true);persistDBNow&&persistDBNow()':"showTab('backup')"}">${localDirty?'Sync':'Backup'}</button></div>
+      <div class="drow"><span>♥ ${D.notDep} not deposited welfare</span><button class="dlink" onclick="dashGoNotDeposited()">Open</button></div>
+      <div class="drow"><span>✆ ${D.unsent} announcements unsent</span><button class="dlink" onclick="showTab('announce')">Open</button></div></div>
+  </div>
+  <div class="dg c2">
+    <div class="dcard"><h3>Top contractors <span class="dk-s" style="font-family:Inter;font-weight:500;">· by total amount</span></h3>${top}</div>
+    <div class="dcard"><h3>Recent activity</h3>${act || '<div class="dk-s">Nothing yet.</div>'}</div>
+  </div>`;
+  updateBell();
+}
+function updateBell(){
+  const b = document.getElementById('bellBtn'); if(!b) return;
+  b.classList.toggle('on', !!(typeof localDirty!=='undefined' && localDirty) || !!(typeof offlineMode!=='undefined' && offlineMode));
+}
+setInterval(()=>{ try{ if(DB) updateBell(); }catch(e){} }, 3000);
+
+
+/* =========================================================
+   DEMO / PREVIEW MODE - sample data, never saved anywhere
+   ========================================================= */
+let demoMode = false;
+function buildDemoDB(){
+  const db = defaultDB();
+  let seed = 7; const rnd = ()=> (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const P = [['1350','Mr. Monjur Alam','Carpenter','Chattogram',591035],['1042','Md. Rafiqul Islam','Lacquer','Dhaka',548200],['1218','Jahid Hasan','Carpenter','Dhaka',412760],['1377','Abul Kashem','Wallpaper','Chattogram',296500],['1094','Nurul Amin','Carpenter','Dhaka',118900],['1460','Shahidul Islam','Lacquer','Sylhet',64300],['1105','Mizanur Rahman','Carpenter','Cumilla',720400],['1288','Kamal Hossain','Lacquer','Dhaka',385000],['1319','Sohel Rana','Wallpaper','Chattogram',210300],['1402','Faruk Ahmed','Carpenter','Sylhet',155800],['1126','Delwar Hossain','Carpenter','Chattogram',472900],['1250','Habibur Rahman','Lacquer','Cumilla',98700],['1371','Anisur Rahman','Carpenter','Dhaka',310500],['1433','Rubel Mia','Wallpaper','Dhaka',45200],['1189','Alamgir Kabir','Carpenter','Chattogram',260100],['1310','Tarek Aziz','Lacquer','Sylhet',182400]];
+  const inch = db.inCharge && db.inCharge.length ? db.inCharge : ['Naquib','Rayhan','Ashraf'];
+  const now = new Date(); let memo = 1500;
+  db.contacts = []; db.accounts = {};
+  P.forEach((p,i)=>{
+    const m1 = '018' + String(Math.floor(10000000 + rnd()*89999999));
+    const mobiles = i%3===0 ? [m1, '017' + String(Math.floor(10000000 + rnd()*89999999))] : [m1];
+    const c = {id:p[0], name:p[1], mobile:mobiles[0], mobiles, address:p[3], nid:p[2], totalAmount:0, ranking:0, waIdx:0};
+    if(p[0]==='1189') c.died = true;
+    const n = 4 + Math.floor(rnd()*5), entries = []; let sum = 0;
+    for(let k=0;k<n;k++){
+      const d = new Date(now.getFullYear(), now.getMonth() - Math.floor(rnd()*10), 1 + Math.floor(rnd()*27));
+      const amt = Math.round(p[4]/n * (0.6 + rnd()*0.8) / 10) * 10; sum += amt;
+      entries.push({uid:'demo'+i+'_'+k, date:localISODate(d), memo:String(memo++), amount:amt, inCharge:inch[(i+k)%inch.length], remark:''});
+    }
+    if(i===0 && entries.length>1) entries[1].memo = entries[0].memo;   // show the duplicate-memo warning
+    entries.sort((a,b)=> a.date<b.date?-1:1);
+    c.totalAmount = sum; db.contacts.push(c); db.accounts[p[0]] = {entries, grandTotal:sum};
+  });
+  db.session = {from: now.getFullYear()+'-01-01', to: now.getFullYear()+'-12-31', meetingDate:''};
+  const tx = []; const meth = ['Cash','Bkash','Nagad'];
+  P.forEach((p,i)=>{
+    if(i%5===4) return;                                   // some contractors have not deposited
+    const months = 1 + Math.floor(rnd()*4);
+    for(let k=0;k<months;k++){
+      const d = new Date(now.getFullYear(), now.getMonth() - k, 3 + Math.floor(rnd()*20));
+      tx.push({uid:'dt'+i+k, txnId:'TXN-'+(100+i*7+k), type:'deposit', contactId:p[0], date:localISODate(d), amount:(1+Math.floor(rnd()*6))*500, method:meth[(i+k)%3], note:'Monthly'});
+    }
+  });
+  tx.push({uid:'dw1', txnId:'TXN-901', type:'withdraw', contactId:'1042', date:localISODate(new Date(now.getFullYear(), now.getMonth(), 2)), amount:1000, method:'Cash', note:'Medical'});
+  tx.push({uid:'dh1', txnId:'TXN-902', type:'help', contactId:'1350', toContactId:'1094', date:localISODate(new Date(now.getFullYear(), now.getMonth()-1, 9)), amount:500, method:'Cash', note:'Help'});
+  db.savings = db.savings || {transactions:[]}; db.savings.transactions = tx;
+  return db;
+}
+function startDemoMode(){
+  demoMode = true;
+  DB = buildDemoDB();
+  applyMigrations();
+  localDirty = false; offlineMode = false; accessToken = null;
+  document.getElementById('userEmailLabel').textContent = 'demo preview';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('demoRibbon').style.display = 'flex';
+  initApp();
+  const br = document.getElementById('backupReminderBar'); if(br) br.classList.remove('show');
+  setDriveStatus('Demo · not connected', 'syncing');
+  const si = document.getElementById('savedIndicator'); if(si) si.textContent = 'sample data';
+}
+function exitDemoMode(){
+  demoMode = false; DB = null;
+  document.getElementById('demoRibbon').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  setDriveStatus('Drive: disconnected', 'offline');
+}
+
+/* ---------- shared page-design helpers ---------- */
+function avatarIdx(id){ let h=0; String(id).split('').forEach(ch=>{ h=(h*31+ch.charCodeAt(0))>>>0; }); return h%7; }
+function avatarHtml(c,size){ size=size||36; return `<span class="avt" style="background:${DASH_COL[avatarIdx(c.id)]};width:${size}px;height:${size}px;font-size:${Math.round(size*.34)}px;">${escapeHtml(dashInitials(c.name))}</span>`; }
+function whoCellHtml(c){ return `<div class="who-cell">${avatarHtml(c)}<div><b>${escapeHtml(c.name)}</b><small>ID ${escapeHtml(String(c.id))}${c.address?' · '+escapeHtml(c.address):''}</small>${c.died?' <span class="pill pill-dark">Dead</span>':''}${c.marked?' <span class="pill pill-yellow">Marked</span>':''}</div></div>`; }
+function statusPillsHtml(scope, list, statusOf){
+  const cnt={green:0,yellow:0,red:0}; list.forEach(c=>{ const k=statusOf(c); if(cnt[k]!==undefined) cnt[k]++; });
+  const F=msFilterState[scope].status; const on=k=> (F.size===1 && F.has(k)) || (k==='all' && F.size===0);
+  const b=(k,l,n)=>`<button type="button" class="spill ${on(k)?'on':''}" onclick="setStatusPill('${scope}','${k}')">${l}<small>${n}</small></button>`;
+  return b('all','All',list.length)+b('green','● Active',cnt.green)+b('yellow','● Moderate',cnt.yellow)+b('red','● Inactive',cnt.red);
+}
+function setStatusPill(scope,key){
+  const F=msFilterState[scope].status; F.clear(); if(key!=='all') F.add(key);
+  msUpdateButtonLabel(scope,'status'); if(scope==='summary') renderSummary(); else renderReports();
+}
+function contactMobileHtml(c){ const nums=getContactMobiles(c), wi=waNumberIndex(c); return nums.length ? nums.map((n,i)=>`<div class="mono" style="white-space:nowrap;">${escapeHtml(n)}${i===wi?' <span class="pill pill-green" style="padding:0 7px;font-size:.62rem;">WA</span>':''}</div>`).join('') : '—'; }
+function rowMenuHtml(c){ return `<details class="rowmenu"><summary>⋯</summary><div class="rm-pop"><button onclick="toggleDied('${c.id}')">${c.died?'Unmark Dead':'Mark Dead'}</button><button class="danger" onclick="deleteContact('${c.id}')">Delete</button></div></details>`; }
+document.addEventListener('click', e=>{ document.querySelectorAll('details.rowmenu[open]').forEach(d=>{ if(!d.contains(e.target)) d.removeAttribute('open'); }); });
+function updateAnnPreview(){ const b=document.getElementById('annBody'), p=document.getElementById('annPreview'); if(b&&p) p.textContent = b.value || 'Your message will appear here…'; }
+function accTab(name){
+  ['Entries','Welfare','Info'].forEach(t=>{ const on = t.toLowerCase()===name; const pane=document.getElementById('accPane'+t), btn=document.getElementById('accTab'+t); if(pane) pane.style.display = on?'block':'none'; if(btn) btn.classList.toggle('on',on); });
+  if(name!=='entries') renderAccountExtras();
+}
+function accSetWa(i){ const c=DB.contacts.find(x=>x.id===currentAccountId); if(!c) return; c.waIdx=i; saveDB(); renderAccountExtras(); toast('Saved: this number is used first for WhatsApp.'); }
+function accNewWelfare(){ const id=currentAccountId; showTab('savings'); const el=document.getElementById('savFormContact'); if(el){ el.value=id; el.dispatchEvent(new Event('change')); el.focus(); } }
+function renderAccountExtras(){
+  const c = DB.contacts.find(x=>x.id===currentAccountId); if(!c) return;
+  const q=id=>document.getElementById(id); if(!q('accAvatar')) return;
+  q('accAvatar').textContent = dashInitials(c.name);
+  const det = contactStatusDetail(c); q('accStatusChip').innerHTML = statusPillHtml(det.status, det);
+  const acc = DB.accounts[c.id] || {entries:[]};
+  q('accEntryCount').textContent = acc.entries.length;
+  const last = acc.entries.reduce((m,e)=> (e.date && e.date>m) ? e.date : m, '');
+  q('accLastDate').textContent = last ? fmtDate(last) : '—';
+  ensureSavings(); const eff = savingsEffectsForContact(c.id);
+  q('accWelDep').textContent = '৳ ' + fmtMoney(eff.deposited); q('accWelBal').textContent = '৳ ' + fmtMoney(eff.balance);
+  const nums = getContactMobiles(c), wi = waNumberIndex(c);
+  q('accMobile').textContent = nums.join(', ');
+  q('accWaCard').innerHTML = nums.length ? nums.map((n,i)=>`<div class="drow"><div style="flex:1;min-width:0;"><b class="mono">${escapeHtml(n)}</b><div class="dk-s">Number ${i+1}</div></div>${i===wi?'<span class="pill pill-green">● Used first</span>':`<button class="btn btn-ghost btn-sm" onclick="accSetWa(${i})">Use first</button>`}<button class="icon-btn" onclick="openWhatsAppToContact('${escapeHtml(c.id)}',null,${i})">WA</button></div>`).join('') : '<div class="dk-s">No mobile number yet. Use “Edit Contractor Info”.</div>';
+  const months={}; acc.entries.forEach(e=>{ const m=String(e.date||'').slice(0,7); if(m) months[m]=(months[m]||0)+(Number(e.amount)||0); });
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const lab=[], val=[]; const now=new Date();
+  for(let k=5;k>=0;k--){ const d=new Date(now.getFullYear(), now.getMonth()-k, 1); lab.push(MN[d.getMonth()]); val.push(months[d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')]||0); }
+  q('accMonthChart').innerHTML = val.some(v=>v>0) ? dashBars(val,lab,300,150) : '<div class="dk-s">No entries in the last 6 months.</div>';
+  // welfare pane
+  const tx = DB.savings.transactions.filter(t=>t.contactId===c.id || t.toContactId===c.id).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,8);
+  const tp = t=> t.type==='deposit' ? '<span class="pill pill-green">Deposit</span>' : t.type==='withdraw' ? '<span class="pill pill-red">Withdraw</span>' : '<span class="pill pill-yellow">Help</span>';
+  q('accPaneWelfare').innerHTML = `<div class="dcard"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><h3 style="margin:0;">Welfare Fund</h3><span class="dk-s">Balance <b>৳ ${fmtMoney(eff.balance)}</b> · Deposited ${fmtMoney(eff.deposited)} · Withdrawn ${fmtMoney(eff.withdrawn)}</span><span style="margin-left:auto;display:flex;gap:8px;"><button class="btn btn-accent btn-sm" onclick="accNewWelfare()">+ Transaction</button><button class="btn btn-ghost btn-sm" onclick="openSavStatement('${escapeHtml(c.id)}')">Full statement</button></span></div>
+    <div style="margin-top:10px;">${tx.length ? tx.map(t=>`<div class="drow">${tp(t)}<div style="flex:1;" class="dk-s">${escapeHtml(fmtDate(t.date))} · ${escapeHtml(normalizeSavMethod(t.method)||'—')}${savNoteWithCashOut(t)?' · '+escapeHtml(savNoteWithCashOut(t)):''}</div><b>${t.type==='withdraw'||(t.type==='help'&&t.contactId===c.id)?'−':'+'} ${fmtMoney(t.amount)}</b></div>`).join('') : '<div class="dk-s">No welfare transactions yet — this contractor has not deposited.</div>'}</div></div>`;
+  q('accPaneInfo').innerHTML = `<div class="dcard"><div style="display:flex;align-items:center;"><h3 style="margin:0;">Contractor info</h3><button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="openEditContactModal('${escapeHtml(c.id)}')">✎ Edit</button></div>
+    <div class="kv"><span>ID</span><b class="mono">${escapeHtml(c.id)}</b></div><div class="kv"><span>Name</span><b>${escapeHtml(c.name)}</b></div><div class="kv"><span>Mobile numbers</span><b class="mono">${escapeHtml(nums.join(' · ')||'—')}</b></div><div class="kv"><span>Address</span><b>${escapeHtml(c.address||'—')}</b></div><div class="kv"><span>Section</span><b>${escapeHtml(c.nid||'—')}</b></div><div class="kv"><span>Status</span><span>${statusPillHtml(det.status, det)}</span></div></div>`;
+}
+
+function toggleBell(ev){
+  ev.stopPropagation(); const pop=document.getElementById('bellPop'); if(!pop) return;
+  if(pop.classList.contains('open')){ pop.classList.remove('open'); return; }
+  const D=dashCompute();
+  const row=(t,btn,act)=>`<div class="drow"><span>${t}</span><button class="dlink" onclick="document.getElementById('bellPop').classList.remove('open');${act}">${btn}</button></div>`;
+  pop.innerHTML = `<div style="font:700 1rem 'Fraunces',serif;padding:4px 6px;">Needs attention</div>`
+    + row('⚠ '+D.dupContractors+' contractor(s) with repeated memo numbers','View',"showTab('accounts')")
+    + row('☁ '+(demoMode?'Demo mode — nothing is saved':(localDirty?'Changes only on this PC':'Everything saved to Drive')),'Backup',"showTab('backup')")
+    + row('♥ '+D.notDep+' not deposited welfare','Open','dashGoNotDeposited()')
+    + row('✆ '+D.unsent+' announcements unsent','Open',"showTab('announce')")
+    + `<div style="padding:8px 6px 2px;"><button class="btn btn-ghost btn-sm" style="width:100%;" onclick="document.getElementById('bellPop').classList.remove('open');showTab('dashboard')">Open Dashboard</button></div>`;
+  pop.classList.add('open');
+}
+document.addEventListener('click', e=>{ const pop=document.getElementById('bellPop'); if(pop && !pop.contains(e.target)) pop.classList.remove('open'); });
+
+/* ---------- Cash Out: online account (Bkash/Nagad/Rocket/Bank) -> cash ---------- */
+function savIsOnlineMethod(m){ return ['Bkash','Nagad','Rocket','Bank'].includes(normalizeSavMethod(m)); }
+function savEffectiveMethod(t){ return (t.cashOut && t.type==='deposit' && savIsOnlineMethod(t.method)) ? 'Cash' : normalizeSavMethod(t.method); }
+function savNoteWithCashOut(t){ const n = String(t.note||'').trim(); return (t.cashOut && t.type==='deposit') ? (n ? n + ' · Cash out' : 'Cash out') : n; }
+function updateCashOutField(){
+  const f = document.getElementById('savCashOutField'), cb = document.getElementById('savFormCashOut'); if(!f||!cb) return;
+  const type = (document.getElementById('savFormType')||{}).value || 'deposit';
+  const ok = type==='deposit' && savIsOnlineMethod(document.getElementById('savFormMethod').value);
+  f.style.display = ok ? 'block' : 'none'; if(!ok) cb.checked = false;
+}
+
 function showTab(tab){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='dashboard') renderDashboard();
   if(tab==='summary') renderSummary();
   if(tab==='accounts') renderAccountsTab();
   if(tab==='reports') renderReports();
@@ -2926,6 +3436,8 @@ function renderSummary(){
     return 0;
   });
   window.__lastSummaryFiltered = filtered;
+  const __mx = Math.max(...list.map(c=>c.totalAmount||0), 1);
+  const __sp = document.getElementById('summaryStatusPills'); if(__sp) __sp.innerHTML = statusPillsHtml('summary', list, contactStatus);
 
   const tbody = document.getElementById('summaryTbody');
   tbody.innerHTML = '';
@@ -2936,19 +3448,17 @@ function renderSummary(){
     tr.innerHTML = `
       <td class="no-print"><input type="checkbox" ${c.marked?'checked':''} onchange="toggleMark('${c.id}')" title="Mark"></td>
       <td>${c.ranking===1?'🥇 ':c.ranking===2?'🥈 ':c.ranking===3?'🥉 ':''}${c.ranking}</td>
-      <td class="mono">${escapeHtml(c.id)}</td>
-      <td>${escapeHtml(c.name)} ${c.died? '<span class="pill pill-dark">Dead</span>':''} ${c.marked? '<span class="pill pill-yellow">Marked</span>':''}</td>
-      <td class="mono">${escapeHtml(formatMobilesDisplay(c))}</td>
-      <td>${escapeHtml(c.address||'')}</td>
-      <td class="mono">${escapeHtml(c.nid||'')}</td>
-      <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
+      <td>${whoCellHtml(c)}</td>
+      <td>${contactMobileHtml(c)}</td>
+      <td><span class="pill pill-gray">${escapeHtml(c.nid||'—')}</span></td>
+      <td>${statusPillHtml(contactStatus(c), contactStatusDetail(c))}</td>
+      <td><b class="mono">${fmtMoney(c.totalAmount)}</b><div class="tbar"><i style="width:${Math.round((c.totalAmount||0)/__mx*100)}%"></i></div></td>
       ${welfareCellsHtml(c)}
-      <td class="no-print"><div class="row-actions">
-        <button class="icon-btn" onclick="jumpToAccount('${c.id}')">Open</button>
+      <td class="no-print"><div class="row-actions" style="flex-wrap:nowrap;align-items:center;">
+        <button class="btn btn-accent btn-sm" onclick="jumpToAccount('${c.id}')">Open</button>
         <button class="icon-btn" onclick="openEditContactModal('${c.id}')">Edit</button>
         <button class="icon-btn" onclick="openWhatsAppToContact('${c.id}')" title="WhatsApp">WA</button>
-        <button class="icon-btn" onclick="toggleDied('${c.id}')">${c.died? 'Unmark Dead':'Mark Dead'}</button>
-        <button class="icon-btn danger" onclick="deleteContact('${c.id}')">Delete</button>
+        ${rowMenuHtml(c)}
       </div></td>`;
     tbody.appendChild(tr);
   });
@@ -3094,7 +3604,9 @@ function openAccount(id){
   document.getElementById('accAddress').textContent = c.address||'—';
   document.getElementById('accDiedBadge').innerHTML = c.died ? '<span class="pill pill-dark">Dead</span>' : '';
   document.getElementById('accDiedToggleBtn').textContent = c.died ? 'Unmark Dead' : 'Mark Dead';
+  accTab('entries');
   renderEntries();
+  renderAccountExtras();
 }
 
 function inChargeOptionsHtml(selected){
@@ -3167,6 +3679,7 @@ function refreshDuplicatesAndTotals(){
   rankedContacts();
   const rankedC = DB.contacts.find(x=>x.id===currentAccountId);
   if(rankedC) document.getElementById('accRankBadge').textContent = 'Rank #' + rankedC.ranking;
+  try{ if(currentAccountId) renderAccountExtras(); }catch(e){}
   // NOTE: no saveDB() here. Rendering must never mark data dirty or overwrite Drive;
   // callers that change entries call saveDB themselves.
 }
@@ -3591,10 +4104,10 @@ function renderReports(){
     if(c.marked) tr.style.background = 'var(--amber-200)';
     tr.innerHTML = `
       <td class="no-print"><input type="checkbox" ${c.marked?'checked':''} onchange="toggleMark('${c.id}')" title="Mark"></td>
-      <td>${c.ranking}</td><td class="mono">${escapeHtml(c.id)}</td>
-      <td>${escapeHtml(c.name)} ${c.marked? '<span class="pill pill-yellow">Marked</span>':''}</td>
-      <td class="mono">${escapeHtml(formatMobilesDisplay(c))}</td><td>${escapeHtml(c.address||'')}</td>
-      <td class="mono">${escapeHtml(c.nid||'')}</td><td class="mono">${c.entries}</td>
+      <td>${c.ranking}</td>
+      <td>${whoCellHtml(c)}</td>
+      <td>${contactMobileHtml(c)}</td>
+      <td><span class="pill pill-gray">${escapeHtml(c.nid||'—')}</span></td><td class="mono">${c.entries}</td>
       <td class="mono" style="font-weight:700;">${fmtMoney(c.totalAmount)}</td>
       ${welfareCellsHtml(c)}
       <td>${statusPillHtml(c.status, c.statusDetail)}</td>
@@ -3602,6 +4115,13 @@ function renderReports(){
     tbody.appendChild(tr);
   });
   window.__lastReportFiltered = filtered;
+  const __mix = document.getElementById('repStatusMix');
+  if(__mix){
+    const cnt={green:0,yellow:0,red:0}; list.forEach(c=>{ if(cnt[c.status]!==undefined) cnt[c.status]++; }); const t=Math.max(list.length,1);
+    __mix.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><h3 style="margin:0;font-family:'Fraunces',serif;">Status mix</h3><span class="dk-s">Click a status to filter the report below</span></div>
+      <div class="mixbar"><i style="width:${cnt.green/t*100}%;background:#17794f"></i><i style="width:${cnt.yellow/t*100}%;background:#e0a526"></i><i style="width:${cnt.red/t*100}%;background:#c8452b"></i></div>
+      <div class="status-pills" style="margin:0;">${statusPillsHtml('reports', list, c=>c.status)}</div>`;
+  }
   renderDiedTable();
 }
 
@@ -3779,6 +4299,7 @@ function loadAnnounceTemplate(){
   if(!t) return;
   document.getElementById('annTitle').value = t.title || '';
   document.getElementById('annBody').value = t.body || '';
+  updateAnnPreview();
   document.getElementById('annTplHint').textContent = 'Template ' + (i+1) + ' of ' + DB.announcements.templates.length;
 }
 
@@ -3811,6 +4332,8 @@ function filteredAnnounceContacts(){
   const sec = document.getElementById('annSectionFilter').value;
   const st = document.getElementById('annStatusFilter').value;
   const sentF = (document.getElementById('annSentFilter')||{}).value || 'all';
+  const welF = (document.getElementById('annWelfareFilter')||{}).value || 'all';
+  const __kp = welfarePeriod; welfarePeriod = 'all'; const __wm = welfareDepositMap(); welfarePeriod = __kp;
   const addrF = (document.getElementById('annAddressFilter')||{}).value || 'all';
   const rankF = (document.getElementById('annRankFilter')||{}).value || 'all';
   const minEl = document.getElementById('annMinAmount');
@@ -3829,6 +4352,8 @@ function filteredAnnounceContacts(){
     const amt = Number(c.totalAmount)||0;
     if(minA !== null && !isNaN(minA) && amt < minA) return false;
     if(maxA !== null && !isNaN(maxA) && amt > maxA) return false;
+    if(welF==='dep' && !((__wm.get(c.id)||{}).amount>0)) return false;
+    if(welF==='not' && ((__wm.get(c.id)||{}).amount>0)) return false;
     if(sentF==='sent' && !annIsSent(c.id)) return false;
     if(sentF==='not_sent' && annIsSent(c.id)) return false;
     if(q && ![c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid,c.address,c.ranking].join(' ').toLowerCase().includes(q)) return false;
@@ -3855,7 +4380,7 @@ function renderAnnounceRecipients(){
     return `<tr>
       <td class="no-print"><input type="checkbox" ${checked} onchange="annToggle('${id}', this.checked)"></td>
       <td class="mono">${escapeHtml(c.id)}</td>
-      <td>${escapeHtml(c.name)}</td>
+      <td><div class="who-cell">${avatarHtml(c,30)}<b>${escapeHtml(c.name)}</b></div></td>
       <td class="mono">${escapeHtml(formatMobilesDisplay(c)||'—')}</td>
       <td>${escapeHtml(c.nid||'')}</td>
       <td style="font-size:.75rem;">${escapeHtml(c.address||'—')}</td>
@@ -4590,6 +5115,7 @@ function setSavFormType(type){
   });
   document.getElementById('savFormToWrap').style.display = type==='help' ? 'block' : 'none';
   updateSavFormBalanceHint();
+  updateCashOutField();
 }
 
 function updateSavFormBalanceHint(){
@@ -4608,6 +5134,7 @@ function resetSavForm(){
   document.getElementById('savFormAmount').value = '';
   document.getElementById('savFormMethod').value = 'Bkash';
   document.getElementById('savFormNote').value = '';
+  { const co = document.getElementById('savFormCashOut'); if(co) co.checked = false; }
   const eu = document.getElementById('savFormEditUid'); if(eu) eu.value = '';
   const sb = document.getElementById('savFormSaveBtn'); if(sb) sb.textContent = 'Save';
   setSavFormType('deposit');
@@ -4642,6 +5169,7 @@ function submitSavForm(){
   const amount = Number(document.getElementById('savFormAmount').value);
   const method = normalizeSavMethod(document.getElementById('savFormMethod').value || 'Cash');
   const note = document.getElementById('savFormNote').value.trim();
+  const cashOut = !!(document.getElementById('savFormCashOut')||{}).checked && type==='deposit' && savIsOnlineMethod(method);
   if(!date){ toast('Date is required.'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount.'); return; }
   const existingTxn = editUid ? DB.savings.transactions.find(x=>x.uid===editUid) : null;
@@ -4662,7 +5190,7 @@ function submitSavForm(){
     Object.assign(t, {
       date, type, contactId: fromC.id,
       toContactId: type==='help' ? toC.id : '',
-      amount, method, note, txnId
+      amount, method, note, txnId, cashOut
     });
     toast('Transaction updated.');
   } else {
@@ -4670,7 +5198,7 @@ function submitSavForm(){
       uid: generateUid(), date, type,
       contactId: fromC.id,
       toContactId: type==='help' ? toC.id : '',
-      amount, method, note, txnId,
+      amount, method, note, txnId, cashOut,
       createdAt: new Date().toISOString()
     });
     toast(type.charAt(0).toUpperCase()+type.slice(1) + ' saved.');
@@ -4726,6 +5254,8 @@ function editSavTxn(uid){
   document.getElementById('savFormDate').value = t.date || '';
   document.getElementById('savFormAmount').value = t.amount || '';
   document.getElementById('savFormMethod').value = t.method || 'Cash';
+  { const co = document.getElementById('savFormCashOut'); if(co) co.checked = !!t.cashOut; }
+  updateCashOutField();
   document.getElementById('savFormNote').value = t.note || '';
   document.getElementById('savFormSaveBtn').textContent = 'Update';
   updateSavFormBalanceHint();
@@ -4792,7 +5322,7 @@ function renderSavings(){
     const amt = Number(t.amount)||0;
     if(t.type==='deposit') allDep += amt;
     if(t.type==='withdraw') allWd += amt;
-    const m = normalizeSavMethod(t.method);
+    const m = savEffectiveMethod(t);
     if(meth[m] !== undefined) meth[m] += amt; else meth.Other += amt;
     if((t.date||'').startsWith(ym)){
       if(t.type==='deposit') monthIn += amt;
@@ -4810,6 +5340,7 @@ function renderSavings(){
   setM('savMethBkash', meth.Bkash);
   setM('savMethNagad', meth.Nagad);
   setM('savMethOther', meth.Rocket + meth.Bank + meth.Other);
+  { const co = DB.savings.transactions.reduce((a,t)=> a + ((t.cashOut && t.type==='deposit' && savIsOnlineMethod(t.method)) ? (Number(t.amount)||0) : 0), 0); const cs = document.getElementById('savMethCashSub'); if(cs) cs.textContent = co>0 ? ('incl. ' + fmtMoney(co) + ' cashed out from online') : ''; }
 
   const list = filteredSavingsTxns();
   window.__lastSavFiltered = list;
@@ -4842,9 +5373,9 @@ function renderSavings(){
         <td class="mono">${idCell}</td>
         <td>${nameAddr}</td>
         <td>${savTypePill(t.type)}</td>
-        <td>${escapeHtml(normalizeSavMethod(t.method))}</td>
+        <td>${escapeHtml(normalizeSavMethod(t.method))}${(t.cashOut && t.type==='deposit') ? ' <span class="pill pill-green" title="Cashed out: counted as Cash in the fund totals">→ Cash</span>' : ''}</td>
         <td class="mono" style="font-weight:700;color:${color}">${sign}${fmtMoney(t.amount)}</td>
-        <td>${escapeHtml(t.note||'')}</td>
+        <td>${escapeHtml(savNoteWithCashOut(t))}</td>
         <td class="no-print" style="white-space:nowrap;">
           <button class="icon-btn" onclick="editSavTxn('${t.uid}')">Edit</button>
           <button class="icon-btn danger" onclick="deleteSavTxn('${t.uid}')">Delete</button>
@@ -4903,15 +5434,14 @@ function renderSavingsBalances(){
     tbody.innerHTML = rows.map(r=>{
       const addrLine = r.c.address ? `<div style="font-size:.72rem;color:var(--ink-soft);">${escapeHtml(r.c.address)}</div>` : '';
       return `<tr>
-      <td class="mono">${escapeHtml(r.c.id)}</td>
-      <td>${escapeHtml(r.c.name)}${addrLine}</td>
-      <td>${escapeHtml(r.c.nid||'')}</td>
+      <td><div class="who-cell">${avatarHtml(r.c,32)}<div><b>${escapeHtml(r.c.name)}</b><small>ID ${escapeHtml(String(r.c.id))}${r.c.address?' · '+escapeHtml(r.c.address):''}</small></div></div></td>
+      <td><span class="pill pill-gray">${escapeHtml(r.c.nid||'—')}</span></td>
       <td class="mono">${r.c.ranking||'—'}</td>
       <td class="mono">${fmtMoney(r.deposited + r.helpIn)}</td>
       <td class="mono">${fmtMoney(r.withdrawn + r.helpOut)}</td>
-      <td class="mono" style="font-weight:700;color:${r.balance>=0?'#0f8a34':'#b3311c'}">${fmtMoney(r.balance)}</td>
+      <td class="mono" style="font-weight:700;color:${r.balance>=0?'#0f8a34':'#b3311c'}">${fmtMoney(r.balance)}<div class="bal-bar"><i style="width:${Math.min(100,Math.round(Math.max(r.balance,0)/Math.max(...rows.map(x=>x.balance),1)*100))}%"></i></div></td>
       <td class="mono">${r.lastDate ? fmtDate(r.lastDate) : '—'}</td>
-      <td class="no-print"><button class="icon-btn" onclick="openSavStatement('${r.c.id}')">Open</button></td>
+      <td class="no-print"><button class="btn btn-accent btn-sm" onclick="openSavStatement('${r.c.id}')">Statement</button></td>
     </tr>`;
     }).join('');
   }
@@ -4950,7 +5480,7 @@ function updateSavPeriodSummary(){
     if(t.type==='deposit') dep += amt;
     else if(t.type==='withdraw') wd += amt;
     else if(t.type==='help') help += amt;
-    const m = normalizeSavMethod(t.method);
+    const m = savEffectiveMethod(t);
     meth[m] = (meth[m]||0) + amt;
   });
   const fromF = (document.getElementById('savFromFilter')||{}).value||'';
@@ -4994,7 +5524,7 @@ function printSavPeriodSummary(){
   list.forEach(t=>{
     const amt=Number(t.amount)||0;
     if(t.type==='deposit') dep+=amt; else if(t.type==='withdraw') wd+=amt; else if(t.type==='help') help+=amt;
-    const m=normalizeSavMethod(t.method); meth[m]=(meth[m]||0)+amt;
+    const m=savEffectiveMethod(t); meth[m]=(meth[m]||0)+amt;
   });
   const fromF=(document.getElementById('savFromFilter')||{}).value||'';
   const toF=(document.getElementById('savToFilter')||{}).value||'';
@@ -5062,7 +5592,7 @@ function savStatementLines(contactId, from, to){
     bal += inn - out;
     totalIn += inn;
     totalOut += out;
-    let note = t.note||'';
+    let note = savNoteWithCashOut(t);
     if(t.type==='help'){
       if(t.contactId===contactId) note = (note? note+' · ' : '') + 'To ID ' + t.toContactId;
       if(t.toContactId===contactId) note = (note? note+' · ' : '') + 'From ID ' + t.contactId;
@@ -5083,10 +5613,10 @@ function renderSavStatementBody(){
   const rows = data.lines.map((l,i)=>`<tr>
     <td>${i+1}</td>
     <td class="mono">${fmtDate(l.date)}</td>
-    <td>${escapeHtml(l.type)}</td>
+    <td><span class="pill ${/deposit/i.test(l.type)?'pill-green':/withdraw/i.test(l.type)?'pill-red':'pill-yellow'}">${escapeHtml(l.type)}</span></td>
     <td>${escapeHtml(normalizeSavMethod(l.method))}</td>
-    <td class="mono">${l.inn?fmtMoney(l.inn):'—'}</td>
-    <td class="mono">${l.out?fmtMoney(l.out):'—'}</td>
+    <td class="mono" style="color:var(--green-700);font-weight:600;">${l.inn?'+ '+fmtMoney(l.inn):'—'}</td>
+    <td class="mono" style="color:var(--red-600);font-weight:600;">${l.out?'− '+fmtMoney(l.out):'—'}</td>
     <td class="mono"><strong>${fmtMoney(l.bal)}</strong></td>
     <td>${escapeHtml(l.note||'')}</td>
   </tr>`).join('');
@@ -5098,10 +5628,11 @@ function renderSavStatementBody(){
       · ${escapeHtml(c.nid||'—')} · ${escapeHtml(formatMobilesDisplay(c)||'—')}</div>
       <div style="color:var(--ink-soft);margin-top:4px;">${escapeHtml(c.address||'')}</div>
     </div>
-    <div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-      <div class="stat-box"><div class="label">Total In</div><div class="value">${fmtMoney(data.totalIn)}</div></div>
-      <div class="stat-box"><div class="label">Total Out</div><div class="value">${fmtMoney(data.totalOut)}</div></div>
-      <div class="stat-box"><div class="label">Closing Balance</div><div class="value">${fmtMoney(data.closing)}</div></div>
+    <div class="stmt-kpis">
+      <div class="stat-box"><div class="label">Opening balance</div><div class="value">${fmtMoney(data.opening||0)}</div></div>
+      <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Total In (+)</div><div class="value">${fmtMoney(data.totalIn)}</div></div>
+      <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">Total Out (−)</div><div class="value">${fmtMoney(data.totalOut)}</div></div>
+      <div class="hero-k"><div class="label">Closing balance</div><div class="value">${fmtMoney(data.closing)}</div></div>
     </div>
     ${from?`<p style="font-size:.8rem;color:var(--ink-soft);">Opening balance before ${escapeHtml(from)}: <strong class="mono">${fmtMoney(data.opening)}</strong></p>`:''}
     <div class="table-wrap"><table>
@@ -5161,7 +5692,7 @@ function printSavingsHistory(){
     total += amt;
     if(t.type==='deposit') dep += amt;
     if(t.type==='withdraw') wd += amt;
-    const m = normalizeSavMethod(t.method);
+    const m = savEffectiveMethod(t);
     byMeth[m] = (byMeth[m]||0) + amt;
   });
   const methLines = Object.keys(byMeth).filter(k=>byMeth[k]>0).map(k=> k + ': <strong>' + fmtMoney(byMeth[k]) + '</strong>').join(' · ');
@@ -5171,7 +5702,7 @@ function printSavingsHistory(){
     if(c && c.address) who += ' · ' + c.address;
     if(t.type==='help') who += ' → ' + t.toContactId;
     return `<tr><td>${i+1}</td><td>${fmtDate(t.date)}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(savTypeLabel(t.type))}</td>
-      <td>${escapeHtml(normalizeSavMethod(t.method))}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(t.note||'')}</td></tr>`;
+      <td>${escapeHtml(normalizeSavMethod(t.method))}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(savNoteWithCashOut(t))}</td></tr>`;
   }).join('');
   const fromF = (document.getElementById('savFromFilter')||{}).value || '';
   const toF = (document.getElementById('savToFilter')||{}).value || '';
@@ -5196,7 +5727,7 @@ function exportSavingsCSV(){
       t.date||'', t.type||'', t.contactId||'', t.toContactId||'',
       '"'+(c?c.name:'').replace(/"/g,'""')+'"',
       t.method||'', t.amount||0,
-      '"'+(t.note||'').replace(/"/g,'""')+'"'
+      '"'+savNoteWithCashOut(t).replace(/"/g,'""')+'"'
     ].join(','));
   });
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
@@ -5266,6 +5797,7 @@ function enterPrintMode(html, docTitle){
       toast('Please allow popups for this site to print on mobile.');
     }catch(e){ console.warn('mobile print window failed', e); }
   }
+  if(document.body.classList.contains('dark-mode')){ window.__restoreDark = true; document.body.classList.remove('dark-mode'); }
   const stage = document.getElementById('printStage');
   stage.innerHTML = html;
   const prevTitle = document.title;
@@ -5279,6 +5811,7 @@ window.addEventListener('afterprint', ()=>{
   // Mobile browsers can fire this too early; wait a little before restoring the normal screen
   const restore = ()=>{
     document.body.classList.remove('print-mode');
+    if(window.__restoreDark){ document.body.classList.add('dark-mode'); window.__restoreDark = false; }
     document.getElementById('printStage').innerHTML = '';
     if(window.__printPrevTitle){ document.title = window.__printPrevTitle; window.__printPrevTitle = null; }
   };
@@ -5483,7 +6016,7 @@ document.addEventListener('keydown', e=>{
    INIT
    ========================================================= */
 function initApp(){
-  showTab('summary');
+  showTab('dashboard');
   renderSettings();
   applyDarkModeFromStorage();
   updatePinStatus();
