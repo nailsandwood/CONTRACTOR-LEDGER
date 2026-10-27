@@ -469,6 +469,15 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
   body.side-collapsed nav.tabs button span{display:inline;} body.side-collapsed nav.tabs button{padding:8px 12px;}
   .side-toggle{display:none;}
 }
+
+/* ===== Recycle Bin / Analysis (v7.4) ===== */
+.nav-badge{margin-left:auto;background:#e0a526;color:#3d2c00;border-radius:999px;padding:1px 8px;font-size:.7rem;font-weight:700;}
+body.side-collapsed nav.tabs button{position:relative;} body.side-collapsed .nav-badge{position:absolute;top:2px;right:6px;margin:0;padding:0 6px;font-size:.62rem;}
+.an-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;} .an-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.an-grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px;}
+.an-delta.up{color:var(--green-700);font-weight:700;} .an-delta.down{color:var(--red-600);font-weight:700;}
+@media(max-width:1100px){.an-kpis{grid-template-columns:1fr 1fr;} .an-groups,.an-grid2{grid-template-columns:1fr;}}
+body.dark-mode .nav-badge{color:#3d2c00;}
 </style>
 </head>
 <body>
@@ -534,6 +543,8 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
 
 <div id="app">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="ni-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+<symbol id="ni-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
 <symbol id="ni-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
 <symbol id="ni-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
 <symbol id="ni-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -554,8 +565,10 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
       <button data-tab="summary" onclick="showTab('summary')" title="Contractor Summary"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Contractor Summary</span></button>
       <button data-tab="accounts" onclick="showTab('accounts')" title="Contractor Accounts"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Contractor Accounts</span></button>
       <button data-tab="reports" onclick="showTab('reports')" title="Reports"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Reports</span></button>
+      <button data-tab="analysis" onclick="showTab('analysis')" title="Analysis"><svg class="ic" aria-hidden="true"><use href="#ni-trend"/></svg><span>Analysis</span></button>
       <button data-tab="savings" onclick="showTab('savings')" title="Welfare Fund"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span></button>
       <button data-tab="announce" onclick="showTab('announce')" title="Announcements"><svg class="ic" aria-hidden="true"><use href="#ni-mega"/></svg><span>Announcements</span></button>
+      <button data-tab="recycle" onclick="showTab('recycle')" title="Recycle Bin"><svg class="ic" aria-hidden="true"><use href="#ni-trash"/></svg><span>Recycle Bin</span><b class="nav-badge" id="binBadge" style="display:none;"></b></button>
       <button data-tab="backup" onclick="showTab('backup')" title="Backup &amp; Files"><svg class="ic" aria-hidden="true"><use href="#ni-cloud"/></svg><span>Backup &amp; Files</span></button>
       <button data-tab="settings" onclick="showTab('settings')" title="Settings"><svg class="ic" aria-hidden="true"><use href="#ni-gear"/></svg><span>Settings</span></button>
     </nav>
@@ -1155,6 +1168,44 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
     </section>
 
     <!-- ============ BACKUP ============ -->
+
+    <!-- ============ ANALYSIS ============ -->
+    <section class="panel" id="panel-analysis">
+      <div class="section-head">
+        <div><h2>Contractor Analysis</h2><div class="sub">How active every contractor is — weekly, monthly or yearly — with full details.</div></div>
+        <div class="btn-row no-print"><button class="btn btn-ghost" onclick="printAnalysis()">🖨 Print / PDF</button><button class="btn btn-ghost" onclick="exportAnalysisExcel()">⇩ Excel Download</button></div>
+      </div>
+      <div class="no-print" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+        <div class="seg" id="anModeSeg" style="margin:0;"><button data-m="weekly" onclick="setAnalysisMode('weekly')">Weekly</button><button class="on" data-m="monthly" onclick="setAnalysisMode('monthly')">Monthly</button><button data-m="yearly" onclick="setAnalysisMode('yearly')">Yearly</button></div>
+        <select class="select-sm" id="anCount" onchange="renderAnalysis()"></select>
+        <select class="select-sm" id="anSection" onchange="renderAnalysis()"><option value="all">All sections</option></select>
+        <div class="search-bar" style="max-width:260px;"><input id="anSearch" placeholder="Search contractor…" oninput="renderAnalysis()"></div>
+        <select class="select-sm" id="anSort" onchange="renderAnalysis()"><option value="amount">Sort: Amount this period</option><option value="memos">Sort: Memos this period</option><option value="change">Sort: Change vs previous</option><option value="silent">Sort: Longest without a memo</option><option value="total">Sort: Total amount (all time)</option><option value="name">Sort: Name A–Z</option></select>
+      </div>
+      <div id="anKpis"></div>
+      <div id="anCharts"></div>
+      <div id="anPeriods"></div>
+      <div class="status-pills no-print" id="anPills"></div>
+      <div id="anTable"></div>
+    </section>
+
+    <!-- ============ RECYCLE BIN ============ -->
+    <section class="panel" id="panel-recycle">
+      <div class="section-head">
+        <div><h2>Recycle Bin</h2><div class="sub">Deleted memos, contractors and welfare transactions stay here until you delete them for good.</div></div>
+        <div class="btn-row no-print"><button class="btn btn-accent" onclick="binRestoreSelected()">↩ Restore selected</button><button class="btn btn-ghost" onclick="binDeleteSelected()">Delete selected</button><button class="btn btn-danger" onclick="binEmpty()">Empty Recycle Bin</button></div>
+      </div>
+      <div class="status-pills no-print" id="binPills"></div>
+      <div class="no-print" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="search-bar" style="max-width:320px;"><input id="binSearch" placeholder="Search deleted items (memo, name, ID…)" oninput="renderRecycleBin()"></div>
+        <select class="select-sm" id="binSort" onchange="renderRecycleBin()"><option value="new">Sort: Newest deleted first</option><option value="old">Sort: Oldest first</option><option value="amount">Sort: Amount (high → low)</option></select>
+      </div>
+      <div class="table-wrap" style="max-height:78vh;overflow:auto;">
+        <table><thead><tr><th class="no-print"><input type="checkbox" id="binAll" onchange="binToggleAll(this)"></th><th>Deleted</th><th>Type</th><th>Item</th><th>Amount</th><th class="no-print">Actions</th></tr></thead><tbody id="binTbody"></tbody></table>
+      </div>
+      <p id="binEmpty" style="color:var(--ink-soft);margin:14px 4px;"></p>
+    </section>
+
     <section class="panel" id="panel-backup">
       <div class="section-head"><div><h2>Backup &amp; Files</h2><div class="sub">Data is automatically saved to your Google Drive. You can also download a local copy or restore from a file.</div></div></div>
       <div class="grid-3">
@@ -1310,13 +1361,14 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
     <div class="grid-4" style="margin-top:6px;">
       <div class="field"><label>Date</label><input type="date" id="aeDate"></div>
       <div class="field"><label>Memo Number</label><input id="aeMemo" placeholder="e.g. 1042" class="mono"></div>
+      <div id="aeDupHint" class="dup-banner" style="display:none;margin-top:8px;"></div>
       <div class="field"><label>Total Amount</label><input type="number" id="aeAmount" placeholder="0.00" class="mono"></div>
       <div class="field"><label>In Charge</label><select id="aeInCharge"><option value="">—</option></select></div>
     </div>
 
     <div style="margin-top:6px;border:1px solid var(--ring-line);border-radius:6px;padding:14px;background:var(--paper-dim);">
       <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;">Entries to add <span id="aeListCount" class="kbd-hint" style="margin-left:6px;"></span></div>
-      <div id="aeListWrap"></div>
+      <div id="aeDupSummary" class="no-print" style="display:none;margin-bottom:8px;"></div><div id="aeListWrap"></div>
       <p id="aeListEmpty" style="font-size:.78rem;color:var(--ink-soft);margin:2px 0 0;">Fill the fields above and click <strong>+ Add to List</strong> for each memo, then <strong>Add</strong> to save them all.</p>
     </div>
 
@@ -1331,6 +1383,17 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
 </div>
 
 <!-- ===================== MEMO LOOKUP / DUPLICATES ===================== -->
+
+<div class="modal-overlay" id="binDetailOverlay"><div class="modal" style="max-width:760px;">
+  <div style="display:flex;align-items:center;margin-bottom:10px;"><h3 style="margin:0;">Deleted item — details</h3><button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="closeBinDetail()">✕</button></div>
+  <div id="binDetailBody"></div>
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="closeBinDetail()">Close</button><button class="btn btn-accent" id="binDetailRestore">↩ Restore</button></div>
+</div></div>
+<div class="modal-overlay" id="anDetailOverlay"><div class="modal" style="max-width:860px;">
+  <div style="display:flex;align-items:center;margin-bottom:10px;"><h3 style="margin:0;" id="anDetailTitle">Contractor activity</h3><button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="closeAnDetail()">✕</button></div>
+  <div id="anDetailBody"></div>
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="closeAnDetail()">Close</button><button class="btn btn-accent" id="anDetailOpen">Open account</button></div>
+</div></div>
 <div class="modal-overlay" id="memoLookupOverlay">
   <div class="modal modal-wide">
     <h3 id="memoLookupTitle">Duplicate Memos</h3>
@@ -1407,7 +1470,7 @@ body.side-collapsed .side-user{padding:6px;background:transparent;}
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '7.3.0-New-Layout';
+const APP_VERSION = '7.4.0-New-Layout';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1663,6 +1726,7 @@ function defaultDB(){
 function generateUid(){ return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 function applyMigrations(){
+  if(DB && !Array.isArray(DB.recycleBin)) DB.recycleBin = [];
   if(!DB.inCharge) DB.inCharge = ['Naquib','Rayhan','Ashraf'];
   if(!DB.session) DB.session = {from:'',to:'',meetingDate:''};
   if(DB.session.meetingDate===undefined) DB.session.meetingDate = '';
@@ -2500,7 +2564,7 @@ async function doLogout(){
    DASHBOARD (new landing page)
    ========================================================= */
 const DASH_COL = ['#17794f','#2f6fb3','#b3541c','#7a4fb3','#b3311c','#0f8a8a','#8a6d1f'];
-function dashInitials(n){ return String(n||'?').replace(/^(Mr\\.|Md\\.|Mrs\\.|Ms\\.)\\s*/i,'').trim().split(/\\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?'; }
+function dashInitials(n){ return String(n||'?').replace(/^(Mr\.|Md\.|Mrs\.|Ms\.)\s*/i,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?'; }
 function dashSpark(vals,w,h){
   const mx=Math.max(...vals), mn=Math.min(...vals), span=(mx-mn)||1;
   const pts=vals.map((x,i)=>[i*w/Math.max(vals.length-1,1), h-8-((x-mn)/span)*(h-20)]);
@@ -2583,7 +2647,7 @@ function renderDashboard(){
     <div class="dcard"><h3>Monthly memo totals</h3>${dashBars(D.vals.slice(-8),D.labels.slice(-8),470,190)}</div>
     <div class="dcard"><h3>Contractor status</h3><div style="display:flex;align-items:center;gap:16px;">${dashDonut([[D.st.green,'#17794f'],[D.st.yellow,'#e0a526'],[D.st.red,'#c8452b']])}<div style="display:flex;flex-direction:column;gap:10px;"><span class="pill pill-green">● Active ${D.st.green} (${pct(D.st.green)}%)</span><span class="pill pill-yellow">● Moderate ${D.st.yellow} (${pct(D.st.yellow)}%)</span><span class="pill pill-red">● Inactive ${D.st.red} (${pct(D.st.red)}%)</span></div></div></div>
     <div class="dcard"><h3>Needs attention</h3>
-      <div class="drow"><span>⚠ ${D.dupContractors} contractor(s) with repeated memo numbers</span><button class="dlink" onclick="showTab('accounts')">View</button></div>
+      <div class="drow"><span>⚠ ${D.dupContractors} contractor(s) with duplicate memos (same date + memo)</span><button class="dlink" onclick="showTab('accounts')">View</button></div>
       <div class="drow"><span>☁ ${demoMode?'Demo mode — nothing is saved':(localDirty?'Changes only on this PC':'Everything saved to Drive')}</span><button class="dlink" onclick="${localDirty?'tryAutoReconnect(true);persistDBNow&&persistDBNow()':"showTab('backup')"}">${localDirty?'Sync':'Backup'}</button></div>
       <div class="drow"><span>♥ ${D.notDep} not deposited welfare</span><button class="dlink" onclick="dashGoNotDeposited()">Open</button></div>
       <div class="drow"><span>✆ ${D.unsent} announcements unsent</span><button class="dlink" onclick="showTab('announce')">Open</button></div></div>
@@ -2623,7 +2687,7 @@ function buildDemoDB(){
       const amt = Math.round(p[4]/n * (0.6 + rnd()*0.8) / 10) * 10; sum += amt;
       entries.push({uid:'demo'+i+'_'+k, date:localISODate(d), memo:String(memo++), amount:amt, inCharge:inch[(i+k)%inch.length], remark:''});
     }
-    if(i===0 && entries.length>1) entries[1].memo = entries[0].memo;   // show the duplicate-memo warning
+    if(i===0 && entries.length>1){ entries[1].memo = entries[0].memo; entries[1].date = entries[0].date; }   // show the duplicate-memo warning
     entries.sort((a,b)=> a.date<b.date?-1:1);
     c.totalAmount = sum; db.contacts.push(c); db.accounts[p[0]] = {entries, grandTotal:sum};
   });
@@ -2721,7 +2785,7 @@ function toggleBell(ev){
   const D=dashCompute();
   const row=(t,btn,act)=>`<div class="drow"><span>${t}</span><button class="dlink" onclick="document.getElementById('bellPop').classList.remove('open');${act}">${btn}</button></div>`;
   pop.innerHTML = `<div style="font:700 1rem 'Fraunces',serif;padding:4px 6px;">Needs attention</div>`
-    + row('⚠ '+D.dupContractors+' contractor(s) with repeated memo numbers','View',"showTab('accounts')")
+    + row('⚠ '+D.dupContractors+' contractor(s) with duplicate memos (same date + memo)','View',"showTab('accounts')")
     + row('☁ '+(demoMode?'Demo mode — nothing is saved':(localDirty?'Changes only on this PC':'Everything saved to Drive')),'Backup',"showTab('backup')")
     + row('♥ '+D.notDep+' not deposited welfare','Open','dashGoNotDeposited()')
     + row('✆ '+D.unsent+' announcements unsent','Open',"showTab('announce')")
@@ -2752,11 +2816,320 @@ function toggleSidebar(){
   applySidebarState();
 }
 
+/* =========================================================
+   RECYCLE BIN - everything that is deleted goes here first
+   ========================================================= */
+function ensureBin(){ if(!Array.isArray(DB.recycleBin)) DB.recycleBin = []; return DB.recycleBin; }
+function binClone(x){ return JSON.parse(JSON.stringify(x)); }
+function updateBinBadge(){
+  const b = document.getElementById('binBadge'); if(!b) return;
+  const n = (DB && Array.isArray(DB.recycleBin)) ? DB.recycleBin.length : 0;
+  b.textContent = n > 99 ? '99+' : String(n); b.style.display = n ? 'inline-block' : 'none';
+}
+function binAdd(type, payload, label, extra){
+  const it = Object.assign({id: generateUid(), type, deletedAt: new Date().toISOString(), label, payload: binClone(payload)}, extra||{});
+  ensureBin().push(it); updateBinBadge(); return it;
+}
+function binTypeInfo(t){ return ({memo:['Memo','pill-yellow'],memos:['Cleared entries','pill-yellow'],session:['Session closed','pill-yellow'],contractor:['Contractor','pill-red'],contractors:['All contractors','pill-red'],welfare:['Welfare','pill-green']})[t] || [t,'pill-gray']; }
+function binGroup(t){ return (t==='memo'||t==='memos'||t==='session') ? 'memo' : (t==='contractor'||t==='contractors') ? 'contractor' : 'welfare'; }
+function binSyncAll(){ DB.contacts.forEach(c=>{ try{ syncGrandTotalToSummary(c.id); }catch(e){} }); try{ rankedContacts(); }catch(e){} }
+function binRestoreItem(id){
+  const bin = ensureBin(); const it = bin.find(x=>x.id===id); if(!it) return {ok:false,msg:'Item not found.'};
+  const p = it.payload; let msg = 'Restored.';
+  if(it.type==='memo' || it.type==='memos'){
+    const c = DB.contacts.find(x=>x.id===p.contactId);
+    if(!c) return {ok:false,msg:'The contractor of this memo is not in the software now. Restore the contractor first.'};
+    const acc = DB.accounts[c.id] = DB.accounts[c.id] || {entries:[], grandTotal:0};
+    const list = it.type==='memo' ? [p.entry] : p.entries; let added = 0;
+    list.forEach(e=>{ if(!acc.entries.some(x=>x.uid===e.uid)){ acc.entries.push(binClone(e)); added++; } });
+    sortEntriesByDate(acc.entries); binSyncAll(); msg = added + ' entr' + (added===1?'y':'ies') + ' restored to ' + c.name + '.';
+  } else if(it.type==='contractor'){
+    if(DB.contacts.some(x=>x.id===p.contact.id)) return {ok:false,msg:'A contractor with ID ' + p.contact.id + ' already exists.'};
+    DB.contacts.push(binClone(p.contact)); DB.accounts[p.contact.id] = binClone(p.account || {entries:[],grandTotal:0}); binSyncAll();
+    msg = 'Contractor ' + p.contact.name + ' restored with ' + ((p.account&&p.account.entries)||[]).length + ' entries.';
+  } else if(it.type==='contractors'){
+    let n = 0; p.contacts.forEach(c=>{ if(!DB.contacts.some(x=>x.id===c.id)){ DB.contacts.push(binClone(c)); DB.accounts[c.id] = binClone((p.accounts||{})[c.id] || {entries:[],grandTotal:0}); n++; } });
+    binSyncAll(); msg = n + ' contractor(s) restored.';
+  } else if(it.type==='welfare'){
+    ensureSavings(); if(DB.savings.transactions.some(t=>t.uid===p.txn.uid)) msg = 'Already present.'; else { DB.savings.transactions.push(binClone(p.txn)); msg = 'Welfare transaction restored.'; }
+  } else if(it.type==='session'){
+    let n = 0; Object.keys(p.accounts||{}).forEach(cid=>{ const acc = DB.accounts[cid]; if(!acc) return; p.accounts[cid].forEach(e=>{ if(!acc.entries.some(x=>x.uid===e.uid)){ acc.entries.push(binClone(e)); n++; } }); sortEntriesByDate(acc.entries); });
+    if(p.session && !(DB.session && (DB.session.from||DB.session.to))) DB.session = binClone(p.session);
+    binSyncAll(); msg = n + ' entries restored.';
+  }
+  const k = bin.findIndex(x=>x.id===id); if(k>=0) bin.splice(k,1);
+  return {ok:true,msg};
+}
+function binRefreshApp(){
+  const active = document.querySelector('nav.tabs button.active'); const tab = active ? active.dataset.tab : 'recycle';
+  updateBinBadge(); try{ showTab(tab); }catch(e){}
+}
+function binRestore(id){
+  if(!requireEditor('Restore')) return;
+  const r = binRestoreItem(id); toast(r.msg); if(r.ok){ saveDB(true); binRefreshApp(); }
+}
+function binPurge(id){
+  if(!requireEditor('Delete')) return;
+  if(!confirm('Delete this item permanently? This cannot be undone.')) return;
+  const bin = ensureBin(); const k = bin.findIndex(x=>x.id===id); if(k>=0) bin.splice(k,1);
+  saveDB(true); binRefreshApp(); toast('Deleted permanently.');
+}
+function binSelectedIds(){ return [...document.querySelectorAll('#binTbody input.bin-chk:checked')].map(x=>x.value); }
+function binToggleAll(cb){ document.querySelectorAll('#binTbody input.bin-chk').forEach(x=> x.checked = cb.checked); }
+function binRestoreSelected(){
+  const ids = binSelectedIds(); if(!ids.length){ toast('Tick the items you want to restore.'); return; }
+  if(!requireEditor('Restore')) return;
+  let ok = 0, fail = []; ids.forEach(id=>{ const r = binRestoreItem(id); if(r.ok) ok++; else fail.push(r.msg); });
+  if(ok) saveDB(true); binRefreshApp(); toast(ok + ' restored' + (fail.length ? ', ' + fail.length + ' could not be restored: ' + fail[0] : '.'));
+}
+function binDeleteSelected(){
+  const ids = binSelectedIds(); if(!ids.length){ toast('Tick the items you want to delete.'); return; }
+  if(!requireEditor('Delete')) return;
+  if(!confirm('Delete ' + ids.length + ' selected item(s) permanently? This cannot be undone.')) return;
+  DB.recycleBin = ensureBin().filter(x=>!ids.includes(x.id)); saveDB(true); binRefreshApp(); toast(ids.length + ' deleted permanently.');
+}
+function binEmpty(){
+  const n = ensureBin().length; if(!n){ toast('The Recycle Bin is already empty.'); return; }
+  if(!requireEditor('Empty Recycle Bin')) return;
+  if(!confirm('Permanently delete all ' + n + ' item(s) in the Recycle Bin? This cannot be undone.')) return;
+  const typed = prompt('To confirm, type EMPTY (in capital letters) below.');
+  if(typed !== 'EMPTY'){ toast('Cancelled — nothing was deleted.'); return; }
+  takeLocalSnapshot(true); DB.recycleBin = []; saveDB(true); binRefreshApp(); toast('Recycle Bin emptied.');
+}
+let binFilter = 'all';
+function setBinFilter(k){ binFilter = k; renderRecycleBin(); }
+function binItemAmount(it){ const p = it.payload; if(it.type==='memo') return Number(p.entry.amount)||0; if(it.type==='welfare') return Number(p.txn.amount)||0; if(it.type==='memos') return p.entries.reduce((s,e)=>s+(Number(e.amount)||0),0); if(it.type==='contractor') return (((p.account||{}).entries)||[]).reduce((s,e)=>s+(Number(e.amount)||0),0); return null; }
+function binItemWho(it){ const p = it.payload; if(it.type==='contractor') return p.contact.name + ' (ID ' + p.contact.id + ')'; if(it.type==='memo'||it.type==='memos') return (it.contactName||'') + (it.contactId ? ' (ID ' + it.contactId + ')' : ''); if(it.type==='welfare') return it.contactName || ''; return ''; }
+function renderRecycleBin(){
+  const tbody = document.getElementById('binTbody'); if(!tbody) return;
+  const all = ensureBin(); updateBinBadge();
+  const cnt = {all:all.length, memo:0, contractor:0, welfare:0}; all.forEach(x=>{ cnt[binGroup(x.type)]++; });
+  const pill = (k,l)=>`<button type="button" class="spill ${binFilter===k?'on':''}" onclick="setBinFilter('${k}')">${l}<small>${cnt[k]}</small></button>`;
+  document.getElementById('binPills').innerHTML = pill('all','All')+pill('memo','Memos')+pill('contractor','Contractors')+pill('welfare','Welfare');
+  const q = (document.getElementById('binSearch').value||'').toLowerCase().trim(); const sort = document.getElementById('binSort').value;
+  let list = all.filter(x=> binFilter==='all' || binGroup(x.type)===binFilter).filter(x=> !q || (x.label+' '+binItemWho(x)+' '+JSON.stringify(x.payload)).toLowerCase().includes(q));
+  list.sort((a,b)=> sort==='old' ? a.deletedAt.localeCompare(b.deletedAt) : sort==='amount' ? ((binItemAmount(b)||0)-(binItemAmount(a)||0)) : b.deletedAt.localeCompare(a.deletedAt));
+  tbody.innerHTML = list.map(it=>{
+    const [tl,tc] = binTypeInfo(it.type); const amt = binItemAmount(it); const d = new Date(it.deletedAt);
+    return `<tr><td class="no-print"><input type="checkbox" class="bin-chk" value="${escapeHtml(it.id)}"></td>
+      <td class="mono" style="white-space:nowrap;">${escapeHtml(d.toLocaleDateString('en-GB'))}<div class="dk-s">${escapeHtml(d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}</div></td>
+      <td><span class="pill ${tc}">${escapeHtml(tl)}</span></td>
+      <td><b>${escapeHtml(it.label)}</b><div class="dk-s">${escapeHtml(binItemWho(it))}</div></td>
+      <td class="mono">${amt===null?'—':fmtMoney(amt)}</td>
+      <td class="no-print"><div class="row-actions" style="flex-wrap:nowrap;"><button class="icon-btn" onclick="binDetails('${escapeHtml(it.id)}')">Details</button><button class="btn btn-accent btn-sm" onclick="binRestore('${escapeHtml(it.id)}')">↩ Restore</button><button class="icon-btn danger" onclick="binPurge('${escapeHtml(it.id)}')">Delete</button></div></td></tr>`;
+  }).join('');
+  document.getElementById('binEmpty').style.display = list.length ? 'none' : 'block';
+  document.getElementById('binEmpty').textContent = all.length ? 'Nothing matches your search.' : 'The Recycle Bin is empty. Deleted memos, contractors and welfare transactions will appear here.';
+  const hc = document.getElementById('binAll'); if(hc) hc.checked = false;
+}
+function binEntriesTable(entries){
+  return `<div class="table-wrap" style="max-height:300px;overflow:auto;"><table><thead><tr><th>#</th><th>Date</th><th>Memo no.</th><th>Amount</th><th>In charge</th><th>Remark</th></tr></thead><tbody>${entries.map((e,i)=>`<tr><td>${i+1}</td><td class="mono">${escapeHtml(fmtDate(e.date))}</td><td class="mono">${escapeHtml(e.memo||'')}</td><td class="mono">${fmtMoney(e.amount)}</td><td>${escapeHtml(e.inCharge||'')}</td><td>${escapeHtml(e.remark||'')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function binDetails(id){
+  const it = ensureBin().find(x=>x.id===id); if(!it) return; const p = it.payload; const [tl,tc] = binTypeInfo(it.type);
+  const kv = (k,v)=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`;
+  let body = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;"><span class="pill ${tc}">${escapeHtml(tl)}</span><b style="font-size:1.05rem;">${escapeHtml(it.label)}</b></div>` + kv('Deleted', escapeHtml(new Date(it.deletedAt).toLocaleString()));
+  if(it.type==='memo'){
+    body += kv('Contractor', escapeHtml(binItemWho(it))) + kv('Date', escapeHtml(fmtDate(p.entry.date))) + kv('Memo no.', escapeHtml(p.entry.memo||'—')) + kv('Total amount', '৳ ' + fmtMoney(p.entry.amount)) + kv('In charge', escapeHtml(p.entry.inCharge||'—')) + kv('Remark', escapeHtml(p.entry.remark||'—'));
+  } else if(it.type==='memos'){
+    body += kv('Contractor', escapeHtml(binItemWho(it))) + kv('Entries', p.entries.length) + kv('Total amount', '৳ ' + fmtMoney(binItemAmount(it))) + '<div style="margin-top:10px;">' + binEntriesTable(p.entries) + '</div>';
+  } else if(it.type==='contractor'){
+    const en = (p.account||{}).entries || [];
+    body += kv('ID', escapeHtml(String(p.contact.id))) + kv('Name', escapeHtml(p.contact.name)) + kv('Mobile', escapeHtml((p.contact.mobiles||[p.contact.mobile]).filter(Boolean).join(' · ')||'—')) + kv('Address', escapeHtml(p.contact.address||'—')) + kv('Section', escapeHtml(p.contact.nid||'—')) + kv('Entries', en.length) + kv('Total amount', '৳ ' + fmtMoney(binItemAmount(it))) + (en.length ? '<div style="margin-top:10px;">' + binEntriesTable(en) + '</div>' : '');
+  } else if(it.type==='welfare'){
+    const t = p.txn; body += kv('Contractor', escapeHtml(it.contactName||t.contactId)) + kv('Type', escapeHtml(t.type)) + kv('Date', escapeHtml(fmtDate(t.date))) + kv('Amount', '৳ ' + fmtMoney(t.amount)) + kv('Method', escapeHtml(normalizeSavMethod(t.method))) + kv('Note', escapeHtml(savNoteWithCashOut(t)||'—')) + kv('Txn ID', escapeHtml(t.txnId||'—'));
+  } else if(it.type==='contractors'){
+    body += kv('Contractors', p.contacts.length) + '<div class="table-wrap" style="max-height:300px;overflow:auto;margin-top:10px;"><table><thead><tr><th>ID</th><th>Name</th><th>Section</th><th>Entries</th></tr></thead><tbody>' + p.contacts.map(c=>`<tr><td class="mono">${escapeHtml(String(c.id))}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.nid||'')}</td><td>${(((p.accounts||{})[c.id]||{}).entries||[]).length}</td></tr>`).join('') + '</tbody></table></div>';
+  } else if(it.type==='session'){
+    const ids = Object.keys(p.accounts||{}); const n = ids.reduce((s,k)=>s+p.accounts[k].length,0);
+    body += kv('Contractors', ids.length) + kv('Entries cleared', n) + kv('Session', escapeHtml(((p.session||{}).from||'…') + ' → ' + ((p.session||{}).to||'…')));
+  }
+  document.getElementById('binDetailBody').innerHTML = body;
+  document.getElementById('binDetailRestore').onclick = ()=>{ closeBinDetail(); binRestore(id); };
+  document.getElementById('binDetailOverlay').classList.add('open');
+}
+function closeBinDetail(){ document.getElementById('binDetailOverlay').classList.remove('open'); }
+
+/* =========================================================
+   ANALYSIS - weekly / monthly / yearly activity of every contractor
+   ========================================================= */
+let anMode = 'monthly', anStatus = 'all';
+const AN_COUNTS = {weekly:[8,12,26,52], monthly:[6,12,24,36], yearly:[3,5,10]};
+const AN_DEFAULT = {weekly:12, monthly:12, yearly:5};
+const AN_MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function anUnit(){ return anMode==='weekly' ? 'week' : anMode==='monthly' ? 'month' : 'year'; }
+function fillAnCount(){
+  const sel = document.getElementById('anCount'); if(!sel) return;
+  sel.innerHTML = AN_COUNTS[anMode].map(n=>`<option value="${n}" ${n===AN_DEFAULT[anMode]?'selected':''}>Last ${n} ${anUnit()}s</option>`).join('');
+}
+function fillAnSections(){
+  const sel = document.getElementById('anSection'); if(!sel) return; const cur = sel.value;
+  const secs = [...new Set(DB.contacts.map(c=>(c.nid||'').trim()).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="all">All sections</option>' + secs.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  sel.value = secs.includes(cur) ? cur : 'all';
+}
+function setAnalysisMode(m){
+  anMode = m; document.querySelectorAll('#anModeSeg button').forEach(b=> b.classList.toggle('on', b.dataset.m===m));
+  fillAnCount(); renderAnalysis();
+}
+function anDate(iso){ return new Date(String(iso).slice(0,10) + 'T12:00:00'); }
+function anMonday(d){ const m = new Date(d); m.setDate(m.getDate() - ((m.getDay()+6)%7)); return m; }
+function anKey(iso){
+  if(!iso) return null; const d = anDate(iso); if(isNaN(d)) return null;
+  if(anMode==='yearly') return String(d.getFullYear());
+  if(anMode==='monthly') return String(iso).slice(0,7);
+  return localISODate(anMonday(d));
+}
+function anBuckets(n){
+  const out = []; const now = new Date(); now.setHours(12,0,0,0);
+  for(let i=n-1;i>=0;i--){
+    if(anMode==='yearly'){ const y = now.getFullYear()-i; out.push({key:String(y), label:String(y), full:String(y)}); }
+    else if(anMode==='monthly'){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1, 12); out.push({key:localISODate(d).slice(0,7), label:AN_MN[d.getMonth()]+' '+String(d.getFullYear()).slice(2), full:AN_MN[d.getMonth()]+' '+d.getFullYear()}); }
+    else { const d = new Date(now); d.setDate(d.getDate() - i*7); const m = anMonday(d); out.push({key:localISODate(m), label:m.getDate()+' '+AN_MN[m.getMonth()], full:'Week of '+m.getDate()+' '+AN_MN[m.getMonth()]+' '+m.getFullYear()}); }
+  }
+  return out;
+}
+function anPeriodName(){ return anMode==='weekly' ? 'this week' : anMode==='monthly' ? 'this month' : 'this year'; }
+function anPct(cur,prev){ return prev>0 ? Math.round((cur-prev)/prev*100) : (cur>0 ? null : 0); }
+function anDeltaHtml(cur,prev){
+  const p = anPct(cur,prev); if(p===0) return '<span class="dk-s">no change</span>'; if(p===null) return '<span class="dk-s">new activity</span>';
+  return `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span> <span class="dk-s">vs previous ${anUnit()}</span>`;
+}
+function anCompute(){
+  const n = Number((document.getElementById('anCount')||{}).value) || AN_DEFAULT[anMode];
+  const B = anBuckets(n), idx = {}; B.forEach((b,i)=> idx[b.key] = i);
+  const sec = (document.getElementById('anSection')||{}).value || 'all';
+  const contacts = DB.contacts.filter(c=>!c.died && (sec==='all' || (c.nid||'').trim()===sec));
+  const today = new Date(); today.setHours(12,0,0,0);
+  const rows = contacts.map(c=>{
+    const acc = DB.accounts[c.id] || {entries:[]}; const per = B.map(()=>({amt:0,cnt:0})); let last = '', allCnt = 0;
+    acc.entries.forEach(e=>{
+      if(!e.date) return; allCnt++; if(String(e.date) > last) last = String(e.date);
+      const k = anKey(e.date); if(k!==null && (k in idx)){ const p = per[idx[k]]; p.amt += Number(e.amount)||0; p.cnt++; }
+    });
+    const cur = per[per.length-1], prev = per[per.length-2] || {amt:0,cnt:0};
+    return {c, st: contactStatus(c), per, cur, prev, last, days: last ? Math.max(0, Math.round((today - anDate(last))/86400000)) : null, allCnt, total: Number(c.totalAmount)||0};
+  });
+  const groups = {green:null, yellow:null, red:null};
+  Object.keys(groups).forEach(k=>{ groups[k] = {n:0, per: B.map(()=>({amt:0,cnt:0,act:0}))}; });
+  rows.forEach(r=>{ const g = groups[r.st]; if(!g) return; g.n++; r.per.forEach((p,i)=>{ g.per[i].amt += p.amt; g.per[i].cnt += p.cnt; if(p.cnt>0) g.per[i].act++; }); });
+  return {B, rows, groups, sec};
+}
+function anMini(vals){
+  const mx = Math.max(...vals,1), w = 88, h = 26, bw = w/vals.length;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${vals.map((v,i)=>{ const bh = v>0 ? Math.max(3, v/mx*(h-2)) : 1.5; return `<rect x="${(i*bw+1).toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${Math.max(bw-2,1.5).toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${i===vals.length-1?'#17794f':'#b9dccb'}"/>`; }).join('')}</svg>`;
+}
+function anStacked(D){
+  const w = 640, h = 220, n = D.B.length, bw = w/n;
+  const tot = D.B.map((b,i)=> D.groups.green.per[i].amt + D.groups.yellow.per[i].amt + D.groups.red.per[i].amt); const mx = Math.max(...tot,1); let o = '';
+  D.B.forEach((b,i)=>{
+    let y = h-26; const x = i*bw + bw*.18, ww = bw*.64;
+    [['green','#17794f'],['yellow','#e0a526'],['red','#c8452b']].forEach(([k,col])=>{ const v = D.groups[k].per[i].amt; const bh = v/mx*(h-44); if(bh>0){ y -= bh; o += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${ww.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"><title>${escapeHtml(b.full)} · ${k==='green'?'Active':k==='yellow'?'Moderate':'Inactive'}: ৳ ${fmtMoney(v)}</title></rect>`; } });
+    if(n<=16 || i%Math.ceil(n/12)===0) o += `<text x="${(i*bw+bw/2).toFixed(1)}" y="${h-8}" font-size="10" fill="#7a8781" text-anchor="middle">${escapeHtml(b.label)}</text>`;
+  });
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block" role="img" aria-label="Amount per ${anUnit()} by contractor status">${o}</svg>`;
+}
+function anFiltered(D){
+  const q = ((document.getElementById('anSearch')||{}).value||'').toLowerCase().trim(); const sort = (document.getElementById('anSort')||{}).value || 'amount';
+  let list = D.rows.filter(r=>{
+    if(q && !(String(r.c.name||'').toLowerCase().includes(q) || String(r.c.id).toLowerCase().includes(q) || String(r.c.mobile||'').includes(q))) return false;
+    if(anStatus==='green'||anStatus==='yellow'||anStatus==='red') return r.st===anStatus;
+    if(anStatus==='silent') return r.cur.cnt===0;
+    if(anStatus==='now') return r.cur.cnt>0;
+    return true;
+  });
+  const chg = r=>{ const p = anPct(r.cur.amt, r.prev.amt); return p===null ? 1e9 : p; };
+  list.sort((a,b)=>{
+    if(sort==='memos') return b.cur.cnt-a.cur.cnt || b.cur.amt-a.cur.amt;
+    if(sort==='change') return chg(b)-chg(a);
+    if(sort==='silent') return (b.days===null?1e9:b.days)-(a.days===null?1e9:a.days);
+    if(sort==='total') return b.total-a.total;
+    if(sort==='name') return String(a.c.name).localeCompare(String(b.c.name));
+    return b.cur.amt-a.cur.amt || b.cur.cnt-a.cur.cnt;
+  });
+  return list;
+}
+function anPill(r){ return statusPillHtml(r.st, contactStatusDetail(r.c)).replace(/<div style="font-size:\.72rem[^>]*>[\s\S]*?<\/div>/,''); }
+function setAnStatus(k){ anStatus = k; renderAnalysis(); }
+function renderAnalysis(){
+  const el = document.getElementById('anKpis'); if(!el) return;
+  const D = anCompute(); window.__anLast = D;
+  const last = D.B.length-1, per = anPeriodName();
+  const act = D.rows.filter(r=>r.cur.cnt>0).length, actPrev = D.rows.filter(r=>r.prev.cnt>0).length;
+  const memos = D.rows.reduce((s,r)=>s+r.cur.cnt,0), memosPrev = D.rows.reduce((s,r)=>s+r.prev.cnt,0);
+  const amt = D.rows.reduce((s,r)=>s+r.cur.amt,0), amtPrev = D.rows.reduce((s,r)=>s+r.prev.amt,0);
+  const N = D.rows.length, silent = N - act;
+  const kp = (l,v,sub,col)=>`<div class="dcard" style="border-top:3px solid ${col};"><div class="dk-l">${l}</div><div class="dk-v">${v}</div><div class="dk-s" style="margin-top:2px;">${sub}</div></div>`;
+  el.innerHTML = `<div class="an-kpis">
+    ${kp('Active '+per, act+' <span style="font-size:1rem;color:var(--ink-soft);">/ '+N+'</span>', anDeltaHtml(act,actPrev).replace('vs previous','vs previous'), '#17794f')}
+    ${kp('Memos '+per, memos.toLocaleString(), anDeltaHtml(memos,memosPrev), '#2f6fb3')}
+    ${kp('Amount '+per, '৳ '+fmtMoney(amt), anDeltaHtml(amt,amtPrev), '#b3541c')}
+    ${kp('No activity '+per, silent.toLocaleString(), N ? Math.round(silent/N*100)+'% of contractors' : '—', '#b3311c')}
+  </div>
+  <div class="an-groups">${[['green','Active','pill-green'],['yellow','Moderate','pill-yellow'],['red','Inactive','pill-red']].map(([k,l,pc])=>{ const g = D.groups[k], p = g.per[last], q = g.per[last-1] || {amt:0,cnt:0,act:0};
+    return `<div class="dcard"><div style="display:flex;align-items:center;gap:8px;"><span class="pill ${pc}">● ${l} contractors</span><b style="margin-left:auto;font:700 1.4rem 'Fraunces',serif;">${g.n}</b></div>
+      <div class="drow"><span>Active ${per}</span><b style="margin-left:auto;">${p.act} of ${g.n}</b></div>
+      <div class="drow"><span>Memos</span><b style="margin-left:auto;">${p.cnt}</b></div>
+      <div class="drow"><span>Amount</span><b style="margin-left:auto;">৳ ${fmtMoney(p.amt)}</b></div>
+      <div class="dk-s" style="margin-top:6px;">${anDeltaHtml(p.amt,q.amt)}</div></div>`; }).join('')}</div>`;
+  const totActive = D.B.map((b,i)=> D.groups.green.per[i].act + D.groups.yellow.per[i].act + D.groups.red.per[i].act);
+  document.getElementById('anCharts').innerHTML = `<div class="an-grid2">
+    <div class="dcard"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h3 style="margin:0;">Amount per ${anUnit()}</h3><span class="pill pill-green">● Active</span><span class="pill pill-yellow">● Moderate</span><span class="pill pill-red">● Inactive</span></div>${anStacked(D)}</div>
+    <div class="dcard"><h3>Active contractors per ${anUnit()}</h3>${dashBars(totActive, D.B.map(b=>b.label), 420, 220)}</div></div>`;
+  // period table (newest first): every period with each status group
+  const prow = D.B.map((b,i)=>{ const g = D.groups; const a = g.green.per[i], y = g.yellow.per[i], r = g.red.per[i];
+    const tAmt = a.amt+y.amt+r.amt, tCnt = a.cnt+y.cnt+r.cnt, tAct = a.act+y.act+r.act, pAmt = i>0 ? (g.green.per[i-1].amt+g.yellow.per[i-1].amt+g.red.per[i-1].amt) : 0;
+    const p = i>0 ? anPct(tAmt,pAmt) : 0; const d = i===0 ? '—' : p===null ? 'new' : p===0 ? '0%' : `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span>`;
+    return `<tr><td><b>${escapeHtml(b.full)}</b></td><td class="mono">${tAct}</td><td class="mono">${tCnt}</td><td class="mono"><b>${fmtMoney(tAmt)}</b></td><td class="mono">${a.act} · ${fmtMoney(a.amt)}</td><td class="mono">${y.act} · ${fmtMoney(y.amt)}</td><td class="mono">${r.act} · ${fmtMoney(r.amt)}</td><td>${d}</td></tr>`; }).reverse().join('');
+  document.getElementById('anPeriods').innerHTML = `<div class="dcard" style="padding:16px 18px;margin-bottom:16px;"><h3>Period details <span class="dk-s" style="font-family:Inter;font-weight:500;">· contractors active · memos · amount, by status group</span></h3>
+    <div class="table-wrap" style="max-height:340px;overflow:auto;"><table><thead><tr><th>Period</th><th>Active contractors</th><th>Memos</th><th>Total amount</th><th>● Active group</th><th>● Moderate group</th><th>● Inactive group</th><th>Change</th></tr></thead><tbody>${prow}</tbody></table></div></div>`;
+  const cnt = {all:D.rows.length, green:0, yellow:0, red:0, now:act, silent}; D.rows.forEach(r=>{ cnt[r.st]++; });
+  const pill = (k,l)=>`<button type="button" class="spill ${anStatus===k?'on':''}" onclick="setAnStatus('${k}')">${l}<small>${cnt[k]}</small></button>`;
+  document.getElementById('anPills').innerHTML = pill('all','All')+pill('green','● Active')+pill('yellow','● Moderate')+pill('red','● Inactive')+pill('now','Active '+per)+pill('silent','No activity '+per);
+  const list = anFiltered(D);
+  const trs = list.map(r=>{ const p = anPct(r.cur.amt, r.prev.amt); const ch = p===null ? '<span class="pill pill-green">new</span>' : p===0 ? '<span class="dk-s">—</span>' : `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span>`;
+    const lastTxt = r.last ? escapeHtml(fmtDate(r.last)) + `<div class="dk-s">${r.days===0?'today':r.days+' days ago'}</div>` : '<span class="dk-s">no memo</span>';
+    return `<tr><td>${whoCellHtml(r.c)}</td><td><span class="pill pill-gray">${escapeHtml(r.c.nid||'—')}</span></td><td>${anPill(r)}</td>
+      <td class="mono"><b>${r.cur.cnt}</b></td><td class="mono"><b>${fmtMoney(r.cur.amt)}</b></td><td class="mono">${fmtMoney(r.prev.amt)}</td><td>${ch}</td><td>${lastTxt}</td><td>${anMini(r.per.map(x=>x.amt))}</td>
+      <td class="no-print"><div class="row-actions" style="flex-wrap:nowrap;"><button class="icon-btn" onclick="anOpenDetail('${escapeHtml(r.c.id)}')">Details</button><button class="btn btn-accent btn-sm" onclick="jumpToAccount('${escapeHtml(r.c.id)}')">Open</button></div></td></tr>`; }).join('');
+  document.getElementById('anTable').innerHTML = `<div class="table-wrap" style="max-height:80vh;overflow:auto;"><table><thead><tr><th>Contractor</th><th>Section</th><th>Status</th><th>Memos ${per}</th><th>Amount ${per}</th><th>Previous ${anUnit()}</th><th>Change</th><th>Last memo</th><th>Trend (${D.B.length} ${anUnit()}s)</th><th class="no-print">Actions</th></tr></thead><tbody>${trs || `<tr><td colspan="10" style="text-align:center;color:var(--ink-soft);padding:22px;">No contractors match.</td></tr>`}</tbody></table></div>`;
+}
+function anOpenDetail(id){
+  const D = window.__anLast || anCompute(); const r = D.rows.find(x=>x.c.id===id); if(!r) return;
+  document.getElementById('anDetailTitle').textContent = r.c.name + ' — ' + anMode + ' activity';
+  const acc = DB.accounts[id] || {entries:[]}; const recent = acc.entries.slice().sort((a,b)=> String(b.date||'').localeCompare(String(a.date||''))).slice(0,10);
+  const rowsP = D.B.map((b,i)=>({b, p:r.per[i]})).reverse();
+  document.getElementById('anDetailBody').innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">${whoCellHtml(r.c)}${anPill(r)}<span class="pill pill-gray">${escapeHtml(r.c.nid||'—')}</span><span class="dk-s">Total ৳ ${fmtMoney(r.total)} · ${r.allCnt} memos · last memo ${r.last?escapeHtml(fmtDate(r.last))+' ('+(r.days===0?'today':r.days+' days ago')+')':'—'}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div><h3 style="margin:0 0 8px;font-size:1rem;">Every ${anUnit()}</h3><div class="table-wrap" style="max-height:320px;overflow:auto;"><table><thead><tr><th>Period</th><th>Memos</th><th>Amount</th></tr></thead><tbody>${rowsP.map(x=>`<tr><td>${escapeHtml(x.b.full)}</td><td class="mono">${x.p.cnt||'—'}</td><td class="mono">${x.p.amt?fmtMoney(x.p.amt):'—'}</td></tr>`).join('')}</tbody></table></div></div>
+    <div><h3 style="margin:0 0 8px;font-size:1rem;">Latest memos</h3>${recent.length?`<div class="table-wrap" style="max-height:320px;overflow:auto;"><table><thead><tr><th>Date</th><th>Memo</th><th>Amount</th></tr></thead><tbody>${recent.map(e=>`<tr><td class="mono">${escapeHtml(fmtDate(e.date))}</td><td class="mono">${escapeHtml(e.memo||'')}</td><td class="mono">${fmtMoney(e.amount)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="dk-s">No memos yet.</div>'}</div></div>`;
+  document.getElementById('anDetailOpen').onclick = ()=>{ closeAnDetail(); jumpToAccount(id); };
+  document.getElementById('anDetailOverlay').classList.add('open');
+}
+function closeAnDetail(){ document.getElementById('anDetailOverlay').classList.remove('open'); }
+function anRowsForExport(){
+  const D = window.__anLast || anCompute(); const list = anFiltered(D);
+  const headers = ['ID','Name','Section','Status','Memos '+anPeriodName(),'Amount '+anPeriodName(),'Previous '+anUnit()+' amount','Change %','Last memo','Days since last memo'];
+  const rows = list.map(r=>{ const p = anPct(r.cur.amt, r.prev.amt); return [r.c.id, r.c.name, r.c.nid||'', ({green:'Active',yellow:'Moderate',red:'Inactive'})[r.st]||r.st, r.cur.cnt, fmtMoney(r.cur.amt), fmtMoney(r.prev.amt), p===null?'new':p+'%', r.last?fmtDate(r.last):'', r.days===null?'':r.days]; });
+  return {D, headers, rows};
+}
+function exportAnalysisExcel(){ const {headers, rows} = anRowsForExport(); exportTableAsExcel('contractor-ledger-analysis-' + anMode + '.xls', headers, rows, []); }
+function printAnalysis(){
+  const {D, headers, rows} = anRowsForExport(); const last = D.B.length-1;
+  const gsum = ['green','yellow','red'].map(k=>{ const g = D.groups[k], p = g.per[last]; return `<tr><td>${({green:'Active',yellow:'Moderate',red:'Inactive'})[k]}</td><td>${g.n}</td><td>${p.act}</td><td>${p.cnt}</td><td>${fmtMoney(p.amt)}</td></tr>`; }).join('');
+  const html = `<div class="pr-head"><h2>Contractor Analysis — ${anMode}</h2></div><div class="pr-meta">Showing ${D.B.length} ${anUnit()}s (latest: ${escapeHtml(D.B[last].full)}) · Section: ${escapeHtml(D.sec==='all'?'All':D.sec)} · Printed: ${new Date().toLocaleString()}</div>
+    <table><thead><tr><th>Status group</th><th>Contractors</th><th>Active ${anPeriodName()}</th><th>Memos</th><th>Amount</th></tr></thead><tbody>${gsum}</tbody></table><br>
+    <table><thead><tr>${headers.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  enterPrintMode(html, 'Contractor Analysis');
+}
+
 function showTab(tab){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
+  updateBinBadge();
   if(tab==='dashboard') renderDashboard();
+  if(tab==='analysis'){ if(!document.getElementById('anCount').options.length) fillAnCount(); fillAnSections(); renderAnalysis(); }
+  if(tab==='recycle') renderRecycleBin();
   if(tab==='summary') renderSummary();
   if(tab==='accounts') renderAccountsTab();
   if(tab==='reports') renderReports();
@@ -3029,13 +3402,14 @@ function deleteContact(id){
   const savN = DB.savings.transactions.filter(t=>t.contactId===id || t.toContactId===id).length;
   const savBal = savN ? savingsBalance(id) : 0;
   const savWarn = savN ? ('\n\nThis contractor has ' + savN + ' Welfare Fund transaction(s) (balance ' + fmtMoney(savBal) + '). They will stay in the Welfare Fund history but will no longer count in balances.') : '';
-  if(!confirm('Delete this contractor and its entire account? This cannot be undone.' + savWarn)) return;
+  if(!confirm('Delete this contractor and its entire account? It will be moved to the Recycle Bin, where you can restore it.' + savWarn)) return;
   takeLocalSnapshot(true);
+  { const __c = DB.contacts.find(c=>c.id===id); if(__c) binAdd('contractor', {contact: __c, account: DB.accounts[id] || {entries:[],grandTotal:0}}, 'Contractor ' + __c.name + ' (ID ' + __c.id + ')', {contactId: __c.id, contactName: __c.name}); }
   DB.contacts = DB.contacts.filter(c=>c.id!==id);
   delete DB.accounts[id];
   if(currentAccountId===id) currentAccountId=null;
   saveDB(true); renderSummary(); renderAccountsTab();
-  toast('Contractor deleted.');
+  toast('Contractor moved to the Recycle Bin.');
 }
 function toggleDied(id){
   const c = DB.contacts.find(x=>x.id===id);
@@ -3641,12 +4015,18 @@ function openAccount(id){
 function inChargeOptionsHtml(selected){
   return DB.inCharge.map(n=>`<option value="${escapeHtml(n)}" ${n===selected?'selected':''}>${escapeHtml(n)}</option>`).join('');
 }
+/** An entry is a duplicate only when the DATE (day, month and year) AND the memo number are both the same. */
+function memoDupKey(e){
+  const memo = String(e.memo||'').trim().toLowerCase();
+  if(!memo) return '';
+  return String(e.date||'').slice(0,10) + '|' + memo;
+}
 function findDuplicateMemoIdx(entries){
   const map = {};
   entries.forEach((e,idx)=>{
-    const memo = (e.memo||'').trim().toLowerCase();
-    if(!memo) return;
-    (map[memo]=map[memo]||[]).push(idx);
+    const key = memoDupKey(e);
+    if(!key) return;
+    (map[key]=map[key]||[]).push(idx);
   });
   const dup = new Set();
   Object.values(map).forEach(idxs=>{ if(idxs.length>1) idxs.forEach(i=>dup.add(i)); });
@@ -3698,7 +4078,7 @@ function refreshDuplicatesAndTotals(){
   const bannerWrap = document.getElementById('dupBannerWrap');
   if(dupSet.size>0){
     bannerWrap.innerHTML = `<div class="dup-banner">
-      <span>⚠ ${dupSet.size} entr${dupSet.size===1?'y':'ies'} reuse the same memo number — still counted in the total.</span>
+      <span>⚠ ${dupSet.size} entr${dupSet.size===1?'y':'ies'} share the same date and memo number — still counted in the total.</span>
       <a onclick="openMemoLookup('')">View duplicate memos</a>
     </div>`;
   } else { bannerWrap.innerHTML=''; }
@@ -3737,8 +4117,8 @@ function openMemoLookup(memoFilter){
   } else {
     const dupSet = findDuplicateMemoIdx(acc.entries);
     matches = acc.entries.map((e,idx)=>({e,idx})).filter(({idx})=> dupSet.has(idx));
-    matches.sort((a,b)=> (a.e.memo||'').localeCompare(b.e.memo||''));
-    title = `Duplicate memos (${matches.length} entries)`;
+    matches.sort((a,b)=> String(a.e.date||'').localeCompare(String(b.e.date||'')) || (a.e.memo||'').localeCompare(b.e.memo||''));
+    title = `Duplicate memos — same date + memo number (${matches.length} entries)`;
   }
   __memoLookupMatches = matches;
   document.getElementById('memoLookupTitle').textContent = title;
@@ -3806,6 +4186,34 @@ function searchMemoAndGo(memoValue){
 
 let stagedEntries = [];
 
+/* ---------- duplicate memo check while adding entries (same date + memo number) ---------- */
+function aeExistingKeys(){ const acc = DB.accounts[currentAccountId]; const set = new Set(); (acc ? acc.entries : []).forEach(e=>{ const k = memoDupKey(e); if(k) set.add(k); }); return set; }
+function aeDupStatus(){
+  // returns, for every staged row, 'existing' (already in this account), 'list' (same date+memo twice in this list) or ''
+  const ex = aeExistingKeys(), seen = {}; const out = stagedEntries.map(()=> '');
+  stagedEntries.forEach((st,i)=>{ const k = memoDupKey(st); if(!k) return; seen[k] = (seen[k]||0) + 1; });
+  stagedEntries.forEach((st,i)=>{ const k = memoDupKey(st); if(!k) return; if(ex.has(k)) out[i] = 'existing'; else if(seen[k] > 1) out[i] = 'list'; });
+  return out;
+}
+function refreshStagedDupBadges(){
+  const st = aeDupStatus(); let n = 0;
+  document.querySelectorAll('#aeListWrap .staged-dup').forEach(el=>{
+    const i = Number(el.getAttribute('data-i')), v = st[i] || '';
+    el.innerHTML = v ? `<span class="pill pill-red" title="${v==='existing'?'This date + memo number is already in this account':'Same date + memo number appears twice in this list'}">⚠ Duplicate${v==='existing'?' (already in account)':' (in this list)'}</span>` : '';
+    if(v) n++;
+  });
+  const sum = document.getElementById('aeDupSummary');
+  if(sum){ sum.style.display = n ? 'block' : 'none'; sum.innerHTML = n ? `<div class="dup-banner"><span>⚠ ${n} item${n===1?'':'s'} in this list ${n===1?'is a':'are'} duplicate${n===1?'':'s'}: same date and memo number.</span></div>` : ''; }
+  return n;
+}
+function updateAeDupHint(){
+  const hint = document.getElementById('aeDupHint'); if(!hint) return;
+  const date = document.getElementById('aeDate').value, memo = document.getElementById('aeMemo').value.trim();
+  const k = memoDupKey({date, memo}); let msg = '';
+  if(k){ if(aeExistingKeys().has(k)) msg = '⚠ Duplicate: this memo number is already recorded on this date in this account.'; else if(stagedEntries.some(x=>memoDupKey(x)===k)) msg = '⚠ Duplicate: this date + memo number is already in the list below.'; }
+  hint.textContent = msg; hint.style.display = msg ? 'block' : 'none';
+}
+
 function openAddEntryModal(){
   if(!currentAccountId){ toast('Open a contractor account first.'); return; }
   const c = DB.contacts.find(x=>x.id===currentAccountId);
@@ -3817,6 +4225,7 @@ function openAddEntryModal(){
   document.getElementById('aeAmount').value = '';
   document.getElementById('aeInCharge').innerHTML = '<option value="">—</option>' + inChargeOptionsHtml('');
   stagedEntries = [];
+  if(!window.__aeDupWired){ window.__aeDupWired = true; ['aeDate','aeMemo'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('input', updateAeDupHint); el.addEventListener('change', updateAeDupHint); }); }
   renderStagedList();
   document.getElementById('addEntryModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('aeDate').focus(), 50);
@@ -3835,6 +4244,7 @@ function renderStagedList(){
     wrap.innerHTML='';
     empty.style.display='block';
     countBadge.textContent='';
+    refreshStagedDupBadges(); updateAeDupHint();
     return;
   }
   empty.style.display='none';
@@ -3845,6 +4255,7 @@ function renderStagedList(){
       <input type="text" class="input-sm mono staged-memo" style="width:110px;" value="${escapeHtml(s.memo||'')}" placeholder="Memo #">
       <input type="number" class="input-sm mono staged-amount" style="width:100px;" value="${s.amount||0}" placeholder="Amount">
       <select class="input-sm staged-incharge" style="width:120px;">${inChargeOptionsHtml(s.inCharge||'')}</select>
+      <span class="staged-dup" data-i="${i}"></span>
       <button type="button" class="btn btn-ghost btn-sm" onclick="removeStagedEntry(${i})" title="Remove" style="padding:2px 8px;">✕</button>
     </div>
   `).join('');
@@ -3854,6 +4265,8 @@ function renderStagedList(){
       el.addEventListener('input', ()=> syncStagedFromDom());
     });
   });
+  refreshStagedDupBadges();
+  updateAeDupHint();
 }
 function syncStagedFromDom(){
   const wrap = document.getElementById('aeListWrap');
@@ -3870,6 +4283,8 @@ function syncStagedFromDom(){
     if(amountEl) stagedEntries[i].amount = Number(amountEl.value)||0;
     if(icEl) stagedEntries[i].inCharge = icEl.value || '';
   });
+  refreshStagedDupBadges();
+  updateAeDupHint();
 }
 function updateStagedEntry(i, field, value){
   if(!stagedEntries[i]) return;
@@ -3889,6 +4304,7 @@ function addToStagedList(){
   if(!date){ toast('Please pick a date.'); return; }
   if(!memo){ toast('Please enter a Memo Number.'); document.getElementById('aeMemo').focus(); return; }
   syncStagedFromDom();
+  { const k = memoDupKey({date, memo}); if(k && (aeExistingKeys().has(k) || stagedEntries.some(x=>memoDupKey(x)===k)) && !confirm('Duplicate: this date + memo number already exists. Add to the list anyway?')) return; }
   stagedEntries.push({date, memo, amount, inCharge});
   renderStagedList();
   document.getElementById('aeMemo').value='';
@@ -3906,6 +4322,7 @@ function commitStagedEntries(){
   const inCharge = document.getElementById('aeInCharge').value || '';
   if(memo){ stagedEntries.push({date, memo, amount, inCharge}); }
   if(stagedEntries.length===0){ toast('Add at least one entry first.'); return; }
+  { const __d = aeDupStatus().filter(Boolean).length; if(__d && !confirm(__d + ' entr' + (__d===1?'y has':'ies have') + ' the same date and memo number as another entry (duplicate).\n\nAdd anyway?')) return; }
   const contactId = currentAccountId;
   stagedEntries.forEach(s=>{
     acc.entries.push({
@@ -3938,10 +4355,13 @@ document.getElementById('addEntryModalOverlay').addEventListener('keydown', e=>{
 function deleteEntryByIdx(idx){
   const acc = DB.accounts[currentAccountId];
   if(!acc) return;
-  if(!confirm('Delete this entry?')) return;
+  if(!confirm('Delete this entry? It will be moved to the Recycle Bin.')) return;
+  const __c = DB.contacts.find(x=>x.id===currentAccountId); const __e = acc.entries[idx];
+  if(__e) binAdd('memo', {contactId: currentAccountId, entry: __e}, 'Memo ' + (__e.memo||'—') + ' · ' + fmtDate(__e.date) + ' · ৳ ' + fmtMoney(__e.amount), {contactId: currentAccountId, contactName: __c ? __c.name : ''});
   acc.entries.splice(idx,1);
   saveDB(true);
   renderEntries();
+  toast('Entry moved to the Recycle Bin.');
 }
 
 function clearAccountEntries(){
@@ -3950,12 +4370,13 @@ function clearAccountEntries(){
   if(!acc) return;
   if(!confirm('Clear all date, memo number, total amount, in-charge and remark data for this contractor? Contractor info (ID, name, mobile, address, Section) will be kept.')) return;
   takeLocalSnapshot(true);
+  if(acc.entries.length){ const __c = DB.contacts.find(x=>x.id===currentAccountId); binAdd('memos', {contactId: currentAccountId, entries: acc.entries}, acc.entries.length + ' entries cleared · ' + (__c?__c.name:''), {contactId: currentAccountId, contactName: __c ? __c.name : ''}); }
   acc.entries = [];
   syncGrandTotalToSummary(currentAccountId);
   saveDB(true);
   renderEntries();
   renderSummary();
-  toast('Entry data cleared — contractor info kept.');
+  toast('Entry data cleared — moved to the Recycle Bin. Contractor info kept.');
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -4679,6 +5100,7 @@ function clearAllContractors(){
   const typed = prompt(`To confirm, type CLEAR (in capital letters) below.`);
   if(typed !== 'CLEAR'){ toast('Cancelled — nothing was cleared.'); return; }
   takeLocalSnapshot(true);
+  binAdd('contractors', {contacts: DB.contacts, accounts: DB.accounts}, 'All contractors cleared (' + count + ')');
   DB.contacts = [];
   DB.accounts = {};
   currentAccountId = null;
@@ -4698,6 +5120,7 @@ function closeSessionClearAllEntries(){
   const typed = prompt(`To confirm, type CLOSE (in capital letters) below.`);
   if(typed !== 'CLOSE'){ toast('Cancelled — nothing was cleared.'); return; }
   takeLocalSnapshot(true);
+  { const __acc = {}; Object.keys(DB.accounts).forEach(id=>{ if((DB.accounts[id].entries||[]).length) __acc[id] = DB.accounts[id].entries; }); binAdd('session', {accounts: __acc, session: DB.session}, 'Session closed — ' + entryCount + ' entries cleared'); }
 
   Object.keys(DB.accounts).forEach(id=>{
     DB.accounts[id].entries = [];
@@ -5241,11 +5664,12 @@ function submitSavForm(){
 function deleteSavTxn(uid){
   if(!requireEditor('Delete')) return;
   ensureSavings();
-  if(!confirm('Delete this savings transaction?')) return;
+  if(!confirm('Delete this savings transaction? It will be moved to the Recycle Bin.')) return;
+  { const __t = DB.savings.transactions.find(t=>t.uid===uid); if(__t){ const __c = DB.contacts.find(c=>c.id===__t.contactId); binAdd('welfare', {txn: __t}, savTypeLabel(__t.type) + ' ৳ ' + fmtMoney(__t.amount) + ' · ' + fmtDate(__t.date), {contactId: __t.contactId, contactName: __c ? __c.name : String(__t.contactId)}); } }
   DB.savings.transactions = DB.savings.transactions.filter(t=>t.uid!==uid);
   saveDB(true);
   renderSavings();
-  toast('Transaction deleted.');
+  toast('Transaction moved to the Recycle Bin.');
 }
 
 function clearSavingsFilters(){
