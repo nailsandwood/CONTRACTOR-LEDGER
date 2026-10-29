@@ -477,7 +477,28 @@ body.side-collapsed nav.tabs button{position:relative;} body.side-collapsed .nav
 .an-grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px;}
 .an-delta.up{color:var(--green-700);font-weight:700;} .an-delta.down{color:var(--red-600);font-weight:700;}
 @media(max-width:1100px){.an-kpis{grid-template-columns:1fr 1fr;} .an-groups,.an-grid2{grid-template-columns:1fr;}}
-body.dark-mode .nav-badge{color:#3d2c00;}
+/* ===== v7.6: filter bars, audit log ===== */
+.an-filterbar{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;padding:14px 16px;background:#fff;border-radius:18px;box-shadow:var(--shadow);}
+.an-frow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.an-f{display:flex;flex-direction:column;gap:4px;font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);}
+.an-f select,.an-f input{font-weight:500;text-transform:none;letter-spacing:0;font-size:.84rem;}
+.an-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 12px;}
+.an-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.an-chip{display:inline-flex;align-items:center;gap:6px;background:var(--amber-200);color:var(--green-700);border-radius:999px;padding:3px 6px 3px 12px;font-size:.78rem;font-weight:600;}
+.an-chip button{border:0;background:rgba(0,0,0,.08);border-radius:50%;width:18px;height:18px;line-height:18px;font-size:.62rem;cursor:pointer;color:inherit;padding:0;}
+.an-sec-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 2px 10px;}
+.pd-foot td{background:var(--paper-dim);border-top:2px solid var(--ring-line);}
+.au-det summary{cursor:pointer;color:var(--green-700);font-size:.78rem;font-weight:600;margin-top:4px;}
+.au-det ul{margin:6px 0 2px 16px;padding:0;font-size:.8rem;color:var(--ink-soft);line-height:1.5;}
+.ae-dup-box{background:var(--red-100);border:1px solid #edb2a5;color:var(--red-600);padding:10px 14px;border-radius:12px;font-size:.82rem;line-height:1.5;}
+.ae-dup-item{margin-top:8px;color:var(--ink);} .ae-dup-sub{margin:2px 0 2px 14px;color:var(--ink);font-size:.8rem;line-height:1.45;}
+.ae-dup-total{margin-top:8px;padding-top:6px;border-top:1px dashed #edb2a5;color:var(--red-600);}
+.ae-same{color:var(--green-700);font-weight:700;} .ae-diff{color:#b3541c;font-weight:700;}
+#aeDupHint .ae-dup-sub{margin-left:6px;}
+body.dark-mode .an-filterbar{background:#1a1f21;}
+body.dark-mode .an-chip{background:#143d2b;color:var(--green-700);}
+body.dark-mode .pd-foot td{background:#232b2e;}
+
 </style>
 </head>
 <body>
@@ -553,6 +574,7 @@ body.dark-mode .nav-badge{color:#3d2c00;}
 <symbol id="ni-heart" viewBox="0 0 24 24"><path d="M12 20s-8-4.6-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.4 12 20 12 20z"/></symbol>
 <symbol id="ni-mega" viewBox="0 0 24 24"><path d="M3 11v3l12 5V6zM18 9v7"/></symbol>
 <symbol id="ni-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5 4 4 0 0 1 17.5 18z"/></symbol>
+<symbol id="ni-log" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7"/></symbol>
 <symbol id="ni-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
 <symbol id="ni-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
 <symbol id="ni-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
@@ -569,6 +591,7 @@ body.dark-mode .nav-badge{color:#3d2c00;}
       <button data-tab="savings" onclick="showTab('savings')" title="Welfare Fund"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span></button>
       <button data-tab="announce" onclick="showTab('announce')" title="Announcements"><svg class="ic" aria-hidden="true"><use href="#ni-mega"/></svg><span>Announcements</span></button>
       <button data-tab="recycle" onclick="showTab('recycle')" title="Recycle Bin"><svg class="ic" aria-hidden="true"><use href="#ni-trash"/></svg><span>Recycle Bin</span><b class="nav-badge" id="binBadge" style="display:none;"></b></button>
+      <button data-tab="audit" onclick="showTab('audit')" title="Audit Log"><svg class="ic" aria-hidden="true"><use href="#ni-log"/></svg><span>Audit Log</span></button>
       <button data-tab="backup" onclick="showTab('backup')" title="Backup &amp; Files"><svg class="ic" aria-hidden="true"><use href="#ni-cloud"/></svg><span>Backup &amp; Files</span></button>
       <button data-tab="settings" onclick="showTab('settings')" title="Settings"><svg class="ic" aria-hidden="true"><use href="#ni-gear"/></svg><span>Settings</span></button>
     </nav>
@@ -1175,16 +1198,31 @@ body.dark-mode .nav-badge{color:#3d2c00;}
         <div><h2>Contractor Analysis</h2><div class="sub">How active every contractor is — weekly, monthly or yearly — with full details.</div></div>
         <div class="btn-row no-print"><button class="btn btn-ghost" onclick="printAnalysis()">🖨 Print / PDF</button><button class="btn btn-ghost" onclick="exportAnalysisExcel()">⇩ Excel Download</button></div>
       </div>
-      <div class="no-print" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-        <div class="seg" id="anModeSeg" style="margin:0;"><button data-m="weekly" onclick="setAnalysisMode('weekly')">Weekly</button><button class="on" data-m="monthly" onclick="setAnalysisMode('monthly')">Monthly</button><button data-m="yearly" onclick="setAnalysisMode('yearly')">Yearly</button></div>
-        <select class="select-sm" id="anCount" onchange="renderAnalysis()"></select>
-        <select class="select-sm" id="anSection" onchange="renderAnalysis()"><option value="all">All sections</option></select>
-        <div class="search-bar" style="max-width:260px;"><input id="anSearch" placeholder="Search contractor…" oninput="renderAnalysis()"></div>
-        <select class="select-sm" id="anSort" onchange="renderAnalysis()"><option value="amount">Sort: Amount this period</option><option value="memos">Sort: Memos this period</option><option value="change">Sort: Change vs previous</option><option value="silent">Sort: Longest without a memo</option><option value="total">Sort: Total amount (all time)</option><option value="name">Sort: Name A–Z</option></select>
+      <div class="no-print an-filterbar">
+        <div class="an-frow">
+          <div class="seg" id="anModeSeg" style="margin:0;"><button data-m="weekly" onclick="setAnalysisMode('weekly')">Weekly</button><button class="on" data-m="monthly" onclick="setAnalysisMode('monthly')">Monthly</button><button data-m="yearly" onclick="setAnalysisMode('yearly')">Yearly</button></div>
+          <label class="an-f"><span>Range</span><select class="select-sm" id="anCount" onchange="anOnRange()"></select></label>
+          <label class="an-f"><span>As of date</span><input type="date" class="input-sm" id="anAsOf" onchange="anOnRange()" title="Leave empty for today"></label>
+          <label class="an-f"><span>Section</span><select class="select-sm" id="anSection" onchange="renderAnalysis()"><option value="all">All sections</option></select></label>
+          <label class="an-f"><span>In-charge</span><select class="select-sm" id="anInCharge" onchange="renderAnalysis()"><option value="all">All in-charge</option></select></label>
+          <label class="an-f"><span>Dead contractors</span><select class="select-sm" id="anDead" onchange="renderAnalysis()"><option value="hide">Hide</option><option value="include">Include</option><option value="only">Only dead</option></select></label>
+        </div>
+        <div class="an-frow">
+          <label class="an-f"><span>Group</span><select class="select-sm" id="anGroupSel" onchange="setAnStatus(this.value)"><option value="all">All groups</option><option value="green">● Active</option><option value="yellow">● Moderate</option><option value="red">● Inactive</option></select></label>
+          <label class="an-f"><span>Activity</span><select class="select-sm" id="anActSel" onchange="setAnAct(this.value)"><option value="all">Any</option><option value="now">Active this period</option><option value="silent">No activity this period</option></select></label>
+          <div class="search-bar" style="max-width:260px;"><input id="anSearch" placeholder="Search contractor…" oninput="renderAnalysis()"></div>
+          <label class="an-f"><span>Sort table</span><select class="select-sm" id="anSort" onchange="renderAnalysis()"><option value="amount">Amount this period</option><option value="memos">Memos this period</option><option value="change">Change vs previous</option><option value="silent">Longest without a memo</option><option value="total">Total amount (all time)</option><option value="name">Name A–Z</option></select></label>
+          <button class="btn btn-ghost btn-sm" onclick="resetAnFilters()">↺ Reset filters</button>
+        </div>
+        <div class="an-chips" id="anChips"></div>
       </div>
       <div id="anKpis"></div>
       <div id="anCharts"></div>
       <div id="anPeriods"></div>
+      <div class="an-sec-head">
+        <h3 style="margin:0;">Contractor details <span class="dk-s" id="anTblCount" style="font-family:Inter;font-weight:500;"></span></h3>
+        <div class="btn-row no-print"><button class="btn btn-ghost btn-sm" onclick="printAnalysisTable()">🖨 Print / PDF</button><button class="btn btn-ghost btn-sm" onclick="exportAnalysisExcel()">⇩ Excel</button></div>
+      </div>
       <div class="status-pills no-print" id="anPills"></div>
       <div id="anTable"></div>
     </section>
@@ -1204,6 +1242,41 @@ body.dark-mode .nav-badge{color:#3d2c00;}
         <table><thead><tr><th class="no-print"><input type="checkbox" id="binAll" onchange="binToggleAll(this)"></th><th>Deleted</th><th>Type</th><th>Item</th><th>Amount</th><th class="no-print">Actions</th></tr></thead><tbody id="binTbody"></tbody></table>
       </div>
       <p id="binEmpty" style="color:var(--ink-soft);margin:14px 4px;"></p>
+    </section>
+
+    <!-- ============ AUDIT LOG ============ -->
+    <section class="panel" id="panel-audit">
+      <div class="section-head">
+        <div><h2>Audit Log</h2><div class="sub">Every change — who did it, on which computer, when, and exactly what changed. All computers share the same history through Google Drive.</div></div>
+        <div class="btn-row no-print"><button class="btn btn-ghost" onclick="printAudit()">🖨 Print / PDF</button><button class="btn btn-ghost" onclick="exportAuditExcel()">⇩ Excel Download</button></div>
+      </div>
+      <div id="auKpis" class="an-kpis"></div>
+      <div class="an-filterbar no-print">
+        <div class="an-frow">
+          <label class="an-f"><span>Period</span><select class="select-sm" id="auRange" onchange="auOnFilter()"><option value="all">All time</option><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="month">This month</option><option value="custom">Custom dates…</option></select></label>
+          <label class="an-f" id="auFromWrap" style="display:none;"><span>From</span><input type="date" class="input-sm" id="auFrom" onchange="auOnFilter()"></label>
+          <label class="an-f" id="auToWrap" style="display:none;"><span>To</span><input type="date" class="input-sm" id="auTo" onchange="auOnFilter()"></label>
+          <label class="an-f"><span>Category</span><select class="select-sm" id="auCat" onchange="auOnFilter()"></select></label>
+          <label class="an-f"><span>Action</span><select class="select-sm" id="auAct" onchange="auOnFilter()"><option value="all">All actions</option></select></label>
+          <label class="an-f"><span>User / computer</span><select class="select-sm" id="auBy" onchange="auOnFilter()"><option value="all">All users / computers</option></select></label>
+        </div>
+        <div class="an-frow">
+          <div class="search-bar" style="flex:1;min-width:240px;max-width:420px;"><input id="auQ" placeholder="Search contractor, memo no., action, details…" oninput="auOnFilter()"></div>
+          <button class="btn btn-ghost btn-sm" onclick="auReset()">↺ Reset filters</button>
+          <button class="btn btn-ghost btn-sm" onclick="auToggleAll(true)">Expand all details</button>
+          <button class="btn btn-ghost btn-sm" onclick="auToggleAll(false)">Collapse</button>
+        </div>
+        <div class="an-frow">
+          <label class="an-f"><span>Name of this computer (shown in the log)</span><input class="input-sm" id="auDevName" maxlength="30" placeholder="e.g. Office PC"></label>
+          <button class="btn btn-accent btn-sm" onclick="auSaveDevName()">Save name</button>
+          <span class="dk-s" id="auMe"></span>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:78vh;overflow:auto;">
+        <table><thead><tr><th>When</th><th>Computer / user</th><th>Category</th><th>Action</th><th>Contractor</th><th>What changed</th></tr></thead><tbody id="auTbody"></tbody></table>
+      </div>
+      <div id="auMore"></div>
+      <p class="dk-s" style="margin:12px 4px;">The newest 5,000 events are kept. Sign-ins, backups, prints and Excel downloads are recorded too. The Audit Log cannot be edited or deleted from the software.</p>
     </section>
 
     <section class="panel" id="panel-backup">
@@ -1361,10 +1434,10 @@ body.dark-mode .nav-badge{color:#3d2c00;}
     <div class="grid-4" style="margin-top:6px;">
       <div class="field"><label>Date</label><input type="date" id="aeDate"></div>
       <div class="field"><label>Memo Number</label><input id="aeMemo" placeholder="e.g. 1042" class="mono"></div>
-      <div id="aeDupHint" class="dup-banner" style="display:none;margin-top:8px;"></div>
       <div class="field"><label>Total Amount</label><input type="number" id="aeAmount" placeholder="0.00" class="mono"></div>
       <div class="field"><label>In Charge</label><select id="aeInCharge"><option value="">—</option></select></div>
     </div>
+    <div id="aeDupHint" class="dup-banner" style="display:none;margin-top:8px;"></div>
 
     <div style="margin-top:6px;border:1px solid var(--ring-line);border-radius:6px;padding:14px;background:var(--paper-dim);">
       <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;">Entries to add <span id="aeListCount" class="kbd-hint" style="margin-left:6px;"></span></div>
@@ -1470,7 +1543,7 @@ body.dark-mode .nav-badge{color:#3d2c00;}
 const GOOGLE_CLIENT_ID = '366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com';
 const DRIVE_FOLDER_NAME = 'Contractor Ledger';
 const DRIVE_FILE_NAME = 'contractor-ledger-data.json';
-const APP_VERSION = '7.4.0-New-Layout';
+const APP_VERSION = '7.6.1-Audit-Analysis';
 const APP_UPDATED = 'September 2026';
 
 /* =========================================================
@@ -1561,6 +1634,7 @@ async function startOfflineMode(opts){
   }
   DB = c.data;
   applyMigrations();
+  syncBaseJson = await baseLoad();
   localDirty = !!c.dirty;
   driveFileModifiedTime = c.baseTime || null;
   currentUserEmail = c.email || '';
@@ -1720,13 +1794,15 @@ function defaultDB(){
     accounts: {},
     savings: { transactions: [] },
     announcements: { templates: [], sent: {} },
-    meta: { lastExternalBackupAt: null, entriesCountAtLastBackup: 0, snoozedUntil: null }
+    meta: { lastExternalBackupAt: null, entriesCountAtLastBackup: 0, snoozedUntil: null },
+    auditLog: []
   };
 }
 function generateUid(){ return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 function applyMigrations(){
   if(DB && !Array.isArray(DB.recycleBin)) DB.recycleBin = [];
+  if(DB && !Array.isArray(DB.auditLog)) DB.auditLog = [];
   if(!DB.inCharge) DB.inCharge = ['Naquib','Rayhan','Ashraf'];
   if(!DB.session) DB.session = {from:'',to:'',meetingDate:''};
   if(DB.session.meetingDate===undefined) DB.session.meetingDate = '';
@@ -1960,20 +2036,14 @@ async function _afterGoogleLoginInner(){
     try{
       const cache = await localCacheGet();
       if(cache && cache.dirty && cache.data && (!cache.email || cache.email === currentUserEmail)){
-        const remote = await getRemoteModifiedTime();
-        if(!remote || !cache.baseTime || remote === cache.baseTime){
-          usedLocal = true; // nobody else changed Drive -> safe to upload offline work
-        } else {
-          downloadJSONFile(cache.data, 'offline-backup-' + new Date().toISOString().slice(0,16).replace(/[:T]/g,'-') + '.json');
-          const keepDrive = confirm('This PC has offline changes AND Google Drive was changed from another PC.\n\nA backup of this PC\'s offline data was just downloaded.\n\nOK = use the Google Drive data\nCancel = upload this PC\'s offline data to Drive (overwrites Drive)');
-          if(!keepDrive){ usedLocal = true; }
-        }
-        if(usedLocal){
-          DB = cache.data;
-          applyMigrations();
-          driveFileModifiedTime = remote || null;
-          localDirty = true;
-        }
+        // Work done on this PC without Drive: keep it and let the save step merge it with whatever Drive holds now
+        const mine = (DB && offlineMode && localDirty) ? DB : cache.data;
+        DB = mine;
+        applyMigrations();
+        syncBaseJson = await baseLoad();
+        driveFileModifiedTime = cache.baseTime || '1970-01-01T00:00:00.000Z';   // older than anything on Drive -> the save merges first
+        localDirty = true;
+        usedLocal = true;
       }
     }catch(e){ console.warn('offline reconcile', e); usedLocal = false; }
     if(!usedLocal) await loadDBFromDrive();
@@ -2254,7 +2324,10 @@ async function loadDBFromDrive(opts){
   applyMigrations();
   localDirty = false;
   setDriveStatus('Drive: connected');
+  setSyncBase(DB);
   cacheLocal(true);
+  auditRebase();
+  try{ checkBackupReminder(); }catch(e){}      // a backup made on another computer clears the reminder here too
   return true;
 }
 
@@ -2269,9 +2342,10 @@ async function pullDriveIfNewer(opts){
     if(driveFileModifiedTime && remote <= driveFileModifiedTime) return false;
     // remote is newer
     if(localDirty && !opts.force){
-      setDriveStatus('Drive: newer on another PC', 'syncing');
-      if(opts.toast) toast('Newer data on Drive. Click Drive status or Sync to load.');
-      return false;
+      // this PC has unsaved changes AND another PC saved: merge both, then upload the merged copy
+      const ok = await mergeFromDrive();
+      if(ok){ refreshAfterMerge(); toast('Merged changes from another PC'); persistDBNow({silent:true}); }
+      return ok;
     }
     const applied = await loadDBFromDrive({onlyIfClean: !opts.force});
     if(!applied) return false;
@@ -2330,6 +2404,119 @@ function maybeRefreshOnGesture(){
 }
 ['pointerdown','keydown'].forEach(ev=> document.addEventListener(ev, maybeRefreshOnGesture, true));
 
+/* =========================================================
+   SAFE MERGE - two PCs (or offline work) never overwrite each other.
+   A 3-way merge of: base (last synced copy) / local (this PC) / remote (Drive).
+   Records are matched by their id/uid, so memos added on different PCs are all kept.
+   ========================================================= */
+let syncBaseJson = null;        // the data exactly as it was at the last successful sync with Drive
+async function baseStore(json){
+  if(demoMode) return;
+  try{
+    const db = await idbOpen();
+    await new Promise((res,rej)=>{ const tx = db.transaction('kv','readwrite'); tx.objectStore('kv').put(json,'base'); tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error); });
+  }catch(e){ try{ localStorage.setItem('nw_sync_base', json); }catch(_){} }
+}
+async function baseLoad(){
+  try{
+    const db = await idbOpen();
+    return await new Promise((res,rej)=>{ const r = db.transaction('kv').objectStore('kv').get('base'); r.onsuccess = ()=>res(r.result||null); r.onerror = ()=>rej(r.error); });
+  }catch(e){ try{ return localStorage.getItem('nw_sync_base'); }catch(_){ return null; } }
+}
+function setSyncBase(obj){ if(demoMode) return; try{ syncBaseJson = JSON.stringify(obj, null, 2); baseStore(syncBaseJson); }catch(e){ syncBaseJson = null; } }
+function mIsObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
+function mSame(a,b){ return JSON.stringify(a) === JSON.stringify(b); }
+function mIdKey(arrs){ for(const a of arrs){ if(!Array.isArray(a)) continue; for(const o of a){ if(mIsObj(o)){ if('uid' in o) return 'uid'; if('id' in o) return 'id'; return null; } } } return null; }
+function mergeThreeWay(base, local, remote){
+  if(mSame(local,remote)) return local;
+  if(mSame(local,base)) return remote;          // only the other side changed
+  if(mSame(remote,base)) return local;          // only this PC changed
+  if(Array.isArray(local) && Array.isArray(remote)){
+    const B = Array.isArray(base) ? base : [];
+    const key = mIdKey([local, remote, B]);
+    if(key){
+      const idx = a=>{ const m = new Map(); a.forEach(x=>{ if(mIsObj(x)) m.set(x[key], x); }); return m; };
+      const mb = idx(B), ml = idx(local), mr = idx(remote), out = [], seen = new Set();
+      remote.forEach(r=>{
+        const k = mIsObj(r) ? r[key] : null; if(k===null){ out.push(r); return; } seen.add(k);
+        const l = ml.get(k), b = mb.get(k);
+        if(l===undefined){ if(b!==undefined && mSame(r,b)) return; out.push(r); return; }   // deleted here & untouched there -> delete; otherwise keep
+        out.push(mergeThreeWay(b, l, r));
+      });
+      local.forEach(l=>{
+        const k = mIsObj(l) ? l[key] : null; if(k===null){ out.push(l); return; } if(seen.has(k)) return;
+        const b = mb.get(k);
+        if(b!==undefined && mSame(l,b)) return;     // deleted on the other PC and untouched here -> delete
+        out.push(l);                                // added here, or edited here -> keep
+      });
+      return out;
+    }
+    if(local.every(x=>typeof x!=='object') && remote.every(x=>typeof x!=='object')){
+      const sb = new Set(B), sl = new Set(local), out = remote.filter(x=> sl.has(x) || !sb.has(x));
+      local.forEach(x=>{ if(!out.includes(x) && !sb.has(x)) out.push(x); }); return out;
+    }
+    return local;
+  }
+  if(mIsObj(local) && mIsObj(remote)){
+    const B = mIsObj(base) ? base : {}; const out = {};
+    new Set([...Object.keys(local), ...Object.keys(remote)]).forEach(k=>{
+      const inL = k in local, inR = k in remote, inB = k in B;
+      if(inL && inR) out[k] = mergeThreeWay(B[k], local[k], remote[k]);
+      else if(inL){ if(inB && mSame(local[k], B[k])) return; out[k] = local[k]; }       // removed on the other PC & untouched here -> remove
+      else { if(inB && mSame(remote[k], B[k])) return; out[k] = remote[k]; }             // removed here & untouched there -> remove
+    });
+    return out;
+  }
+  return local;       // the same single value was changed on both sides: this PC (the person working now) wins
+}
+async function fetchDriveDB(){
+  const mt = await getRemoteModifiedTime();
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return { db: JSON.parse(await res.text()), modifiedTime: mt };
+}
+let _merging = false;
+/** Pull what another PC saved on Drive and merge it with the changes made on this PC. Nothing is thrown away. */
+async function mergeFromDrive(opts){
+  opts = opts || {};
+  if(_merging) return false; _merging = true;
+  try{
+    try{ auditFlush(); }catch(e){}                 // log this PC's own pending changes before the other PC's changes arrive
+    await takeLocalSnapshot(true);
+    const {db: remoteDB, modifiedTime} = await fetchDriveDB();
+    const baseJson = opts.baseJson || syncBaseJson;
+    const base = baseJson ? JSON.parse(baseJson) : {};
+    const local = JSON.parse(JSON.stringify(DB));
+    const merged = mergeThreeWay(base, local, remoteDB);
+    reconcileBackupMeta(merged, local, remoteDB);  // the newest backup mark always wins
+    DB = merged;
+    applyMigrations(); binSyncAll();
+    auditRebase();
+    try{ checkBackupReminder(); }catch(e){}
+    if(modifiedTime) driveFileModifiedTime = modifiedTime;
+    if(mSame(DB, remoteDB)){            // Drive already holds everything: nothing to upload
+      localDirty = false; setSyncBase(DB);
+    } else {
+      localDirty = true; dirtyVersion++;
+    }
+    cacheLocal(true);
+    return true;
+  }finally{ _merging = false; }
+}
+/** Two PCs can save in the same second. A moment after our save, check that nobody wrote right after us; if they did, merge. */
+async function verifySave(upTime, prevBaseJson){
+  if(!upTime || !driveFileId || !accessToken || demoMode || _merging || isSyncing) return;
+  try{
+    const t = await getRemoteModifiedTime();
+    if(!t || t === upTime) return;
+    const hadEdits = localDirty;
+    await mergeFromDrive({baseJson: prevBaseJson});
+    refreshAfterMerge();
+    if(localDirty){ toast('Merged changes from another PC'); persistDBNow({silent:true}); }
+  }catch(e){ console.warn('verifySave', e); }
+}
+function refreshAfterMerge(){ try{ const a = document.querySelector('nav.tabs button.active'); showTab(a ? a.dataset.tab : 'dashboard'); }catch(e){} try{ checkBackupReminder(); }catch(e){} }
+
 async function persistDBNow(opts){
   opts = opts || {};
   if(demoMode) return true;
@@ -2342,31 +2529,23 @@ async function persistDBNow(opts){
   // Nothing changed on this PC -> do NOT overwrite Drive (it may hold newer data from another PC)
   if(!localDirty) return true;
   isSyncing = true;
-  const myVer = dirtyVersion;
+  let myVer = dirtyVersion;
   setDriveStatus('Drive: saving…', 'syncing');
   try{
     // Conflict check: did another PC save after we last synced?
     try{
       const remote = await getRemoteModifiedTime();
       if(remote && driveFileModifiedTime && remote > driveFileModifiedTime){
-        if(opts.silent){
-          isSyncing = false;
-          setDriveStatus('Drive: newer on another PC', 'syncing');
-          return false;
-        }
-        const loadTheirs = confirm('Another PC has saved newer data to Google Drive.\n\nOK = load the newer Drive data (changes made on this PC since last sync will be lost)\nCancel = overwrite Drive with this PC\'s data');
-        if(loadTheirs){
-          isSyncing = false;
-          localDirty = false;
-          await loadDBFromDrive();
-          try{ showTab(document.querySelector('nav.tabs button.active')?.dataset.tab || 'summary'); }catch(e){}
-          toast('Loaded newer data from Google Drive');
-          return false;
-        }
+        // Another PC saved first: merge its changes with ours (nothing is lost), then upload the merged copy
+        await mergeFromDrive();
+        myVer = dirtyVersion;
+        refreshAfterMerge();
+        toast('Merged changes from another PC');
+        setDriveStatus('Drive: saving…', 'syncing');
       }
     }catch(e){ console.warn('conflict check failed', e); }
     const content = JSON.stringify(DB, null, 2);
-    let res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+    let res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media&fields=modifiedTime`, {
       method: 'PATCH',
       headers: {
         Authorization: 'Bearer ' + accessToken,
@@ -2378,7 +2557,7 @@ async function persistDBNow(opts){
       setDriveStatus('Drive: re-connecting…', 'syncing');
       const ok = await refreshTokenThrottled();
       if(ok){
-        res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+        res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media&fields=modifiedTime`, {
           method: 'PATCH',
           headers: {
             Authorization: 'Bearer ' + accessToken,
@@ -2389,16 +2568,20 @@ async function persistDBNow(opts){
       }
     }
     if(!res.ok) throw new Error('HTTP ' + res.status);
+    let __upTime = null; try{ __upTime = (await res.clone().json()).modifiedTime || null; }catch(e){}
+    const __prevBase = syncBaseJson;
+    syncBaseJson = content; baseStore(content);      // remember exactly what Drive now holds (the base for the next merge)
     updateSavedIndicator(true);
     // Only clear the dirty flag if nothing was edited while this upload was running
     if(dirtyVersion === myVer) localDirty = false;
     try{
-      const t = await getRemoteModifiedTime();
+      const t = __upTime || await getRemoteModifiedTime();
       if(t) driveFileModifiedTime = t;
     }catch(e){}
     setDriveStatus('Drive: connected');
     isSyncing = false;
     driveSaveFailing = false;
+    if(__upTime) setTimeout(()=>verifySave(__upTime, __prevBase), 2500);
     cacheLocal(true);
     if(localDirty) setTimeout(()=>persistDBNow(opts), 300); // edits arrived during upload -> save them too
     return true;
@@ -2460,6 +2643,7 @@ async function uploadBlobToDrive(filename, blob, mimeType){
       fileId = created.id;
     }
     setDriveStatus('Drive: connected');
+    if(!/^contractor-ledger-backup/.test(filename)) auditEvent('report', 'File saved to Google Drive', filename, ['File: ' + filename]);
     toast('⬆ Saved to Google Drive: ' + filename);
     return fileId;
   }catch(err){
@@ -2475,6 +2659,7 @@ function saveDB(immediate){
   if(typeof demoMode !== 'undefined' && demoMode) return;   // demo: never save anything
   localDirty = true;
   dirtyVersion++;
+  if(immediate) auditFlush(); else auditSchedule();      // audit log: record what changed (typing is grouped into one line)
   cacheLocal();
   if(immediate){
     clearTimeout(saveTimer);
@@ -2498,8 +2683,11 @@ setInterval(()=>{ if(DB && accessToken && localDirty) persistDBNow({silent:true}
 
 window.addEventListener('beforeunload', ()=>{
   clearTimeout(saveTimer);
+  try{ auditFlush(); }catch(e){}
+  try{ if(DB && localDirty) cacheLocal(true); }catch(e){}
   if(DB && accessToken && localDirty) persistDBNow({silent:true});
 });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden'){ try{ auditFlush(); }catch(e){} try{ if(DB && localDirty) cacheLocal(true); }catch(e){} } });
 
 function fmtMoney(n){ n=Number(n)||0; return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}); }
 /** Display ISO YYYY-MM-DD as DD/MM/YYYY */
@@ -2534,10 +2722,13 @@ async function clearLocalCache(){
       tx.oncomplete = ()=> res(); tx.onerror = ()=> rej(tx.error);
     });
   }catch(e){}
-  try{ localStorage.removeItem('nw_offline_state'); }catch(e){}
+  try{ localStorage.removeItem('nw_offline_state'); localStorage.removeItem('nw_sync_base'); }catch(e){}
+  try{ const db = await idbOpen(); await new Promise((res)=>{ const tx = db.transaction('kv','readwrite'); tx.objectStore('kv').delete('base'); tx.oncomplete = ()=>res(); tx.onerror = ()=>res(); }); }catch(e){}
+  syncBaseJson = null;
 }
 async function doLogout(){
   if(demoMode){ exitDemoMode(); return; }
+  try{ auditEvent('auth', 'Signed out', currentUserEmail || '', ['Google account: ' + (currentUserEmail || '—'), 'Computer: ' + auditDeviceLabel()]); sessionStorage.removeItem('nw_audit_login'); }catch(e){}
   // Upload anything unsaved first (needs the token), then sign out
   try{ if(DB && accessToken && localDirty) await persistDBNow(); }catch(e){}
   const fullySynced = !localDirty;
@@ -2953,11 +3144,14 @@ function closeBinDetail(){ document.getElementById('binDetailOverlay').classList
 /* =========================================================
    ANALYSIS - weekly / monthly / yearly activity of every contractor
    ========================================================= */
-let anMode = 'monthly', anStatus = 'all';
+let anMode = 'monthly', anStatus = 'all', anAct = 'all', anPerLabel = 'this month';
+let pdFrom = '', pdTo = '', pdGroup = 'all', pdShow = 'all', pdSort = 'new';
 const AN_COUNTS = {weekly:[8,12,26,52], monthly:[6,12,24,36], yearly:[3,5,10]};
 const AN_DEFAULT = {weekly:12, monthly:12, yearly:5};
 const AN_MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const AN_GROUP_NAME = {green:'Active', yellow:'Moderate', red:'Inactive'};
 function anUnit(){ return anMode==='weekly' ? 'week' : anMode==='monthly' ? 'month' : 'year'; }
+function anVal(id, d){ const el = document.getElementById(id); return el ? el.value : d; }
 function fillAnCount(){
   const sel = document.getElementById('anCount'); if(!sel) return;
   sel.innerHTML = AN_COUNTS[anMode].map(n=>`<option value="${n}" ${n===AN_DEFAULT[anMode]?'selected':''}>Last ${n} ${anUnit()}s</option>`).join('');
@@ -2967,9 +3161,35 @@ function fillAnSections(){
   const secs = [...new Set(DB.contacts.map(c=>(c.nid||'').trim()).filter(Boolean))].sort();
   sel.innerHTML = '<option value="all">All sections</option>' + secs.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
   sel.value = secs.includes(cur) ? cur : 'all';
+  fillAnInCharge();
+}
+function fillAnInCharge(){
+  const sel = document.getElementById('anInCharge'); if(!sel) return; const cur = sel.value;
+  const names = new Set((DB.inCharge||[]).filter(Boolean));
+  Object.values(DB.accounts||{}).forEach(a=> ((a&&a.entries)||[]).forEach(e=>{ if(e && e.inCharge) names.add(e.inCharge); }));
+  const arr = [...names].sort();
+  sel.innerHTML = '<option value="all">All in-charge</option>' + arr.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  sel.value = arr.includes(cur) ? cur : 'all';
 }
 function setAnalysisMode(m){
   anMode = m; document.querySelectorAll('#anModeSeg button').forEach(b=> b.classList.toggle('on', b.dataset.m===m));
+  pdFrom = ''; pdTo = ''; fillAnCount(); renderAnalysis();
+}
+function anOnRange(){ pdFrom = ''; pdTo = ''; renderAnalysis(); }
+function setAnStatus(k){ anStatus = k; renderAnalysis(); }
+function setAnAct(k){ anAct = k; renderAnalysis(); }
+function anQuickAll(){ anStatus = 'all'; anAct = 'all'; renderAnalysis(); }
+function anClear(k){
+  const set = (id, v)=>{ const el = document.getElementById(id); if(el) el.value = v; };
+  if(k==='section') set('anSection','all'); else if(k==='inch') set('anInCharge','all'); else if(k==='dead') set('anDead','hide');
+  else if(k==='status') anStatus = 'all'; else if(k==='act') anAct = 'all'; else if(k==='q') set('anSearch',''); else if(k==='asof') set('anAsOf','');
+  if(k==='asof') { pdFrom = ''; pdTo = ''; }
+  renderAnalysis();
+}
+function resetAnFilters(){
+  const set = (id, v)=>{ const el = document.getElementById(id); if(el) el.value = v; };
+  anStatus = 'all'; anAct = 'all'; pdFrom = ''; pdTo = ''; pdGroup = 'all'; pdShow = 'all'; pdSort = 'new';
+  set('anSection','all'); set('anInCharge','all'); set('anDead','hide'); set('anSearch',''); set('anAsOf',''); set('anSort','amount');
   fillAnCount(); renderAnalysis();
 }
 function anDate(iso){ return new Date(String(iso).slice(0,10) + 'T12:00:00'); }
@@ -2980,8 +3200,13 @@ function anKey(iso){
   if(anMode==='monthly') return String(iso).slice(0,7);
   return localISODate(anMonday(d));
 }
+/** The date the analysis is "as of": today, unless a date was picked in the filter */
+function anBase(){
+  const v = anVal('anAsOf',''); const d = v ? anDate(v) : new Date();
+  const out = isNaN(d) ? new Date() : d; out.setHours(12,0,0,0); return out;
+}
 function anBuckets(n){
-  const out = []; const now = new Date(); now.setHours(12,0,0,0);
+  const out = []; const now = anBase();
   for(let i=n-1;i>=0;i--){
     if(anMode==='yearly'){ const y = now.getFullYear()-i; out.push({key:String(y), label:String(y), full:String(y)}); }
     else if(anMode==='monthly'){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1, 12); out.push({key:localISODate(d).slice(0,7), label:AN_MN[d.getMonth()]+' '+String(d.getFullYear()).slice(2), full:AN_MN[d.getMonth()]+' '+d.getFullYear()}); }
@@ -2989,31 +3214,47 @@ function anBuckets(n){
   }
   return out;
 }
-function anPeriodName(){ return anMode==='weekly' ? 'this week' : anMode==='monthly' ? 'this month' : 'this year'; }
+function anPeriodName(){ return anPerLabel; }
 function anPct(cur,prev){ return prev>0 ? Math.round((cur-prev)/prev*100) : (cur>0 ? null : 0); }
 function anDeltaHtml(cur,prev){
   const p = anPct(cur,prev); if(p===0) return '<span class="dk-s">no change</span>'; if(p===null) return '<span class="dk-s">new activity</span>';
   return `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span> <span class="dk-s">vs previous ${anUnit()}</span>`;
 }
+function anDeltaPlain(cur,prev){ const p = anPct(cur,prev); return p===0 ? '0%' : p===null ? 'new' : (p>0?'▲ ':'▼ ') + Math.abs(p) + '%'; }
+/** Every filter (section, in-charge, dead, search, group, activity, as-of date) is applied HERE, so the cards, charts,
+ *  period details, table, print and Excel all show exactly the same filtered set of contractors. */
 function anCompute(){
-  const n = Number((document.getElementById('anCount')||{}).value) || AN_DEFAULT[anMode];
+  const n = Number(anVal('anCount')) || AN_DEFAULT[anMode];
   const B = anBuckets(n), idx = {}; B.forEach((b,i)=> idx[b.key] = i);
-  const sec = (document.getElementById('anSection')||{}).value || 'all';
-  const contacts = DB.contacts.filter(c=>!c.died && (sec==='all' || (c.nid||'').trim()===sec));
+  const sec = anVal('anSection','all'), inch = anVal('anInCharge','all'), dead = anVal('anDead','hide');
+  const q = String(anVal('anSearch','')).toLowerCase().trim();
+  const todayKey = anKey(localISODate(new Date()));
+  anPerLabel = (B[B.length-1].key === todayKey) ? ('this ' + anUnit()) : ('in ' + B[B.length-1].full);
+  const contacts = DB.contacts.filter(c=>{
+    if(dead==='hide' && c.died) return false;
+    if(dead==='only' && !c.died) return false;
+    if(sec!=='all' && (c.nid||'').trim()!==sec) return false;
+    if(q){ const hay = [c.name, c.id, c.mobile, (c.mobiles||[]).join(' '), c.address].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
   const today = new Date(); today.setHours(12,0,0,0);
-  const rows = contacts.map(c=>{
+  const base = contacts.map(c=>{
     const acc = DB.accounts[c.id] || {entries:[]}; const per = B.map(()=>({amt:0,cnt:0})); let last = '', allCnt = 0;
     acc.entries.forEach(e=>{
-      if(!e.date) return; allCnt++; if(String(e.date) > last) last = String(e.date);
+      if(!e.date) return; if(inch!=='all' && (e.inCharge||'')!==inch) return;
+      allCnt++; if(String(e.date) > last) last = String(e.date);
       const k = anKey(e.date); if(k!==null && (k in idx)){ const p = per[idx[k]]; p.amt += Number(e.amount)||0; p.cnt++; }
     });
     const cur = per[per.length-1], prev = per[per.length-2] || {amt:0,cnt:0};
     return {c, st: contactStatus(c), per, cur, prev, last, days: last ? Math.max(0, Math.round((today - anDate(last))/86400000)) : null, allCnt, total: Number(c.totalAmount)||0};
   });
+  const counts = {all:base.length, green:0, yellow:0, red:0, now:0, silent:0};
+  base.forEach(r=>{ if(counts[r.st]!==undefined) counts[r.st]++; if(r.cur.cnt>0) counts.now++; else counts.silent++; });
+  const rows = base.filter(r=> (anStatus==='all' || r.st===anStatus) && (anAct==='all' || (anAct==='now' ? r.cur.cnt>0 : r.cur.cnt===0)));
   const groups = {green:null, yellow:null, red:null};
   Object.keys(groups).forEach(k=>{ groups[k] = {n:0, per: B.map(()=>({amt:0,cnt:0,act:0}))}; });
   rows.forEach(r=>{ const g = groups[r.st]; if(!g) return; g.n++; r.per.forEach((p,i)=>{ g.per[i].amt += p.amt; g.per[i].cnt += p.cnt; if(p.cnt>0) g.per[i].act++; }); });
-  return {B, rows, groups, sec};
+  return {B, rows, base, counts, groups, sec, inch, dead, q};
 }
 function anMini(vals){
   const mx = Math.max(...vals,1), w = 88, h = 26, bw = w/vals.length;
@@ -3024,20 +3265,14 @@ function anStacked(D){
   const tot = D.B.map((b,i)=> D.groups.green.per[i].amt + D.groups.yellow.per[i].amt + D.groups.red.per[i].amt); const mx = Math.max(...tot,1); let o = '';
   D.B.forEach((b,i)=>{
     let y = h-26; const x = i*bw + bw*.18, ww = bw*.64;
-    [['green','#17794f'],['yellow','#e0a526'],['red','#c8452b']].forEach(([k,col])=>{ const v = D.groups[k].per[i].amt; const bh = v/mx*(h-44); if(bh>0){ y -= bh; o += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${ww.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"><title>${escapeHtml(b.full)} · ${k==='green'?'Active':k==='yellow'?'Moderate':'Inactive'}: ৳ ${fmtMoney(v)}</title></rect>`; } });
+    [['green','#17794f'],['yellow','#e0a526'],['red','#c8452b']].forEach(([k,col])=>{ const v = D.groups[k].per[i].amt; const bh = v/mx*(h-44); if(bh>0){ y -= bh; o += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${ww.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"><title>${escapeHtml(b.full)} · ${AN_GROUP_NAME[k]}: ৳ ${fmtMoney(v)}</title></rect>`; } });
     if(n<=16 || i%Math.ceil(n/12)===0) o += `<text x="${(i*bw+bw/2).toFixed(1)}" y="${h-8}" font-size="10" fill="#7a8781" text-anchor="middle">${escapeHtml(b.label)}</text>`;
   });
   return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block" role="img" aria-label="Amount per ${anUnit()} by contractor status">${o}</svg>`;
 }
+/** sort only - the filtering is already done in anCompute() */
 function anFiltered(D){
-  const q = ((document.getElementById('anSearch')||{}).value||'').toLowerCase().trim(); const sort = (document.getElementById('anSort')||{}).value || 'amount';
-  let list = D.rows.filter(r=>{
-    if(q && !(String(r.c.name||'').toLowerCase().includes(q) || String(r.c.id).toLowerCase().includes(q) || String(r.c.mobile||'').includes(q))) return false;
-    if(anStatus==='green'||anStatus==='yellow'||anStatus==='red') return r.st===anStatus;
-    if(anStatus==='silent') return r.cur.cnt===0;
-    if(anStatus==='now') return r.cur.cnt>0;
-    return true;
-  });
+  const sort = anVal('anSort','amount'); const list = D.rows.slice();
   const chg = r=>{ const p = anPct(r.cur.amt, r.prev.amt); return p===null ? 1e9 : p; };
   list.sort((a,b)=>{
     if(sort==='memos') return b.cur.cnt-a.cur.cnt || b.cur.amt-a.cur.amt;
@@ -3050,18 +3285,52 @@ function anFiltered(D){
   return list;
 }
 function anPill(r){ return statusPillHtml(r.st, contactStatusDetail(r.c)).replace(/<div style="font-size:\.72rem[^>]*>[\s\S]*?<\/div>/,''); }
-function setAnStatus(k){ anStatus = k; renderAnalysis(); }
+/** plain-words summary of the filters that are on (used on screen, in print and in Excel) */
+function anFilterParts(D){
+  const p = [];
+  p.push('View: ' + anMode.charAt(0).toUpperCase() + anMode.slice(1));
+  p.push('Range: ' + D.B.length + ' ' + anUnit() + 's (' + D.B[0].full + ' → ' + D.B[D.B.length-1].full + ')');
+  if(D.sec!=='all') p.push('Section: ' + D.sec);
+  if(D.inch!=='all') p.push('In-charge: ' + D.inch);
+  if(D.dead!=='hide') p.push(D.dead==='only' ? 'Dead contractors only' : 'Dead contractors included');
+  if(anStatus!=='all') p.push('Group: ' + AN_GROUP_NAME[anStatus]);
+  if(anAct!=='all') p.push(anAct==='now' ? 'Active ' + anPerLabel : 'No activity ' + anPerLabel);
+  if(D.q) p.push('Search: "' + D.q + '"');
+  return p;
+}
+function anChipsHtml(D){
+  const chips = []; const add = (label, fn)=> chips.push(`<span class="an-chip">${escapeHtml(label)}<button type="button" onclick="${fn}" title="Clear this filter">✕</button></span>`);
+  if(anVal('anAsOf','')) add('As of ' + fmtDate(anVal('anAsOf','')), "anClear('asof')");
+  if(D.sec!=='all') add('Section: ' + D.sec, "anClear('section')");
+  if(D.inch!=='all') add('In-charge: ' + D.inch, "anClear('inch')");
+  if(D.dead!=='hide') add(D.dead==='only' ? 'Dead only' : 'Dead included', "anClear('dead')");
+  if(anStatus!=='all') add('Group: ' + AN_GROUP_NAME[anStatus], "anClear('status')");
+  if(anAct!=='all') add(anAct==='now' ? 'Active ' + anPerLabel : 'No activity ' + anPerLabel, "anClear('act')");
+  if(D.q) add('Search: ' + D.q, "anClear('q')");
+  return `<span class="dk-s">Showing <b>${D.rows.length}</b> of ${D.base.length} contractors</span>` + chips.join('');
+}
+function anPillsHtml(D){
+  const c = D.counts, per = anPerLabel;
+  const g = (k,l)=>`<button type="button" class="spill ${anStatus===k?'on':''}" onclick="setAnStatus('${k}')">${l}<small>${c[k]}</small></button>`;
+  const a = (k,l,n)=>`<button type="button" class="spill ${anAct===k?'on':''}" onclick="setAnAct('${k}')">${l}<small>${n}</small></button>`;
+  return `<button type="button" class="spill ${anStatus==='all'&&anAct==='all'?'on':''}" onclick="anQuickAll()">All<small>${c.all}</small></button>` +
+    g('green','● Active') + g('yellow','● Moderate') + g('red','● Inactive') + a('now','Active '+per, c.now) + a('silent','No activity '+per, c.silent);
+}
 function renderAnalysis(){
   const el = document.getElementById('anKpis'); if(!el) return;
   const D = anCompute(); window.__anLast = D;
-  const last = D.B.length-1, per = anPeriodName();
+  const last = D.B.length-1, per = anPerLabel;
+  // keep the dropdowns that mirror the quick filters in step
+  const gs = document.getElementById('anGroupSel'); if(gs) gs.value = anStatus;
+  const as = document.getElementById('anActSel'); if(as){ as.options[1].text = 'Active ' + per; as.options[2].text = 'No activity ' + per; as.value = anAct; }
+  document.getElementById('anChips').innerHTML = anChipsHtml(D);
   const act = D.rows.filter(r=>r.cur.cnt>0).length, actPrev = D.rows.filter(r=>r.prev.cnt>0).length;
   const memos = D.rows.reduce((s,r)=>s+r.cur.cnt,0), memosPrev = D.rows.reduce((s,r)=>s+r.prev.cnt,0);
   const amt = D.rows.reduce((s,r)=>s+r.cur.amt,0), amtPrev = D.rows.reduce((s,r)=>s+r.prev.amt,0);
   const N = D.rows.length, silent = N - act;
   const kp = (l,v,sub,col)=>`<div class="dcard" style="border-top:3px solid ${col};"><div class="dk-l">${l}</div><div class="dk-v">${v}</div><div class="dk-s" style="margin-top:2px;">${sub}</div></div>`;
   el.innerHTML = `<div class="an-kpis">
-    ${kp('Active '+per, act+' <span style="font-size:1rem;color:var(--ink-soft);">/ '+N+'</span>', anDeltaHtml(act,actPrev).replace('vs previous','vs previous'), '#17794f')}
+    ${kp('Active '+per, act+' <span style="font-size:1rem;color:var(--ink-soft);">/ '+N+'</span>', anDeltaHtml(act,actPrev), '#17794f')}
     ${kp('Memos '+per, memos.toLocaleString(), anDeltaHtml(memos,memosPrev), '#2f6fb3')}
     ${kp('Amount '+per, '৳ '+fmtMoney(amt), anDeltaHtml(amt,amtPrev), '#b3541c')}
     ${kp('No activity '+per, silent.toLocaleString(), N ? Math.round(silent/N*100)+'% of contractors' : '—', '#b3311c')}
@@ -3076,17 +3345,10 @@ function renderAnalysis(){
   document.getElementById('anCharts').innerHTML = `<div class="an-grid2">
     <div class="dcard"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h3 style="margin:0;">Amount per ${anUnit()}</h3><span class="pill pill-green">● Active</span><span class="pill pill-yellow">● Moderate</span><span class="pill pill-red">● Inactive</span></div>${anStacked(D)}</div>
     <div class="dcard"><h3>Active contractors per ${anUnit()}</h3>${dashBars(totActive, D.B.map(b=>b.label), 420, 220)}</div></div>`;
-  // period table (newest first): every period with each status group
-  const prow = D.B.map((b,i)=>{ const g = D.groups; const a = g.green.per[i], y = g.yellow.per[i], r = g.red.per[i];
-    const tAmt = a.amt+y.amt+r.amt, tCnt = a.cnt+y.cnt+r.cnt, tAct = a.act+y.act+r.act, pAmt = i>0 ? (g.green.per[i-1].amt+g.yellow.per[i-1].amt+g.red.per[i-1].amt) : 0;
-    const p = i>0 ? anPct(tAmt,pAmt) : 0; const d = i===0 ? '—' : p===null ? 'new' : p===0 ? '0%' : `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span>`;
-    return `<tr><td><b>${escapeHtml(b.full)}</b></td><td class="mono">${tAct}</td><td class="mono">${tCnt}</td><td class="mono"><b>${fmtMoney(tAmt)}</b></td><td class="mono">${a.act} · ${fmtMoney(a.amt)}</td><td class="mono">${y.act} · ${fmtMoney(y.amt)}</td><td class="mono">${r.act} · ${fmtMoney(r.amt)}</td><td>${d}</td></tr>`; }).reverse().join('');
-  document.getElementById('anPeriods').innerHTML = `<div class="dcard" style="padding:16px 18px;margin-bottom:16px;"><h3>Period details <span class="dk-s" style="font-family:Inter;font-weight:500;">· contractors active · memos · amount, by status group</span></h3>
-    <div class="table-wrap" style="max-height:340px;overflow:auto;"><table><thead><tr><th>Period</th><th>Active contractors</th><th>Memos</th><th>Total amount</th><th>● Active group</th><th>● Moderate group</th><th>● Inactive group</th><th>Change</th></tr></thead><tbody>${prow}</tbody></table></div></div>`;
-  const cnt = {all:D.rows.length, green:0, yellow:0, red:0, now:act, silent}; D.rows.forEach(r=>{ cnt[r.st]++; });
-  const pill = (k,l)=>`<button type="button" class="spill ${anStatus===k?'on':''}" onclick="setAnStatus('${k}')">${l}<small>${cnt[k]}</small></button>`;
-  document.getElementById('anPills').innerHTML = pill('all','All')+pill('green','● Active')+pill('yellow','● Moderate')+pill('red','● Inactive')+pill('now','Active '+per)+pill('silent','No activity '+per);
+  renderAnPeriods(D);
+  document.getElementById('anPills').innerHTML = anPillsHtml(D);
   const list = anFiltered(D);
+  document.getElementById('anTblCount').textContent = '· ' + list.length + ' contractor' + (list.length===1?'':'s');
   const trs = list.map(r=>{ const p = anPct(r.cur.amt, r.prev.amt); const ch = p===null ? '<span class="pill pill-green">new</span>' : p===0 ? '<span class="dk-s">—</span>' : `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span>`;
     const lastTxt = r.last ? escapeHtml(fmtDate(r.last)) + `<div class="dk-s">${r.days===0?'today':r.days+' days ago'}</div>` : '<span class="dk-s">no memo</span>';
     return `<tr><td>${whoCellHtml(r.c)}</td><td><span class="pill pill-gray">${escapeHtml(r.c.nid||'—')}</span></td><td>${anPill(r)}</td>
@@ -3094,8 +3356,108 @@ function renderAnalysis(){
       <td class="no-print"><div class="row-actions" style="flex-wrap:nowrap;"><button class="icon-btn" onclick="anOpenDetail('${escapeHtml(r.c.id)}')">Details</button><button class="btn btn-accent btn-sm" onclick="jumpToAccount('${escapeHtml(r.c.id)}')">Open</button></div></td></tr>`; }).join('');
   document.getElementById('anTable').innerHTML = `<div class="table-wrap" style="max-height:80vh;overflow:auto;"><table><thead><tr><th>Contractor</th><th>Section</th><th>Status</th><th>Memos ${per}</th><th>Amount ${per}</th><th>Previous ${anUnit()}</th><th>Change</th><th>Last memo</th><th>Trend (${D.B.length} ${anUnit()}s)</th><th class="no-print">Actions</th></tr></thead><tbody>${trs || `<tr><td colspan="10" style="text-align:center;color:var(--ink-soft);padding:22px;">No contractors match.</td></tr>`}</tbody></table></div>`;
 }
+
+/* ---------- Period details: own filters + Print / PDF + Excel ---------- */
+function setPd(k, v){
+  if(k==='from') pdFrom = v; else if(k==='to') pdTo = v; else if(k==='group') pdGroup = v; else if(k==='show') pdShow = v; else if(k==='sort') pdSort = v;
+  renderAnPeriods();
+}
+function resetPd(){ pdFrom = ''; pdTo = ''; pdGroup = 'all'; pdShow = 'all'; pdSort = 'new'; renderAnPeriods(); }
+/** Build the period table once; the screen, the print page and Excel all use the same rows */
+function pdTable(D){
+  const g = D.groups, sel = pdGroup;
+  const pick = i => { if(sel==='all'){ const a = g.green.per[i], y = g.yellow.per[i], r = g.red.per[i]; return {act:a.act+y.act+r.act, cnt:a.cnt+y.cnt+r.cnt, amt:a.amt+y.amt+r.amt}; } const p = g[sel].per[i]; return {act:p.act, cnt:p.cnt, amt:p.amt}; };
+  let all = D.B.map((b,i)=>{ const cur = pick(i), prev = i>0 ? pick(i-1) : null; return {b, i, cur, prev, a:g.green.per[i], y:g.yellow.per[i], r:g.red.per[i]}; });
+  let fi = D.B.findIndex(b=>b.key===pdFrom), ti = D.B.findIndex(b=>b.key===pdTo);
+  if(fi<0) fi = 0; if(ti<0) ti = D.B.length-1; if(fi>ti){ const t = fi; fi = ti; ti = t; }
+  let rows = all.filter(r=> r.i>=fi && r.i<=ti);
+  if(pdShow==='activity') rows = rows.filter(r=> r.cur.cnt>0);
+  else if(pdShow==='up') rows = rows.filter(r=> r.prev && r.cur.amt > r.prev.amt);
+  else if(pdShow==='down') rows = rows.filter(r=> r.prev && r.cur.amt < r.prev.amt);
+  rows.sort((x,y)=> pdSort==='old' ? x.i-y.i : pdSort==='amount' ? y.cur.amt-x.cur.amt : pdSort==='memos' ? y.cur.cnt-x.cur.cnt : pdSort==='active' ? y.cur.act-x.cur.act : y.i-x.i);
+  const showGroups = sel==='all';
+  const head = ['Period', sel==='all' ? 'Active contractors' : 'Active contractors ('+AN_GROUP_NAME[sel]+' group)', 'Memos', 'Total amount'];
+  if(showGroups) head.push('● Active group','● Moderate group','● Inactive group');
+  head.push('Change');
+  const plain = rows.map(r=>{
+    const row = [r.b.full, r.cur.act, r.cur.cnt, fmtMoney(r.cur.amt)];
+    if(showGroups) row.push(r.a.act+' · '+fmtMoney(r.a.amt), r.y.act+' · '+fmtMoney(r.y.amt), r.r.act+' · '+fmtMoney(r.r.amt));
+    row.push(r.prev ? anDeltaPlain(r.cur.amt, r.prev.amt) : '—'); return row;
+  });
+  const sum = (f)=> rows.reduce((s,r)=> s+f(r), 0), n = rows.length || 1;
+  const foot = [];
+  if(rows.length){
+    const tot = ['Total ('+rows.length+' '+anUnit()+(rows.length>1?'s':'')+')', '—', sum(r=>r.cur.cnt), fmtMoney(sum(r=>r.cur.amt))];
+    const avg = ['Average per '+anUnit(), (sum(r=>r.cur.act)/n).toFixed(1), (sum(r=>r.cur.cnt)/n).toFixed(1), fmtMoney(Math.round(sum(r=>r.cur.amt)/n))];
+    if(showGroups){ tot.push(fmtMoney(sum(r=>r.a.amt)), fmtMoney(sum(r=>r.y.amt)), fmtMoney(sum(r=>r.r.amt))); avg.push(fmtMoney(Math.round(sum(r=>r.a.amt)/n)), fmtMoney(Math.round(sum(r=>r.y.amt)/n)), fmtMoney(Math.round(sum(r=>r.r.amt)/n))); }
+    tot.push(''); avg.push(''); foot.push(tot, avg);
+  }
+  const html = rows.map(r=>{
+    const p = r.prev ? anPct(r.cur.amt, r.prev.amt) : 0;
+    const d = !r.prev ? '—' : p===null ? 'new' : p===0 ? '0%' : `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span>`;
+    return `<tr><td><b>${escapeHtml(r.b.full)}</b></td><td class="mono">${r.cur.act}</td><td class="mono">${r.cur.cnt}</td><td class="mono"><b>${fmtMoney(r.cur.amt)}</b></td>` +
+      (showGroups ? `<td class="mono">${r.a.act} · ${fmtMoney(r.a.amt)}</td><td class="mono">${r.y.act} · ${fmtMoney(r.y.amt)}</td><td class="mono">${r.r.act} · ${fmtMoney(r.r.amt)}</td>` : '') + `<td>${d}</td></tr>`;
+  }).join('');
+  return {head, rows, plain, foot, html, total: all.length, from: D.B[fi].full, to: D.B[ti].full};
+}
+function renderAnPeriods(D){
+  D = D || window.__anLast; if(!D) return;
+  const el = document.getElementById('anPeriods'); if(!el) return;
+  const T = pdTable(D);
+  const f = D.B.some(b=>b.key===pdFrom) ? pdFrom : D.B[0].key, t = D.B.some(b=>b.key===pdTo) ? pdTo : D.B[D.B.length-1].key;
+  const opts = (cur)=> D.B.map(b=>`<option value="${b.key}" ${b.key===cur?'selected':''}>${escapeHtml(b.full)}</option>`).join('');
+  const so = (arr, cur)=> arr.map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${l}</option>`).join('');
+  const foot = T.foot.map(r=>`<tr class="pd-foot">${r.map((c,i)=>`<td class="${i?'mono':''}"><b>${escapeHtml(String(c))}</b></td>`).join('')}</tr>`).join('');
+  el.innerHTML = `<div class="dcard" style="padding:16px 18px;margin-bottom:16px;">
+    <div class="an-sec-head" style="margin:0 0 6px;"><h3 style="margin:0;">Period details <span class="dk-s" style="font-family:Inter;font-weight:500;">· contractors active · memos · amount, by status group</span></h3>
+      <div class="btn-row no-print"><button class="btn btn-ghost btn-sm" onclick="printAnPeriods()">🖨 Print / PDF</button><button class="btn btn-ghost btn-sm" onclick="exportAnPeriodsExcel()">⇩ Excel</button></div></div>
+    <div class="an-tools no-print">
+      <label class="an-f"><span>From</span><select class="select-sm" onchange="setPd('from',this.value)">${opts(f)}</select></label>
+      <label class="an-f"><span>To</span><select class="select-sm" onchange="setPd('to',this.value)">${opts(t)}</select></label>
+      <label class="an-f"><span>Group</span><select class="select-sm" onchange="setPd('group',this.value)">${so([['all','All groups'],['green','● Active group'],['yellow','● Moderate group'],['red','● Inactive group']], pdGroup)}</select></label>
+      <label class="an-f"><span>Show</span><select class="select-sm" onchange="setPd('show',this.value)">${so([['all','All periods'],['activity','Only periods with memos'],['up','Only increases'],['down','Only decreases']], pdShow)}</select></label>
+      <label class="an-f"><span>Sort</span><select class="select-sm" onchange="setPd('sort',this.value)">${so([['new','Newest first'],['old','Oldest first'],['amount','Highest amount'],['memos','Most memos'],['active','Most active contractors']], pdSort)}</select></label>
+      <button class="btn btn-ghost btn-sm" onclick="resetPd()">↺ Reset</button>
+    </div>
+    <div class="dk-s" style="margin-bottom:8px;">${T.rows.length} of ${T.total} ${anUnit()}s shown · ${escapeHtml(T.from)} → ${escapeHtml(T.to)}</div>
+    <div class="table-wrap" style="max-height:380px;overflow:auto;"><table><thead><tr>${T.head.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
+      <tbody>${T.html || `<tr><td colspan="${T.head.length}" style="text-align:center;color:var(--ink-soft);padding:18px;">No periods match these filters.</td></tr>`}</tbody>${foot ? `<tfoot>${foot}</tfoot>` : ''}</table></div></div>`;
+}
+function anRowsForExport(){
+  const D = window.__anLast || anCompute(); const list = anFiltered(D);
+  const headers = ['ID','Name','Section','Status','Memos '+anPeriodName(),'Amount '+anPeriodName(),'Previous '+anUnit()+' amount','Change %','Last memo','Days since last memo'];
+  const rows = list.map(r=>{ const p = anPct(r.cur.amt, r.prev.amt); return [r.c.id, r.c.name, r.c.nid||'', ({green:'Active',yellow:'Moderate',red:'Inactive'})[r.st]||r.st, r.cur.cnt, fmtMoney(r.cur.amt), fmtMoney(r.prev.amt), p===null?'new':p+'%', r.last?fmtDate(r.last):'', r.days===null?'':r.days]; });
+  return {D, headers, rows};
+}
+function exportAnalysisExcel(){ const {headers, rows} = anRowsForExport(); exportTableAsExcel('contractor-ledger-analysis-' + anMode + '.xls', headers, rows, []); }
+function exportAnPeriodsExcel(){
+  const D = window.__anLast || anCompute(); const T = pdTable(D);
+  exportTableAsExcel('contractor-ledger-analysis-periods-' + anMode + '.xls', T.head, T.plain.concat(T.foot), []);
+  toast('Excel file downloaded.');
+}
+/* ---- print builders (shared by the three Print / PDF buttons) ---- */
+function anPrintHead(title, D){ return `<div class="pr-head"><h2>${title}</h2></div><div class="pr-meta">${escapeHtml(anFilterParts(D).join(' · '))} · Printed: ${new Date().toLocaleString()}</div>`; }
+function anPrintGroups(D){
+  const last = D.B.length-1;
+  const gsum = ['green','yellow','red'].map(k=>{ const g = D.groups[k], p = g.per[last]; return `<tr><td>${AN_GROUP_NAME[k]}</td><td>${g.n}</td><td>${p.act}</td><td>${p.cnt}</td><td>${fmtMoney(p.amt)}</td></tr>`; }).join('');
+  return `<table><thead><tr><th>Status group</th><th>Contractors</th><th>Active ${anPeriodName()}</th><th>Memos</th><th>Amount</th></tr></thead><tbody>${gsum}</tbody></table><br>`;
+}
+function anPrintPeriods(D){
+  const T = pdTable(D);
+  const foot = T.foot.map(r=>`<tr>${r.map(c=>`<td><b>${escapeHtml(String(c))}</b></td>`).join('')}</tr>`).join('');
+  return `<h3 style="margin:10px 0 4px;">Period details <small style="font-weight:400;">(${T.rows.length} of ${T.total} ${anUnit()}s · ${escapeHtml(T.from)} → ${escapeHtml(T.to)})</small></h3>
+    <table><thead><tr>${T.head.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${T.plain.map(r=>`<tr>${r.map(c=>`<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${T.head.length}">No periods match.</td></tr>`}</tbody><tfoot>${foot}</tfoot></table><br>`;
+}
+function anPrintTable(D){
+  const {headers, rows} = anRowsForExport();
+  return `<h3 style="margin:10px 0 4px;">Contractor details <small style="font-weight:400;">(${rows.length} contractors)</small></h3>
+    <table><thead><tr>${headers.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function printAnalysis(){ const D = window.__anLast || anCompute(); enterPrintMode(anPrintHead('Contractor Analysis — ' + anMode, D) + anPrintGroups(D) + anPrintPeriods(D) + anPrintTable(D), 'Contractor Analysis'); }
+function printAnPeriods(){ const D = window.__anLast || anCompute(); enterPrintMode(anPrintHead('Period Details — ' + anMode, D) + anPrintPeriods(D), 'Analysis Period Details'); }
+function printAnalysisTable(){ const D = window.__anLast || anCompute(); enterPrintMode(anPrintHead('Contractor Analysis — ' + anMode, D) + anPrintGroups(D) + anPrintTable(D), 'Contractor Analysis'); }
 function anOpenDetail(id){
-  const D = window.__anLast || anCompute(); const r = D.rows.find(x=>x.c.id===id); if(!r) return;
+  const D = window.__anLast || anCompute(); const r = D.rows.find(x=>x.c.id===id) || D.base.find(x=>x.c.id===id); if(!r) return;
   document.getElementById('anDetailTitle').textContent = r.c.name + ' — ' + anMode + ' activity';
   const acc = DB.accounts[id] || {entries:[]}; const recent = acc.entries.slice().sort((a,b)=> String(b.date||'').localeCompare(String(a.date||''))).slice(0,10);
   const rowsP = D.B.map((b,i)=>({b, p:r.per[i]})).reverse();
@@ -3106,21 +3468,6 @@ function anOpenDetail(id){
   document.getElementById('anDetailOverlay').classList.add('open');
 }
 function closeAnDetail(){ document.getElementById('anDetailOverlay').classList.remove('open'); }
-function anRowsForExport(){
-  const D = window.__anLast || anCompute(); const list = anFiltered(D);
-  const headers = ['ID','Name','Section','Status','Memos '+anPeriodName(),'Amount '+anPeriodName(),'Previous '+anUnit()+' amount','Change %','Last memo','Days since last memo'];
-  const rows = list.map(r=>{ const p = anPct(r.cur.amt, r.prev.amt); return [r.c.id, r.c.name, r.c.nid||'', ({green:'Active',yellow:'Moderate',red:'Inactive'})[r.st]||r.st, r.cur.cnt, fmtMoney(r.cur.amt), fmtMoney(r.prev.amt), p===null?'new':p+'%', r.last?fmtDate(r.last):'', r.days===null?'':r.days]; });
-  return {D, headers, rows};
-}
-function exportAnalysisExcel(){ const {headers, rows} = anRowsForExport(); exportTableAsExcel('contractor-ledger-analysis-' + anMode + '.xls', headers, rows, []); }
-function printAnalysis(){
-  const {D, headers, rows} = anRowsForExport(); const last = D.B.length-1;
-  const gsum = ['green','yellow','red'].map(k=>{ const g = D.groups[k], p = g.per[last]; return `<tr><td>${({green:'Active',yellow:'Moderate',red:'Inactive'})[k]}</td><td>${g.n}</td><td>${p.act}</td><td>${p.cnt}</td><td>${fmtMoney(p.amt)}</td></tr>`; }).join('');
-  const html = `<div class="pr-head"><h2>Contractor Analysis — ${anMode}</h2></div><div class="pr-meta">Showing ${D.B.length} ${anUnit()}s (latest: ${escapeHtml(D.B[last].full)}) · Section: ${escapeHtml(D.sec==='all'?'All':D.sec)} · Printed: ${new Date().toLocaleString()}</div>
-    <table><thead><tr><th>Status group</th><th>Contractors</th><th>Active ${anPeriodName()}</th><th>Memos</th><th>Amount</th></tr></thead><tbody>${gsum}</tbody></table><br>
-    <table><thead><tr>${headers.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  enterPrintMode(html, 'Contractor Analysis');
-}
 
 function showTab(tab){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
@@ -3130,6 +3477,7 @@ function showTab(tab){
   if(tab==='dashboard') renderDashboard();
   if(tab==='analysis'){ if(!document.getElementById('anCount').options.length) fillAnCount(); fillAnSections(); renderAnalysis(); }
   if(tab==='recycle') renderRecycleBin();
+  if(tab==='audit') renderAudit();
   if(tab==='summary') renderSummary();
   if(tab==='accounts') renderAccountsTab();
   if(tab==='reports') renderReports();
@@ -4188,30 +4536,87 @@ let stagedEntries = [];
 
 /* ---------- duplicate memo check while adding entries (same date + memo number) ---------- */
 function aeExistingKeys(){ const acc = DB.accounts[currentAccountId]; const set = new Set(); (acc ? acc.entries : []).forEach(e=>{ const k = memoDupKey(e); if(k) set.add(k); }); return set; }
-function aeDupStatus(){
-  // returns, for every staged row, 'existing' (already in this account), 'list' (same date+memo twice in this list) or ''
-  const ex = aeExistingKeys(), seen = {}; const out = stagedEntries.map(()=> '');
-  stagedEntries.forEach((st,i)=>{ const k = memoDupKey(st); if(!k) return; seen[k] = (seen[k]||0) + 1; });
-  stagedEntries.forEach((st,i)=>{ const k = memoDupKey(st); if(!k) return; if(ex.has(k)) out[i] = 'existing'; else if(seen[k] > 1) out[i] = 'list'; });
+/** one memo as a readable line: Memo 1042 · 28/10/2026 · ৳ 5,000 · In-charge · remark */
+function aeEntryLine(e){
+  let s = 'Memo ' + (e.memo || '—') + ' · ' + fmtDate(e.date) + ' · ৳ ' + fmtMoney(e.amount);
+  if(e.inCharge) s += ' · ' + e.inCharge;
+  if(e.remark) s += ' · ' + e.remark;
+  return s;
+}
+/** compare the amounts of two entries with the same date + memo number */
+function aeCmp(newAmt, oldAmt){
+  newAmt = Number(newAmt) || 0; oldAmt = Number(oldAmt) || 0;
+  if(newAmt === oldAmt) return {same:true, text:'same amount (৳ ' + fmtMoney(newAmt) + ')'};
+  const d = newAmt - oldAmt;
+  return {same:false, text:'DIFFERENT amount — new ৳ ' + fmtMoney(newAmt) + ' vs ৳ ' + fmtMoney(oldAmt) + ' (difference ' + (d > 0 ? '+' : '−') + '৳ ' + fmtMoney(Math.abs(d)) + ')'};
+}
+/** every entry that has the same date + memo number as `item`: already in this account, and/or elsewhere in the list being added */
+function aeFindMatches(item, skipIdx){
+  const k = memoDupKey(item); const out = {existing:[], list:[]};
+  if(!k) return out;
+  const acc = DB.accounts[currentAccountId];
+  (acc ? acc.entries : []).forEach(e=>{ if(memoDupKey(e) === k) out.existing.push(e); });
+  stagedEntries.forEach((s,j)=>{ if(j !== skipIdx && memoDupKey(s) === k) out.list.push({idx:j, e:s}); });
   return out;
 }
+/** for every row of the list: null, or {type:'existing'|'list', existing, list} */
+function aeDupInfo(){
+  return stagedEntries.map((st,i)=>{
+    const m = aeFindMatches(st, i);
+    if(m.existing.length) return {type:'existing', existing:m.existing, list:m.list};
+    if(m.list.length) return {type:'list', existing:[], list:m.list};
+    return null;
+  });
+}
+function aeDupStatus(){ return aeDupInfo().map(x=> x ? x.type : ''); }
+/** the lines that explain WHAT it duplicates (plain text) */
+function aeDupLines(item, m){
+  const out = [];
+  m.existing.forEach(e=>{ out.push('Already in this account: ' + aeEntryLine(e) + ' — ' + aeCmp(item.amount, e.amount).text); });
+  m.list.forEach(x=>{ out.push('Also in this list (item ' + (x.idx+1) + '): ' + aeEntryLine(x.e) + ' — ' + aeCmp(item.amount, x.e.amount).text); });
+  return out;
+}
+function aeDupHtmlLines(item, m){
+  const h = (cmp, txt)=> `<div class="ae-dup-sub">↳ ${txt} — <span class="${cmp.same ? 'ae-same' : 'ae-diff'}">${escapeHtml(cmp.text)}</span></div>`;
+  let out = '';
+  m.existing.forEach(e=>{ out += h(aeCmp(item.amount, e.amount), 'Already in this account: <b>' + escapeHtml(aeEntryLine(e)) + '</b>'); });
+  m.list.forEach(x=>{ out += h(aeCmp(item.amount, x.e.amount), 'Also in this list (item ' + (x.idx+1) + '): <b>' + escapeHtml(aeEntryLine(x.e)) + '</b>'); });
+  return out;
+}
+/** text for the confirmation question (same details, plain text) */
+function aeDupConfirmText(rows){
+  let total = 0; const parts = rows.map(r=>{ total += Number(r.item.amount) || 0; return (r.label ? r.label + ': ' : 'New entry: ') + aeEntryLine(r.item) + '\n   ' + aeDupLines(r.item, r.m).join('\n   '); });
+  return parts.join('\n\n') + (rows.length > 1 ? '\n\nTotal amount of the duplicate item' + (rows.length > 1 ? 's' : '') + ': ৳ ' + fmtMoney(total) : '');
+}
 function refreshStagedDupBadges(){
-  const st = aeDupStatus(); let n = 0;
+  const info = aeDupInfo(); let n = 0, total = 0, html = '';
   document.querySelectorAll('#aeListWrap .staged-dup').forEach(el=>{
-    const i = Number(el.getAttribute('data-i')), v = st[i] || '';
-    el.innerHTML = v ? `<span class="pill pill-red" title="${v==='existing'?'This date + memo number is already in this account':'Same date + memo number appears twice in this list'}">⚠ Duplicate${v==='existing'?' (already in account)':' (in this list)'}</span>` : '';
-    if(v) n++;
+    const i = Number(el.getAttribute('data-i')), v = info[i];
+    el.innerHTML = v ? `<span class="pill pill-red" title="${v.type==='existing'?'This date + memo number is already in this account':'Same date + memo number appears twice in this list'}">⚠ Duplicate${v.type==='existing'?' (already in account)':' (in this list)'}</span>` : '';
+    const d = document.querySelector('#aeListWrap .staged-dup-detail[data-i="' + i + '"]');
+    if(d) d.innerHTML = v ? aeDupHtmlLines(stagedEntries[i], v) : '';
+    if(v){ n++; total += Number(stagedEntries[i].amount) || 0; html += `<div class="ae-dup-item"><b>Item ${i+1}</b> · ${escapeHtml(aeEntryLine(stagedEntries[i]))}${aeDupHtmlLines(stagedEntries[i], v)}</div>`; }
   });
   const sum = document.getElementById('aeDupSummary');
-  if(sum){ sum.style.display = n ? 'block' : 'none'; sum.innerHTML = n ? `<div class="dup-banner"><span>⚠ ${n} item${n===1?'':'s'} in this list ${n===1?'is a':'are'} duplicate${n===1?'':'s'}: same date and memo number.</span></div>` : ''; }
+  if(sum){
+    sum.style.display = n ? 'block' : 'none';
+    sum.innerHTML = n ? `<div class="ae-dup-box"><div><b>⚠ ${n} item${n===1?'':'s'} in this list ${n===1?'is a':'are'} duplicate${n===1?'':'s'}</b> — same date and memo number. Please check the amounts:</div>${html}<div class="ae-dup-total">Total amount of the duplicate item${n===1?'':'s'}: <b>৳ ${fmtMoney(total)}</b> (counted in the account total if you add ${n===1?'it':'them'})</div></div>` : '';
+  }
   return n;
 }
 function updateAeDupHint(){
   const hint = document.getElementById('aeDupHint'); if(!hint) return;
   const date = document.getElementById('aeDate').value, memo = document.getElementById('aeMemo').value.trim();
-  const k = memoDupKey({date, memo}); let msg = '';
-  if(k){ if(aeExistingKeys().has(k)) msg = '⚠ Duplicate: this memo number is already recorded on this date in this account.'; else if(stagedEntries.some(x=>memoDupKey(x)===k)) msg = '⚠ Duplicate: this date + memo number is already in the list below.'; }
-  hint.textContent = msg; hint.style.display = msg ? 'block' : 'none';
+  const amtRaw = (document.getElementById('aeAmount').value || '').trim();
+  const item = {date, memo, amount: Number(amtRaw) || 0, inCharge: ''};
+  const m = aeFindMatches(item, -1); let html = '';
+  if(m.existing.length || m.list.length){
+    const lines = (cmp, txt)=> amtRaw === '' ? `<div class="ae-dup-sub">↳ ${txt}</div>` : `<div class="ae-dup-sub">↳ ${txt} — <span class="${cmp.same ? 'ae-same' : 'ae-diff'}">${escapeHtml(cmp.text)}</span></div>`;
+    html = '<div><b>⚠ Duplicate:</b> this date + memo number is already ' + (m.existing.length ? 'recorded in this account' : 'in the list below') + '.</div>';
+    m.existing.forEach(e=>{ html += lines(aeCmp(item.amount, e.amount), 'Already in this account: <b>' + escapeHtml(aeEntryLine(e)) + '</b>'); });
+    m.list.forEach(x=>{ html += lines(aeCmp(item.amount, x.e.amount), 'In the list (item ' + (x.idx+1) + '): <b>' + escapeHtml(aeEntryLine(x.e)) + '</b>'); });
+  }
+  hint.innerHTML = html; hint.style.display = html ? 'block' : 'none';
 }
 
 function openAddEntryModal(){
@@ -4225,7 +4630,7 @@ function openAddEntryModal(){
   document.getElementById('aeAmount').value = '';
   document.getElementById('aeInCharge').innerHTML = '<option value="">—</option>' + inChargeOptionsHtml('');
   stagedEntries = [];
-  if(!window.__aeDupWired){ window.__aeDupWired = true; ['aeDate','aeMemo'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('input', updateAeDupHint); el.addEventListener('change', updateAeDupHint); }); }
+  if(!window.__aeDupWired){ window.__aeDupWired = true; ['aeDate','aeMemo','aeAmount'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('input', updateAeDupHint); el.addEventListener('change', updateAeDupHint); }); }
   renderStagedList();
   document.getElementById('addEntryModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('aeDate').focus(), 50);
@@ -4257,6 +4662,7 @@ function renderStagedList(){
       <select class="input-sm staged-incharge" style="width:120px;">${inChargeOptionsHtml(s.inCharge||'')}</select>
       <span class="staged-dup" data-i="${i}"></span>
       <button type="button" class="btn btn-ghost btn-sm" onclick="removeStagedEntry(${i})" title="Remove" style="padding:2px 8px;">✕</button>
+      <div class="staged-dup-detail" data-i="${i}" style="flex-basis:100%;"></div>
     </div>
   `).join('');
   wrap.querySelectorAll('.staged-row').forEach(row=>{
@@ -4304,11 +4710,13 @@ function addToStagedList(){
   if(!date){ toast('Please pick a date.'); return; }
   if(!memo){ toast('Please enter a Memo Number.'); document.getElementById('aeMemo').focus(); return; }
   syncStagedFromDom();
-  { const k = memoDupKey({date, memo}); if(k && (aeExistingKeys().has(k) || stagedEntries.some(x=>memoDupKey(x)===k)) && !confirm('Duplicate: this date + memo number already exists. Add to the list anyway?')) return; }
+  { const __it = {date, memo, amount, inCharge}; const __m = aeFindMatches(__it, -1);
+    if((__m.existing.length || __m.list.length) && !confirm('⚠ DUPLICATE — same date + memo number:\n\n' + aeDupConfirmText([{item:__it, m:__m}]) + '\n\nAdd to the list anyway?')) return; }
   stagedEntries.push({date, memo, amount, inCharge});
   renderStagedList();
   document.getElementById('aeMemo').value='';
   document.getElementById('aeAmount').value='';
+  updateAeDupHint();   // the fields were just cleared, so clear the hint too
   document.getElementById('aeDate').focus();
 }
 function commitStagedEntries(){
@@ -4322,7 +4730,8 @@ function commitStagedEntries(){
   const inCharge = document.getElementById('aeInCharge').value || '';
   if(memo){ stagedEntries.push({date, memo, amount, inCharge}); }
   if(stagedEntries.length===0){ toast('Add at least one entry first.'); return; }
-  { const __d = aeDupStatus().filter(Boolean).length; if(__d && !confirm(__d + ' entr' + (__d===1?'y has':'ies have') + ' the same date and memo number as another entry (duplicate).\n\nAdd anyway?')) return; }
+  { const __info = aeDupInfo(); const __rows = []; __info.forEach((v,i)=>{ if(v) __rows.push({label:'Item ' + (i+1), item:stagedEntries[i], m:v}); });
+    if(__rows.length && !confirm('⚠ ' + __rows.length + ' DUPLICATE entr' + (__rows.length===1?'y':'ies') + ' — same date + memo number:\n\n' + aeDupConfirmText(__rows) + '\n\nAdd anyway?')) return; }
   const contactId = currentAccountId;
   stagedEntries.forEach(s=>{
     acc.entries.push({
@@ -4952,12 +5361,14 @@ function setEditorPin(){
   sessionStorage.setItem('nw_editor_unlocked', '1');
   document.getElementById('settingsPin').value = '';
   updatePinStatus();
+  auditEvent('auth', 'Editor PIN set / changed', '', ['The PIN itself is never stored in the log', 'Computer: ' + auditDeviceLabel()]);
   toast('Editor PIN saved on this device.');
 }
 function clearEditorPin(){
   localStorage.removeItem('nw_editor_pin');
   sessionStorage.setItem('nw_editor_unlocked', '1');
   updatePinStatus();
+  auditEvent('auth', 'Editor PIN removed', '', ['Computer: ' + auditDeviceLabel()]);
   toast('Editor PIN removed.');
 }
 function unlockEditorWithPin(){
@@ -4967,8 +5378,10 @@ function unlockEditorWithPin(){
   if(entered === stored){
     sessionStorage.setItem('nw_editor_unlocked', '1');
     updatePinStatus();
+    auditEvent('auth', 'Editor unlocked with PIN', '', ['Computer: ' + auditDeviceLabel()]);
     toast('Editor unlocked.');
   } else {
+    auditEvent('auth', 'Wrong editor PIN entered', '', ['Computer: ' + auditDeviceLabel()]);
     toast('Wrong PIN.');
   }
 }
@@ -4984,8 +5397,10 @@ function requireEditor(actionLabel){
   if(entered === stored){
     sessionStorage.setItem('nw_editor_unlocked', '1');
     updatePinStatus();
+    auditEvent('auth', 'Editor unlocked with PIN', actionLabel || '', ['Computer: ' + auditDeviceLabel()]);
     return true;
   }
+  auditEvent('auth', 'Wrong editor PIN entered', actionLabel || '', ['Computer: ' + auditDeviceLabel()]);
   toast('Editor locked. Enter PIN from Settings.');
   return false;
 }
@@ -5011,20 +5426,40 @@ function exportBackup(){
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   toast('Backup downloaded.');
-  markBackupDone();
+  markBackupDone('download', name);
 }
 async function exportBackupToDrive(){
   const blob = makeBackupBlob();
   const name = `contractor-ledger-backup-${localISODate()}.json`;
   const ok = await uploadBlobToDrive(name, blob, 'application/json');
-  if(ok) markBackupDone();
+  if(ok) markBackupDone('drive', name);
 }
 
 function totalEntriesCount(){
   return Object.values(DB.accounts||{}).reduce((sum,acc)=> sum + (acc.entries?acc.entries.length:0), 0);
 }
+/** How many memo / welfare changes happened since the last backup. Uses the saved counters AND the shared audit log
+ *  (whichever is bigger), so the number is right even after a session close and is the same on every computer. */
+function backupChangesSince(meta){
+  const savCount = (DB.savings && DB.savings.transactions) ? DB.savings.transactions.length : 0;
+  let memo = Math.max(0, totalEntriesCount() - (meta.entriesCountAtLastBackup||0));
+  let welfare = Math.max(0, savCount - (meta.savingsCountAtLastBackup||0));
+  try{
+    const since = meta.lastExternalBackupAt || '';
+    let m = 0, w = 0;
+    (DB.auditLog||[]).forEach(r=>{
+      if(!r || !r.at || r.at <= since) return;
+      if(r.cat==='memo') m += (r.n||1);
+      else if(r.cat==='welfare') w += (r.n||1);
+    });
+    memo = Math.max(memo, m); welfare = Math.max(welfare, w);
+  }catch(e){}
+  return {memo, welfare};
+}
 function checkBackupReminder(){
   const bar = document.getElementById('backupReminderBar');
+  if(!bar || !DB) return;
+  if(typeof demoMode !== 'undefined' && demoMode){ bar.classList.remove('show'); return; }
   if(!DB.meta) DB.meta = { lastExternalBackupAt: null, entriesCountAtLastBackup: 0, snoozedUntil: null };
   if(!DB.savings) DB.savings = { transactions: [] };
   if(!Array.isArray(DB.savings.transactions)) DB.savings.transactions = [];
@@ -5035,6 +5470,7 @@ function checkBackupReminder(){
   if(!meta.lastExternalBackupAt){
     meta.lastExternalBackupAt = new Date().toISOString();
     meta.entriesCountAtLastBackup = totalEntriesCount();
+    meta.savingsCountAtLastBackup = DB.savings.transactions.length;
     saveDB();
     bar.classList.remove('show');
     return;
@@ -5044,24 +5480,47 @@ function checkBackupReminder(){
     return;
   }
   const daysSince = Math.floor((Date.now() - new Date(meta.lastExternalBackupAt).getTime()) / 86400000);
-  const entriesSince = Math.max(0, totalEntriesCount() - (meta.entriesCountAtLastBackup||0));
-  const savCount = (DB.savings && DB.savings.transactions) ? DB.savings.transactions.length : 0;
-  const savSince = Math.max(0, savCount - (meta.savingsCountAtLastBackup||0));
-  if(daysSince >= 3 || entriesSince >= 20 || savSince >= 10){
+  const ch = backupChangesSince(meta);
+  if(daysSince >= 3 || ch.memo >= 20 || ch.welfare >= 10){
     document.getElementById('backupReminderMsg').textContent =
-      `Local backup recommended: ${daysSince} day(s), ${entriesSince} memo entry(ies), ${savSince} welfare txn(s) since last JSON download. Drive auto-save is on — still keep a file copy.`;
+      `Local backup recommended: ${daysSince} day(s), ${ch.memo} memo entry(ies), ${ch.welfare} welfare txn(s) since last JSON download. Drive auto-save is on — still keep a file copy.`;
     bar.classList.add('show');
   } else {
     bar.classList.remove('show');
   }
 }
-function markBackupDone(){
+/** When two computers saved at the same time, the NEWEST backup mark always wins, so an old computer can never bring the reminder back. */
+function reconcileBackupMeta(merged, local, remote){
+  try{
+    if(!merged) return;
+    const a = (local && local.meta) || {}, b = (remote && remote.meta) || {};
+    const ta = a.lastExternalBackupAt ? Date.parse(a.lastExternalBackupAt) : 0;
+    const tb = b.lastExternalBackupAt ? Date.parse(b.lastExternalBackupAt) : 0;
+    if(!(ta > 0 || tb > 0)) return;
+    const best = tb > ta ? b : a;
+    if(!merged.meta) merged.meta = {};
+    ['lastExternalBackupAt','entriesCountAtLastBackup','savingsCountAtLastBackup','lastBackupBy','lastBackupKind'].forEach(k=>{
+      if(best[k] !== undefined) merged.meta[k] = best[k];
+    });
+    const bt = Math.max(ta, tb);
+    const sn = merged.meta.snoozedUntil ? Date.parse(merged.meta.snoozedUntil) : 0;
+    if(sn && sn <= bt) merged.meta.snoozedUntil = null;      // a snooze older than the newest backup is no longer needed
+  }catch(e){ console.warn('reconcileBackupMeta', e); }
+}
+function markBackupDone(kind, fname){
   DB.meta = DB.meta || {};
   DB.meta.lastExternalBackupAt = new Date().toISOString();
   DB.meta.entriesCountAtLastBackup = totalEntriesCount();
   DB.meta.savingsCountAtLastBackup = (DB.savings && DB.savings.transactions) ? DB.savings.transactions.length : 0;
   DB.meta.snoozedUntil = null;
-  saveDB(true);
+  DB.meta.lastBackupBy = (typeof currentUserEmail !== 'undefined' && currentUserEmail) ? currentUserEmail : '';
+  DB.meta.lastBackupKind = kind || '';
+  try{
+    auditEvent('backup', kind==='drive' ? 'Backup saved to Google Drive' : 'Backup downloaded to this computer', fname || '',
+      ['File: ' + (fname||'—'), 'Contractors: ' + (DB.contacts||[]).length, 'Memo entries: ' + totalEntriesCount(),
+       'Welfare transactions: ' + DB.meta.savingsCountAtLastBackup], {noSave:true});
+  }catch(e){}
+  saveDB(true);                                   // uploads right away -> every other computer sees the new backup mark
   document.getElementById('backupReminderBar').classList.remove('show');
 }
 function snoozeBackupReminder(){
@@ -5070,6 +5529,12 @@ function snoozeBackupReminder(){
   saveDB();
   document.getElementById('backupReminderBar').classList.remove('show');
 }
+// The reminder is re-checked all the time (not only at start-up), so it disappears by itself on every computer
+// as soon as another computer has made a backup.
+setInterval(()=>{ try{ if(DB && !demoMode) checkBackupReminder(); }catch(e){} }, 20000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ try{ if(DB && !demoMode) checkBackupReminder(); }catch(e){} } });
+window.addEventListener('focus', ()=>{ try{ if(DB && !demoMode) checkBackupReminder(); }catch(e){} });
+
 function importBackup(){
   const file = document.getElementById('restoreFile').files[0];
   if(!file){ toast('Choose a backup file first.'); return; }
@@ -5080,8 +5545,13 @@ function importBackup(){
     try{
       const data = JSON.parse(e.target.result);
       if(!data || !Array.isArray(data.contacts)) throw new Error('bad format');
+      const __keepLog = (DB && DB.auditLog) || [];
       DB = data;
       applyMigrations();
+      DB.auditLog = auditUnion(__keepLog, DB.auditLog);
+      auditRebase();
+      auditPushRow({cat:'backup', act:'Data restored from backup file', who:'', sum:file.name,
+        det:['File: ' + file.name, 'Contractors: ' + (DB.contacts||[]).length, 'Memo entries: ' + totalEntriesCount(), 'All current data was replaced by the file'], n:1});
       saveDB(true);
       toast('Backup restored and saved to Drive.');
       currentAccountId = null;
@@ -5403,6 +5873,7 @@ function downloadBlob(filename, blob){
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 function exportTableAsExcel(filename, headers, rows, rawCols){
+  try{ auditEvent('report', 'Excel file downloaded', filename, ['File: ' + filename, 'Rows: ' + (rows||[]).length]); }catch(e){}
   const blob = buildExcelBlob(headers, rows, rawCols);
   downloadBlob(filename, blob);
 }
@@ -6198,6 +6669,7 @@ function exportSavStatementCSV(){
   data.lines.forEach(l=>{
     lines.push([l.date,l.type,l.method,l.inn||'',l.out||'',l.bal,'"'+(l.note||'').replace(/"/g,'""')+'"'].join(','));
   });
+  try{ auditEvent('report', 'Welfare statement downloaded (CSV)', 'Contractor ' + __savStmtContactId, ['Contractor: ' + __savStmtContactId]); }catch(e){}
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -6240,6 +6712,7 @@ function buildPrintDocument(html, title){
     '</body></html>';
 }
 function enterPrintMode(html, docTitle){
+  try{ const __a = document.querySelector('nav.tabs button.active'); auditEvent('report', 'Printed / saved as PDF', docTitle || 'Report', ['Page: ' + (__a ? __a.title : '—'), 'Computer: ' + auditDeviceLabel()]); }catch(e){}
   // Phones/tablets: print from a separate clean page. Printing the live app on mobile shows the whole software.
   if(isMobileDevice()){
     try{
@@ -6466,15 +6939,474 @@ document.addEventListener('keydown', e=>{
 });
 
 /* =========================================================
+   AUDIT / ACTIVITY LOG - who did what, when, with full details.
+   Every save is compared with the data as it was before, so every change is recorded automatically:
+   memos, contractors, welfare transactions, recycle bin, settings, announcements, backups, prints/exports, sign-ins.
+   The log lives inside the same Drive file, so every computer sees the same history.
+   ========================================================= */
+const AUDIT_CAP = 5000;        // newest events kept
+const AUDIT_GROUP = 6;         // more than this many similar changes in one save -> shown as ONE summary line
+const AUDIT_CATS = {
+  memo:['Memos','pill-yellow'], contractor:['Contractors','pill-gold'], welfare:['Welfare Fund','pill-green'],
+  bin:['Recycle Bin','pill-red'], announce:['Announcements','pill-gold'], settings:['Settings','pill-gray'],
+  backup:['Backup','pill-dark'], report:['Print / Export','pill-gray'], auth:['Sign-in / Security','pill-gray']
+};
+const AU_LABEL = {date:'Date', memo:'Memo no.', amount:'Amount', inCharge:'In charge', remark:'Remark', name:'Name', mobiles:'Mobile', address:'Address',
+  nid:'Section', died:'Dead', marked:'Marked', type:'Type', method:'Method', note:'Note', txnId:'Txn ID', cashOut:'Cash out',
+  contactId:'Contractor', toContactId:'Help to', from:'Session start', to:'Session end', meetingDate:'Meeting date'};
+const AU_BOOL = new Set(['died','marked','cashOut']);
+const AU_DATE = new Set(['date','from','to','meetingDate']);
+const AU_SKIP_CONTACT = new Set(['id','totalAmount','ranking','welfareAmount','waIdx','mobile']);
+let __auditPrev = null, __auditTimer = null;
+
+function auditDeviceId(){
+  let id = '';
+  try{ id = localStorage.getItem('nw_device_id') || ''; if(!id){ id = Math.random().toString(36).slice(2,6).toUpperCase(); localStorage.setItem('nw_device_id', id); } }catch(e){ id = '----'; }
+  return id;
+}
+function auditAutoDevice(){
+  const ua = navigator.userAgent || '';
+  const br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'PC';
+  return br + ' on ' + os;
+}
+function auditDeviceName(){
+  let n = ''; try{ n = (localStorage.getItem('nw_device_name') || '').trim(); }catch(e){}
+  return n || ('PC-' + auditDeviceId());
+}
+function auditDeviceLabel(){ return auditDeviceName() + ' · ' + auditAutoDevice(); }
+
+function auVal(k, v){
+  if(AU_BOOL.has(k)) return v ? 'Yes' : 'No';
+  if(v === undefined || v === null || v === '') return '(blank)';
+  if(k === 'amount') return '৳ ' + fmtMoney(v);
+  if(AU_DATE.has(k)) return fmtDate(v);
+  if(Array.isArray(v)) return v.length ? v.join(', ') : '(blank)';
+  return String(v);
+}
+function auChanges(a, b, skip){
+  const out = []; a = a || {}; b = b || {};
+  new Set([...Object.keys(a), ...Object.keys(b)]).forEach(k=>{
+    if(skip && skip.has(k)) return;
+    const norm = v => (v === undefined || v === null || v === false) ? '' : v;
+    const x = norm(a[k]), y = norm(b[k]);
+    if(JSON.stringify(x) === JSON.stringify(y)) return;
+    const label = AU_LABEL[k] || k;
+    if((typeof x === 'string' && x.length > 120) || (typeof y === 'string' && y.length > 120)){ out.push(label + ': changed'); return; }
+    out.push(label + ': ' + auVal(k, x) + ' → ' + auVal(k, y));
+  });
+  return out;
+}
+function auTypeLabel(t){ try{ return savTypeLabel(t); }catch(e){ return String(t || 'Welfare'); } }
+function auEntryText(e){ return 'Memo ' + (e.memo || '—') + ' · ' + fmtDate(e.date) + ' · ৳ ' + fmtMoney(e.amount); }
+function auEntryDet(e){
+  const d = ['Memo no.: ' + (e.memo || '—'), 'Date: ' + fmtDate(e.date), 'Amount: ৳ ' + fmtMoney(e.amount)];
+  if(e.inCharge) d.push('In charge: ' + e.inCharge);
+  if(e.remark) d.push('Remark: ' + e.remark);
+  return d;
+}
+function auWelfareText(t){ return auTypeLabel(t.type) + ' ৳ ' + fmtMoney(t.amount) + ' · ' + fmtDate(t.date); }
+
+/** A light copy of everything worth watching (computed numbers such as totals/ranking are left out) */
+function auditIndex(db){
+  const ix = {contacts:{}, entries:{}, welfare:{}, bin:{}, inCharge:[], session:{}, tpl:{}, sent:{}};
+  (db.contacts || []).forEach(c=>{
+    if(!c) return; const o = {};
+    Object.keys(c).forEach(k=>{
+      if(AU_SKIP_CONTACT.has(k)) return; const v = c[k];
+      if(v !== null && typeof v === 'object' && !Array.isArray(v)) return;
+      o[k] = Array.isArray(v) ? v.slice() : v;
+    });
+    ix.contacts[String(c.id)] = o;
+  });
+  Object.keys(db.accounts || {}).forEach(cid=>{
+    const acc = db.accounts[cid];
+    ((acc && acc.entries) || []).forEach(e=>{
+      if(!e || !e.uid) return;
+      ix.entries[e.uid] = {cid:String(cid), date:e.date||'', memo:(e.memo===undefined||e.memo===null)?'':String(e.memo), amount:Number(e.amount)||0, inCharge:e.inCharge||'', remark:e.remark||''};
+    });
+  });
+  ((db.savings && db.savings.transactions) || []).forEach(t=>{
+    if(!t || !t.uid) return;
+    ix.welfare[t.uid] = {type:t.type||'', contactId:String(t.contactId||''), toContactId:String(t.toContactId||''), date:t.date||'', amount:Number(t.amount)||0, method:t.method||'', note:t.note||'', txnId:t.txnId||'', cashOut:!!t.cashOut};
+  });
+  (db.recycleBin || []).forEach(b=>{ if(b && b.id) ix.bin[b.id] = {type:b.type, label:b.label||'', contactId:b.contactId?String(b.contactId):'', p:b.payload}; });
+  ix.inCharge = (db.inCharge || []).slice();
+  const s = db.session || {}; ix.session = {from:s.from||'', to:s.to||'', meetingDate:s.meetingDate||''};
+  const an = db.announcements || {};
+  (an.templates || []).forEach(t=>{ if(t && t.id) ix.tpl[t.id] = {title:t.title||'', body:t.body||''}; });
+  Object.keys(an.sent || {}).forEach(id=>{ ix.sent[id] = (an.sent[id] && an.sent[id].times) || 1; });
+  return ix;
+}
+function auBinUids(b){
+  const s = {entries:new Set(), welfare:new Set(), contacts:new Set()}; const p = b && b.p; if(!p) return s;
+  try{
+    if(b.type === 'memo' && p.entry) s.entries.add(p.entry.uid);
+    if(b.type === 'memos' && p.entries) p.entries.forEach(e=>s.entries.add(e.uid));
+    if(b.type === 'session' && p.accounts) Object.keys(p.accounts).forEach(cid=> (p.accounts[cid] || []).forEach(e=>s.entries.add(e.uid)));
+    if(b.type === 'contractor' && p.contact){ s.contacts.add(String(p.contact.id)); ((p.account && p.account.entries) || []).forEach(e=>s.entries.add(e.uid)); }
+    if(b.type === 'contractors' && p.contacts){ p.contacts.forEach(c=>s.contacts.add(String(c.id))); Object.keys(p.accounts || {}).forEach(cid=> ((p.accounts[cid] && p.accounts[cid].entries) || []).forEach(e=>s.entries.add(e.uid))); }
+    if(b.type === 'welfare' && p.txn) s.welfare.add(p.txn.uid);
+  }catch(e){}
+  return s;
+}
+function auBinSets(ix){
+  const all = {entries:new Set(), welfare:new Set(), contacts:new Set()};
+  Object.keys(ix.bin).forEach(id=>{ const s = auBinUids(ix.bin[id]); s.entries.forEach(x=>all.entries.add(x)); s.welfare.forEach(x=>all.welfare.add(x)); s.contacts.forEach(x=>all.contacts.add(x)); });
+  return all;
+}
+
+/** Compare the data before (P) and after (N) a save and describe every difference in plain words */
+function auditDiff(P, N){
+  const items = [];
+  const PB = auBinSets(P), NB = auBinSets(N);
+  const nm = id => { const c = N.contacts[id] || P.contacts[id]; return c && c.name ? c.name : ''; };
+  const who = id => { id = String(id || ''); return id === '' ? '' : (id + (nm(id) ? ' · ' + nm(id) : '')); };
+  const add = (cat, act, cid, sum, det, extra) => items.push(Object.assign({cat, act, cid: (cid === undefined || cid === null) ? '' : String(cid), who: who(cid), sum, det: det || [], n: 1}, extra || {}));
+
+  // ----- per-contractor memo totals (to describe created / deleted contractors) -----
+  const stat = ix => { const s = {}; Object.keys(ix.entries).forEach(u=>{ const e = ix.entries[u]; const o = s[e.cid] || (s[e.cid] = {cnt:0, amt:0}); o.cnt++; o.amt += e.amount; }); return s; };
+  const pStat = stat(P), nStat = stat(N);
+
+  // ----- contractors -----
+  const removedC = Object.keys(P.contacts).filter(id=> !(id in N.contacts));
+  const addedC = Object.keys(N.contacts).filter(id=> !(id in P.contacts));
+  const rcSet = new Set(removedC), acSet = new Set(addedC);
+  const rename = {};                                   // old contractor ID -> new contractor ID
+  Object.keys(N.entries).forEach(uid=>{ const p = P.entries[uid], n = N.entries[uid]; if(p && p.cid !== n.cid && rcSet.has(p.cid) && acSet.has(n.cid)) rename[p.cid] = n.cid; });
+  removedC.forEach(o=>{
+    if(rename[o]) return; const used = new Set(Object.values(rename)); const nmO = P.contacts[o].name || '';
+    const m = nmO ? addedC.find(a=> !used.has(a) && (N.contacts[a].name || '') === nmO) : null; if(m) rename[o] = m;
+  });
+  const inv = {}; Object.keys(rename).forEach(o=>{ inv[rename[o]] = o; });
+  Object.keys(rename).forEach(o=>{
+    const n = rename[o];
+    add('contractor', 'Contractor ID changed', n, (P.contacts[o].name || '') + ' · ID ' + o + ' → ' + n,
+      ['Contractor ID: ' + o + ' → ' + n].concat(auChanges(P.contacts[o], N.contacts[n])));
+  });
+  removedC.filter(o=>!rename[o]).forEach(o=>{
+    const c = P.contacts[o], st = pStat[o] || {cnt:0, amt:0}, inBin = NB.contacts.has(String(o));
+    add('contractor', 'Contractor deleted', o, (c.name || '') + ' · ID ' + o + (inBin ? ' — moved to Recycle Bin' : ''),
+      ['Name: ' + (c.name || '—'), 'Section: ' + (c.nid || '—'), 'Memo entries in account: ' + st.cnt, 'Total amount: ৳ ' + fmtMoney(st.amt)].concat(inBin ? ['Moved to Recycle Bin'] : []), {amt: st.amt});
+  });
+  addedC.filter(a=>!inv[a]).forEach(a=>{
+    const c = N.contacts[a], st = nStat[a] || {cnt:0, amt:0}, restored = PB.contacts.has(String(a));
+    const det = ['Name: ' + (c.name || '—'), 'Section: ' + (c.nid || '—'), 'Mobile: ' + auVal('mobiles', c.mobiles), 'Address: ' + (c.address || '—')];
+    if(st.cnt) det.push('Memo entries: ' + st.cnt + ' · total ৳ ' + fmtMoney(st.amt));
+    add('contractor', restored ? 'Contractor restored' : 'Contractor created', a, (c.name || '') + ' · ID ' + a + (restored ? ' — restored from Recycle Bin' : ''), det);
+  });
+  Object.keys(N.contacts).forEach(id=>{
+    if(!(id in P.contacts)) return;
+    const ch = auChanges(P.contacts[id], N.contacts[id]); if(!ch.length) return;
+    let act = 'Contractor edited';
+    if(ch.length === 1 && /^Dead:/.test(ch[0])) act = N.contacts[id].died ? 'Marked as dead' : 'Unmarked as dead';
+    else if(ch.length === 1 && /^Marked:/.test(ch[0])) act = N.contacts[id].marked ? 'Contractor marked' : 'Contractor unmarked';
+    add('contractor', act, id, (N.contacts[id].name || '') + ' · ID ' + id, ch);
+  });
+
+  // ----- memo entries -----
+  Object.keys(N.entries).forEach(uid=>{
+    const n = N.entries[uid], p = P.entries[uid];
+    if(!p){
+      if(acSet.has(n.cid)) return;                      // came with a created / restored contractor: described there
+      add('memo', PB.entries.has(uid) ? 'Memo restored' : 'Memo added', n.cid, auEntryText(n), auEntryDet(n).concat(PB.entries.has(uid) ? ['Restored from Recycle Bin'] : []), {amt: n.amount});
+      return;
+    }
+    if(p.cid !== n.cid){
+      if(rcSet.has(p.cid) && acSet.has(n.cid)) return;  // contractor ID was renamed: described there
+      add('memo', 'Memo edited', n.cid, auEntryText(n), ['Contractor: ' + who(p.cid) + ' → ' + who(n.cid)].concat(auChanges(p, n, new Set(['cid']))), {amt: n.amount});
+      return;
+    }
+    const ch = auChanges(p, n, new Set(['cid']));
+    if(ch.length) add('memo', 'Memo edited', n.cid, auEntryText(n), ch, {amt: n.amount});
+  });
+  Object.keys(P.entries).forEach(uid=>{
+    if(uid in N.entries) return;
+    const p = P.entries[uid]; if(rcSet.has(p.cid)) return;     // went away with a deleted contractor: described there
+    const inBin = NB.entries.has(uid);
+    add('memo', 'Memo deleted', p.cid, auEntryText(p), auEntryDet(p).concat(inBin ? ['Moved to Recycle Bin'] : ['Removed (not in Recycle Bin)']), {amt: p.amount});
+  });
+
+  // ----- welfare fund -----
+  const wDet = t => {
+    const d = ['Type: ' + auTypeLabel(t.type), 'Contractor: ' + who(t.contactId)];
+    if(t.type === 'help' && t.toContactId) d.push('Help to: ' + who(t.toContactId));
+    d.push('Date: ' + fmtDate(t.date), 'Amount: ৳ ' + fmtMoney(t.amount), 'Method: ' + (t.method || '—'));
+    if(t.txnId) d.push('Txn ID: ' + t.txnId); if(t.note) d.push('Note: ' + t.note); if(t.cashOut) d.push('Cash out: Yes');
+    return d;
+  };
+  Object.keys(N.welfare).forEach(uid=>{
+    const n = N.welfare[uid], p = P.welfare[uid];
+    if(!p){ const rs = PB.welfare.has(uid); add('welfare', rs ? 'Welfare transaction restored' : 'Welfare transaction added', n.contactId, auWelfareText(n), wDet(n), {amt: n.amount}); return; }
+    const ch = auChanges(p, n, new Set(['contactId','toContactId']));
+    if(p.contactId !== n.contactId && rename[p.contactId] !== n.contactId) ch.unshift('Contractor: ' + who(p.contactId) + ' → ' + who(n.contactId));
+    if(p.toContactId !== n.toContactId && rename[p.toContactId] !== n.toContactId) ch.unshift('Help to: ' + who(p.toContactId) + ' → ' + who(n.toContactId));
+    if(ch.length) add('welfare', 'Welfare transaction edited', n.contactId, auWelfareText(n), ch, {amt: n.amount});
+  });
+  Object.keys(P.welfare).forEach(uid=>{
+    if(uid in N.welfare) return; const p = P.welfare[uid]; const inBin = NB.welfare.has(uid);
+    add('welfare', 'Welfare transaction deleted', p.contactId, auWelfareText(p), wDet(p).concat(inBin ? ['Moved to Recycle Bin'] : []), {amt: p.amount});
+  });
+
+  // ----- recycle bin: permanently deleted items (restored items are described as "restored") -----
+  Object.keys(P.bin).forEach(id=>{
+    if(id in N.bin) return; const b = P.bin[id]; const s = auBinUids(b); let restored = false;
+    s.entries.forEach(u=>{ if(u in N.entries) restored = true; }); s.contacts.forEach(c=>{ if(c in N.contacts) restored = true; }); s.welfare.forEach(u=>{ if(u in N.welfare) restored = true; });
+    if(restored) return;
+    add('bin', 'Deleted permanently from Recycle Bin', b.contactId || '', b.label || String(b.type || 'item'), ['Item: ' + (b.label || b.type || '—'), 'This cannot be undone']);
+  });
+
+  // ----- settings -----
+  const pIn = new Set(P.inCharge), nIn = new Set(N.inCharge);
+  N.inCharge.filter(x=>!pIn.has(x)).forEach(x=> add('settings', 'In-charge person added', '', x, ['Name: ' + x]));
+  P.inCharge.filter(x=>!nIn.has(x)).forEach(x=> add('settings', 'In-charge person removed', '', x, ['Name: ' + x]));
+  const sc = auChanges(P.session, N.session);
+  if(sc.length) add('settings', 'Session / meeting date changed', '', sc.length + ' setting' + (sc.length > 1 ? 's' : '') + ' changed', sc);
+
+  // ----- announcements -----
+  Object.keys(N.tpl).forEach(id=>{
+    const n = N.tpl[id], p = P.tpl[id];
+    if(!p){ add('announce', 'Announcement template added', '', n.title, ['Title: ' + n.title]); return; }
+    const d = []; if(p.title !== n.title) d.push('Title: ' + p.title + ' → ' + n.title); if(p.body !== n.body) d.push('Message text changed');
+    if(d.length) add('announce', 'Announcement template edited', '', n.title, d);
+  });
+  Object.keys(P.tpl).forEach(id=>{ if(!(id in N.tpl)) add('announce', 'Announcement template removed', '', P.tpl[id].title, []); });
+  const up = Object.keys(N.sent).filter(id=> (N.sent[id] || 0) > (P.sent[inv[id] || id] || 0));
+  if(up.length) add('announce', 'Announcement marked as sent', '', up.length + ' contractor' + (up.length > 1 ? 's' : '') + ' marked as sent', up.slice(0, 40).map(who), {n: up.length});
+  const gone = Object.keys(P.sent).filter(id=> !(id in N.sent) && !rename[id]);
+  if(gone.length) add('announce', 'Announcement sent-log cleared', '', gone.length + ' mark' + (gone.length > 1 ? 's' : '') + ' cleared', [], {n: gone.length});
+
+  // ----- many similar changes in one save (import, session close, bulk delete...) -> ONE summary line -----
+  const groups = new Map();
+  items.forEach(it=>{ const k = it.cat + '|' + it.act; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(it); });
+  const out = [];
+  groups.forEach(list=>{
+    if(list.length <= AUDIT_GROUP){ list.forEach(it=>out.push(it)); return; }
+    const f = list[0], nTot = list.reduce((s,it)=> s + (it.n || 1), 0), total = list.reduce((s,it)=> s + (it.amt || 0), 0);
+    const cids = new Set(list.map(it=>it.cid).filter(Boolean));
+    let sum, det = [];
+    if((f.cat === 'memo' || f.cat === 'welfare') && !/edited/.test(f.act)){
+      const noun = f.cat === 'memo' ? 'memo' : 'transaction';
+      sum = nTot + ' ' + noun + (nTot > 1 ? 's' : '') + (cids.size > 1 ? ' across ' + cids.size + ' contractors' : '') + ' · total ৳ ' + fmtMoney(total);
+      const by = {}; list.forEach(it=>{ const o = by[it.cid] || (by[it.cid] = {n:0, amt:0}); o.n++; o.amt += it.amt || 0; });
+      det = Object.keys(by).sort((a,b)=> by[b].amt - by[a].amt).slice(0, 40).map(k=> (k ? who(k) : '—') + ': ' + by[k].n + ' ' + noun + (by[k].n > 1 ? 's' : '') + ' · ৳ ' + fmtMoney(by[k].amt));
+      if(Object.keys(by).length > 40) det.push('… and ' + (Object.keys(by).length - 40) + ' more contractors');
+    } else {
+      sum = nTot + ' items';
+      det = list.slice(0, 40).map(it=> (it.who ? it.who + ' — ' : '') + it.sum + (it.det.length ? ' (' + it.det.join('; ') + ')' : ''));
+      if(list.length > 40) det.push('… and ' + (list.length - 40) + ' more');
+    }
+    out.push({cat:f.cat, act:f.act + ' (bulk)', cid:'', who: cids.size === 1 ? who([...cids][0]) : (cids.size > 1 ? cids.size + ' contractors' : ''), sum, det, n:nTot});
+  });
+  return out;
+}
+
+function auditPushRow(it){
+  if(!DB) return;
+  if(!Array.isArray(DB.auditLog)) DB.auditLog = [];
+  DB.auditLog.push({
+    id: generateUid(), at: new Date().toISOString(), by: (typeof currentUserEmail !== 'undefined' && currentUserEmail) ? currentUserEmail : '',
+    dev: auditDeviceLabel(), cat: it.cat, act: it.act, who: it.who || '', sum: it.sum || '', det: (it.det || []).slice(0, 60), n: it.n || 1
+  });
+  if(DB.auditLog.length > AUDIT_CAP + 200){
+    DB.auditLog.sort((a,b)=> a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
+    DB.auditLog.splice(0, DB.auditLog.length - AUDIT_CAP);
+  }
+}
+/** Remember how the data looks right now (call after the data is loaded from Drive / the PC / a backup) */
+function auditRebase(){
+  try{ __auditPrev = (DB && !(typeof demoMode !== 'undefined' && demoMode)) ? auditIndex(DB) : null; }catch(e){ __auditPrev = null; }
+}
+/** Compare with the remembered copy and write the differences into the log. Returns how many log lines were added. */
+function auditCapture(){
+  if(!DB || (typeof demoMode !== 'undefined' && demoMode)) return 0;
+  let added = 0, N = null;
+  try{
+    N = auditIndex(DB);
+    if(__auditPrev){ auditDiff(__auditPrev, N).forEach(it=>{ auditPushRow(it); added++; }); }
+  }catch(e){ console.warn('audit capture failed', e); }
+  if(N) __auditPrev = N;
+  return added;
+}
+function auditFlush(){ clearTimeout(__auditTimer); return auditCapture(); }
+/** Typing in a table cell saves on every key: wait a moment so one edit = one log line */
+function auditSchedule(){
+  clearTimeout(__auditTimer);
+  __auditTimer = setTimeout(()=>{
+    const n = auditCapture();
+    if(n){ localDirty = true; dirtyVersion++; try{ cacheLocal(); }catch(e){} clearTimeout(saveTimer); saveTimer = setTimeout(()=> persistDBNow(), 300); }
+  }, 600);
+}
+/** Write one event that is not a data change (sign-in, backup, print, export...) */
+function auditEvent(cat, act, sum, det, opts){
+  if(!DB || (typeof demoMode !== 'undefined' && demoMode)) return;
+  opts = opts || {};
+  try{ auditFlush(); }catch(e){}
+  auditPushRow({cat, act, who: opts.who || '', sum: sum || '', det: det || [], n: opts.n || 1});
+  if(!opts.noSave){
+    localDirty = true; dirtyVersion++;
+    try{ cacheLocal(); }catch(e){}
+    clearTimeout(saveTimer); saveTimer = setTimeout(()=> persistDBNow(), 800);
+  }
+}
+function auditUnion(a, b){
+  const m = new Map(); (a || []).concat(b || []).forEach(r=>{ if(r && r.id && !m.has(r.id)) m.set(r.id, r); });
+  return [...m.values()].sort((x,y)=> x.at < y.at ? -1 : x.at > y.at ? 1 : 0);
+}
+
+/* ---------- Audit Log screen ---------- */
+let auState = {range:'all', from:'', to:'', cat:'all', act:'all', by:'all', q:''}, auLimit = 100;
+function auRows(){ return (DB && Array.isArray(DB.auditLog)) ? DB.auditLog.slice().sort((a,b)=> a.at < b.at ? 1 : a.at > b.at ? -1 : 0) : []; }
+function auWhen(at){
+  const d = new Date(at); if(isNaN(d)) return String(at || '');
+  return d.toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+}
+function auByKey(r){ return (r.by || '—') + ' | ' + (r.dev || '—'); }
+function auRangeBounds(){
+  const now = new Date(), sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), day = 86400000;
+  switch(auState.range){
+    case 'today': return [sod, sod + day];
+    case 'yesterday': return [sod - day, sod];
+    case '7d': return [sod - 6*day, sod + day];
+    case '30d': return [sod - 29*day, sod + day];
+    case 'month': return [new Date(now.getFullYear(), now.getMonth(), 1).getTime(), sod + day];
+    case 'custom': return [auState.from ? new Date(auState.from + 'T00:00:00').getTime() : -Infinity, auState.to ? new Date(auState.to + 'T00:00:00').getTime() + day : Infinity];
+    default: return [-Infinity, Infinity];
+  }
+}
+function auFiltered(){
+  const [f, t] = auRangeBounds(), q = auState.q.toLowerCase().trim();
+  return auRows().filter(r=>{
+    const ms = Date.parse(r.at); if(ms < f || ms >= t) return false;
+    if(auState.cat !== 'all' && r.cat !== auState.cat) return false;
+    if(auState.act !== 'all' && r.act !== auState.act) return false;
+    if(auState.by !== 'all' && auByKey(r) !== auState.by) return false;
+    if(q){ const hay = [r.act, r.who, r.sum, r.by, r.dev, (r.det || []).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
+}
+function auFillSelects(all){
+  const acts = [...new Set(all.map(r=>r.act))].sort(), bys = [...new Set(all.map(auByKey))].sort();
+  const fill = (id, first, vals, cur, lab)=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.innerHTML = `<option value="all">${first}</option>` + vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(lab ? lab(v) : v)}</option>`).join('');
+    el.value = vals.includes(cur) ? cur : 'all';
+  };
+  fill('auAct', 'All actions', acts, auState.act);
+  fill('auBy', 'All users / computers', bys, auState.by, v=> v.replace(' | ', ' — '));
+  if(auState.act !== 'all' && !acts.includes(auState.act)) auState.act = 'all';
+  if(auState.by !== 'all' && !bys.includes(auState.by)) auState.by = 'all';
+}
+function auReadControls(){
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  auState = {range:g('auRange') || 'all', from:g('auFrom'), to:g('auTo'), cat:g('auCat') || 'all', act:g('auAct') || 'all', by:g('auBy') || 'all', q:g('auQ')};
+}
+function auOnFilter(){
+  auReadControls(); auLimit = 100;
+  const c = auState.range === 'custom'; ['auFromWrap','auToWrap'].forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = c ? '' : 'none'; });
+  renderAudit(true);
+}
+function auReset(){
+  auState = {range:'all', from:'', to:'', cat:'all', act:'all', by:'all', q:''}; auLimit = 100;
+  ['auRange','auCat','auAct','auBy'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value = id === 'auRange' ? 'all' : 'all'; });
+  ['auFrom','auTo','auQ'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+  ['auFromWrap','auToWrap'].forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+  renderAudit();
+}
+function auSaveDevName(){
+  const v = (document.getElementById('auDevName').value || '').trim();
+  try{ if(v) localStorage.setItem('nw_device_name', v); else localStorage.removeItem('nw_device_name'); }catch(e){}
+  toast('This computer will be shown as: ' + auditDeviceLabel());
+  renderAudit(true);
+}
+function auToggleAll(open){ document.querySelectorAll('#auTbody details').forEach(d=>{ d.open = open; }); }
+function auMore(){ auLimit += 200; renderAudit(true); }
+function renderAudit(keepControls){
+  const body = document.getElementById('auTbody'); if(!body) return;
+  const all = auRows();
+  if(!keepControls){
+    const cat = document.getElementById('auCat');
+    if(cat && !cat.options.length) cat.innerHTML = '<option value="all">All categories</option>' + Object.keys(AUDIT_CATS).map(k=>`<option value="${k}">${AUDIT_CATS[k][0]}</option>`).join('');
+    const dn = document.getElementById('auDevName'); if(dn){ let n = ''; try{ n = localStorage.getItem('nw_device_name') || ''; }catch(e){} dn.value = n; dn.placeholder = 'PC-' + auditDeviceId(); }
+  }
+  auFillSelects(all);
+  const list = auFiltered();
+  const today = new Date(); const sod = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const todayN = all.filter(r=> Date.parse(r.at) >= sod).length;
+  const devs = new Set(all.map(r=>r.dev || '—')).size;
+  const m = (DB && DB.meta) || {};
+  let lastB = '<span class="dk-s">no backup recorded yet</span>';
+  if(m.lastExternalBackupAt){
+    lastB = escapeHtml(auWhen(m.lastExternalBackupAt)) + `<div class="dk-s">${m.lastBackupKind === 'drive' ? 'saved to Google Drive' : m.lastBackupKind === 'download' ? 'downloaded to a computer' : 'backup'}${m.lastBackupBy ? ' · ' + escapeHtml(m.lastBackupBy) : ''}</div>`;
+  }
+  const kp = (l,v,sub,col)=>`<div class="dcard" style="border-top:3px solid ${col};"><div class="dk-l">${l}</div><div class="dk-v" style="${String(v).length > 12 ? 'font-size:1.05rem;' : ''}">${v}</div><div class="dk-s" style="margin-top:2px;">${sub}</div></div>`;
+  document.getElementById('auKpis').innerHTML =
+    kp('Events shown', list.length.toLocaleString(), 'of ' + all.length.toLocaleString() + ' recorded', '#17794f') +
+    kp('Events today', todayN.toLocaleString(), 'on every computer', '#2f6fb3') +
+    kp('Last backup', lastB, '', '#b3541c') +
+    kp('Computers / users', devs.toLocaleString(), 'seen in the log', '#7a5ab3');
+  const rows = list.slice(0, auLimit).map(r=>{
+    const cat = AUDIT_CATS[r.cat] || [r.cat, 'pill-gray']; const det = r.det || [];
+    return `<tr><td class="mono" style="white-space:nowrap;">${escapeHtml(auWhen(r.at))}</td>
+      <td><b>${escapeHtml(r.dev || '—')}</b><div class="dk-s">${escapeHtml(r.by || '—')}</div></td>
+      <td><span class="pill ${cat[1]}">${escapeHtml(cat[0])}</span></td>
+      <td><b>${escapeHtml(r.act)}</b></td>
+      <td>${escapeHtml(r.who || '—')}</td>
+      <td>${escapeHtml(r.sum || '')}${det.length ? `<details class="au-det"><summary>${det.length} detail${det.length > 1 ? 's' : ''}</summary><ul>${det.map(d=>`<li>${escapeHtml(d)}</li>`).join('')}</ul></details>` : ''}</td></tr>`;
+  }).join('');
+  body.innerHTML = rows || `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px;">${all.length ? 'No events match these filters.' : 'Nothing recorded yet. Every change you make from now on will appear here.'}</td></tr>`;
+  document.getElementById('auMore').innerHTML = list.length > auLimit
+    ? `<div style="text-align:center;margin:12px;"><button class="btn btn-ghost" onclick="auMore()">Show more (${Math.min(200, list.length - auLimit)} of ${list.length - auLimit} remaining)</button></div>` : '';
+  const me = document.getElementById('auMe'); if(me) me.textContent = 'This computer is recorded as: ' + auditDeviceLabel();
+}
+function auExportRows(list){
+  return list.map(r=>{
+    const d = new Date(r.at); const cat = (AUDIT_CATS[r.cat] || [r.cat])[0];
+    return [isNaN(d) ? '' : fmtDate(localISODate(d)), isNaN(d) ? '' : d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true}), r.by || '', r.dev || '', cat, r.act, r.who || '', r.sum || '', (r.det || []).join(' | ')];
+  });
+}
+function auFilterText(){
+  const p = []; const rg = {all:'All time', today:'Today', yesterday:'Yesterday', '7d':'Last 7 days', '30d':'Last 30 days', month:'This month', custom:'Custom'}[auState.range];
+  p.push('Period: ' + rg + (auState.range === 'custom' ? ' (' + (auState.from ? fmtDate(auState.from) : '…') + ' → ' + (auState.to ? fmtDate(auState.to) : '…') + ')' : ''));
+  if(auState.cat !== 'all') p.push('Category: ' + (AUDIT_CATS[auState.cat] || [auState.cat])[0]);
+  if(auState.act !== 'all') p.push('Action: ' + auState.act);
+  if(auState.by !== 'all') p.push('User/computer: ' + auState.by.replace(' | ', ' — '));
+  if(auState.q.trim()) p.push('Search: "' + auState.q.trim() + '"');
+  return p.join(' · ');
+}
+function exportAuditExcel(){
+  auReadControls(); const list = auFiltered();
+  exportTableAsExcel('contractor-ledger-audit-log-' + localISODate() + '.xls', ['Date','Time','User (Google account)','Computer','Category','Action','Contractor','Summary','Details'], auExportRows(list), []);
+  toast('Excel file downloaded (' + list.length + ' events).');
+}
+function printAudit(){
+  auReadControls(); const list = auFiltered();
+  if(list.length > 2000 && !confirm(list.length + ' events will be printed. Continue? (Tip: narrow the period first.)')) return;
+  const rows = list.map(r=>{
+    const cat = (AUDIT_CATS[r.cat] || [r.cat])[0]; const det = r.det || [];
+    return `<tr><td>${escapeHtml(auWhen(r.at))}</td><td><b>${escapeHtml(r.dev || '—')}</b><br>${escapeHtml(r.by || '')}</td><td>${escapeHtml(cat)}</td><td><b>${escapeHtml(r.act)}</b></td><td>${escapeHtml(r.who || '—')}</td><td>${escapeHtml(r.sum || '')}${det.length ? '<br><small>' + det.map(escapeHtml).join('<br>') + '</small>' : ''}</td></tr>`;
+  }).join('');
+  enterPrintMode(`<div class="pr-head"><h2>Audit Log — activity history</h2></div><div class="pr-meta">${escapeHtml(auFilterText())} · ${list.length} event${list.length === 1 ? '' : 's'} · Printed: ${new Date().toLocaleString()}</div>
+    <table><thead><tr><th>When</th><th>Computer / user</th><th>Category</th><th>Action</th><th>Contractor</th><th>What changed</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No events.</td></tr>'}</tbody></table>`, 'Audit Log');
+}
+
+/* =========================================================
    INIT
    ========================================================= */
 function initApp(){
+  auditRebase();
   applySidebarState();
   showTab('dashboard');
   renderSettings();
   applyDarkModeFromStorage();
   updatePinStatus();
   checkBackupReminder();
+  try{
+    if(!demoMode && !sessionStorage.getItem('nw_audit_login')){
+      sessionStorage.setItem('nw_audit_login', '1');
+      auditEvent('auth', 'Signed in', currentUserEmail || '', ['Google account: ' + (currentUserEmail || '—'), 'Computer: ' + auditDeviceLabel()]);
+    }
+  }catch(e){}
   document.getElementById('appVersionFooter').textContent = '· v' + APP_VERSION;
   const savIn = document.getElementById('savFormContact');
   if(savIn){
