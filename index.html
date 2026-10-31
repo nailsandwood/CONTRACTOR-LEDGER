@@ -372,6 +372,7 @@ tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,.12),transparen
   .shell{grid-template-columns:1fr;padding:10px 12px 86px;gap:0;}
   .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;border-radius:22px 22px 0 0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:120;flex-direction:row;box-shadow:0 -10px 30px -12px rgba(0,0,0,.45);}
   .side-brand,.side-user{display:none;}
+  .nav-group,.nav-sub,.nav-sub>div{display:contents !important;} .nav-parent{display:none !important;} nav.tabs .nav-sub button{padding:8px 12px !important;font-size:.66rem !important;}
   nav.tabs{flex-direction:row;overflow-x:auto;gap:2px;width:100%;-webkit-overflow-scrolling:touch;}
   nav.tabs button{flex:0 0 auto;flex-direction:column;gap:3px;padding:8px 12px;font-size:.66rem;min-width:66px;align-items:center;text-align:center;}
   .m-brand{display:flex;} .top-search{min-width:0;flex:1 1 100%;max-width:none;order:5;} .topbar-right .who{display:none;}
@@ -411,8 +412,17 @@ body.dark-mode header.topbar{background:var(--paper);}
 .acc-chips #accStatusChip div{display:none;}
 .acc-total{text-align:right;} .acc-total .lbl{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;opacity:.85;} .acc-total .amt{font:700 2.4rem 'Fraunces',serif;letter-spacing:-.01em;}
 .acc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
-.acc-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;} .acc-side{display:flex;flex-direction:column;gap:16px;}
-@media(max-width:1180px){.acc-grid{grid-template-columns:1fr;} .acc-stats{grid-template-columns:1fr 1fr;} .stmt-kpis{grid-template-columns:1fr 1fr !important;}}
+.acc-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;} .acc-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:74px;max-height:calc(100vh - 90px);padding:2px 4px 6px 2px;}
+#entriesStickHead{position:fixed;z-index:40;overflow:hidden;display:none;} #entriesStickHead table{table-layout:fixed;border-collapse:collapse;} #entriesStickHead th{box-sizing:border-box;}
+.acc-side.acc-long{height:calc(100vh - 90px);} .acc-side>.dcard{flex:0 0 auto;} .acc-side>.acc-ins{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+.acc-ins .seg{display:flex;margin:0 0 8px;padding:3px;} .acc-ins .seg button{flex:1;padding:6px 0;font-size:.78rem;}
+.ai-filters{display:flex;gap:6px;margin-bottom:10px;} .ai-filters select,.ai-filters input{flex:1;min-width:0;}
+#accInsBody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;}
+.ai-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.ai-kpi{background:rgba(128,128,128,.1);border-radius:10px;padding:8px 10px;min-width:0;} .ai-kpi .l{font-size:.68rem;color:var(--ink-soft);} .ai-kpi .v{font-weight:700;font-size:.96rem;white-space:nowrap;margin-top:1px;} .ai-kpi .s{font-size:.7rem;color:var(--ink-soft);}
+.ai-h{font-size:.84rem;font-weight:700;margin:6px 0;}
+.ai-tbl{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:12px;} .ai-tbl th{font-size:.64rem;letter-spacing:.04em;color:var(--ink-soft);text-align:right;padding:4px 0;background:none;} .ai-tbl td{padding:6px 0;border-top:1px solid rgba(128,128,128,.18);text-align:right;} .ai-tbl th:first-child,.ai-tbl td:first-child{text-align:left;} .ai-tbl tr.ai-go{cursor:pointer;} .ai-tbl tr.ai-go:hover td{background:rgba(128,128,128,.08);}
+@media(max-width:1180px){.acc-grid{grid-template-columns:1fr;} .acc-side,.acc-side.acc-long{position:static;max-height:none;height:auto;padding:0;} #accInsBody{overflow:visible !important;} .acc-stats{grid-template-columns:1fr 1fr;} .stmt-kpis{grid-template-columns:1fr 1fr !important;}}
 .seg{display:inline-flex;background:#dfe8e3;border-radius:12px;padding:4px;margin-bottom:14px;} .seg button{border:0;background:transparent;padding:8px 18px;border-radius:9px;font:600 .84rem 'Inter',sans-serif;color:var(--ink-soft);cursor:pointer;} .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(15,30,25,.14);}
 .stat-hero{background:linear-gradient(135deg,#14201b,#2a4136) !important;color:#fff;border-left:0 !important;} .stat-hero .label{color:#a9bbb2;} .stat-hero .value{color:#fff;font-size:2rem;}
 .mixbar{display:flex;height:16px;border-radius:9px;overflow:hidden;margin:12px 0;} .mixbar i{display:block;}
@@ -455,6 +465,18 @@ body.dark-mode .btn-danger,body.dark-mode .btn.btn-danger{background:#b3311c !im
 body.dark-mode tbody tr.rank-1{background:linear-gradient(90deg,rgba(224,165,38,.16),transparent);}
 
 /* ===== collapsible sidebar (v7.3) ===== */
+.nav-group{display:flex;flex-direction:column;}
+nav.tabs button.nav-parent{width:100%;}
+.nav-parent .chev{margin-left:auto;width:16px;height:16px;flex:0 0 auto;transition:transform .25s ease;}
+.nav-group.open>.nav-parent .chev{transform:rotate(90deg);}
+.nav-group.has-active>.nav-parent{color:#fff;}
+.nav-sub{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease;}
+.nav-group.open>.nav-sub{grid-template-rows:1fr;}
+.nav-sub>div{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:2px;margin:2px 0 2px 22px;padding-left:10px;border-left:1px solid rgba(255,255,255,.14);}
+nav.tabs .nav-sub button{padding:9px 12px;font-size:.84rem;}
+nav.tabs .nav-sub .ic{width:16px;height:16px;}
+body.side-collapsed .nav-parent .chev{display:none;}
+body.side-collapsed .nav-sub>div{margin-left:0;padding-left:0;border-left:0;}
 .side-toggle{border:0;cursor:pointer;} .side-toggle:hover{filter:brightness(1.18);}
 .shell{transition:grid-template-columns .25s ease;}
 body.side-collapsed .shell{grid-template-columns:76px 1fr;}
@@ -578,17 +600,31 @@ body.dark-mode .pd-foot td{background:#232b2e;}
 <symbol id="ni-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
 <symbol id="ni-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
 <symbol id="ni-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="ni-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="ni-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 </defs></svg>
 <div class="shell">
   <aside class="side no-print">
     <div class="side-brand"><button type="button" class="lm side-toggle" id="sideToggle" onclick="toggleSidebar()" title="Hide / show the menu" aria-label="Hide or show the menu" aria-expanded="true"><svg class="ic" aria-hidden="true"><use href="#ni-menu"/></svg></button><span class="side-name">Contractor Ledger</span></div>
     <nav class="tabs">
       <button data-tab="dashboard" onclick="showTab('dashboard')" title="Dashboard"><svg class="ic" aria-hidden="true"><use href="#ni-home"/></svg><span>Dashboard</span></button>
-      <button data-tab="summary" onclick="showTab('summary')" title="Contractor Summary"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Contractor Summary</span></button>
-      <button data-tab="accounts" onclick="showTab('accounts')" title="Contractor Accounts"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Contractor Accounts</span></button>
-      <button data-tab="reports" onclick="showTab('reports')" title="Reports"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Reports</span></button>
+      <div class="nav-group" id="grp-contractor">
+        <button type="button" class="nav-parent" onclick="toggleNavGroup('contractor')" title="Contractor"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Contractor</span><svg class="ic chev" aria-hidden="true"><use href="#ni-chev"/></svg></button>
+        <div class="nav-sub"><div>
+          <button data-tab="accounts" onclick="showTab('accounts')" title="Contractor Accounts"><svg class="ic" aria-hidden="true"><use href="#ni-user"/></svg><span>Accounts</span></button>
+          <button data-tab="summary" onclick="showTab('summary')" title="Contractor Summary"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Summary</span></button>
+          <button data-tab="reports" onclick="showTab('reports')" title="Reports"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Reports</span></button>
+        </div></div>
+      </div>
+      <div class="nav-group" id="grp-welfare">
+        <button type="button" class="nav-parent" onclick="toggleNavGroup('welfare')" title="Welfare Fund"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span><svg class="ic chev" aria-hidden="true"><use href="#ni-chev"/></svg></button>
+        <div class="nav-sub"><div>
+          <button data-tab="savings" data-view="entry" onclick="showTab('savings','entry')" title="Welfare Fund — New Transaction"><svg class="ic" aria-hidden="true"><use href="#ni-plus"/></svg><span>New Transaction</span></button>
+          <button data-tab="savings" data-view="history" onclick="showTab('savings','history')" title="Welfare Fund — Transaction History"><svg class="ic" aria-hidden="true"><use href="#ni-log"/></svg><span>Transaction History</span></button>
+          <button data-tab="savings" data-view="ledger" onclick="showTab('savings','ledger')" title="Welfare Fund — Accounts Ledger"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Accounts Ledger</span></button>
+        </div></div>
+      </div>
       <button data-tab="analysis" onclick="showTab('analysis')" title="Analysis"><svg class="ic" aria-hidden="true"><use href="#ni-trend"/></svg><span>Analysis</span></button>
-      <button data-tab="savings" onclick="showTab('savings')" title="Welfare Fund"><svg class="ic" aria-hidden="true"><use href="#ni-heart"/></svg><span>Welfare Fund</span></button>
       <button data-tab="announce" onclick="showTab('announce')" title="Announcements"><svg class="ic" aria-hidden="true"><use href="#ni-mega"/></svg><span>Announcements</span></button>
       <button data-tab="recycle" onclick="showTab('recycle')" title="Recycle Bin"><svg class="ic" aria-hidden="true"><use href="#ni-trash"/></svg><span>Recycle Bin</span><b class="nav-badge" id="binBadge" style="display:none;"></b></button>
       <button data-tab="audit" onclick="showTab('audit')" title="Audit Log"><svg class="ic" aria-hidden="true"><use href="#ni-log"/></svg><span>Audit Log</span></button>
@@ -788,7 +824,16 @@ body.dark-mode .pd-foot td{background:#232b2e;}
           </div>
           <div class="acc-side no-print">
             <div class="dcard"><h3>WhatsApp numbers</h3><span id="accMobile" style="display:none;"></span><div id="accWaCard"></div></div>
-            <div class="dcard"><h3>Amount by month</h3><div id="accMonthChart"></div></div>
+            <div class="dcard acc-ins">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                <h3 style="margin:0;">Analysis</h3>
+                <span class="no-print" style="margin-left:auto;display:flex;gap:6px;"><button type="button" class="icon-btn" onclick="aiPrint()">Print</button><button type="button" class="icon-btn" onclick="aiExcel()">Excel</button></span>
+              </div>
+              <div class="seg" id="aiModeSeg"><button data-m="weekly" onclick="aiSetMode('weekly')">Weekly</button><button class="on" data-m="monthly" onclick="aiSetMode('monthly')">Monthly</button><button data-m="yearly" onclick="aiSetMode('yearly')">Yearly</button></div>
+              <div class="ai-filters"><select class="select-sm" id="aiCount" onchange="aiRender()" title="Range"></select><input type="date" class="input-sm" id="aiAsOf" onchange="aiRender()" title="As of date (leave empty for today)"></div>
+              <div id="accInsBody"></div>
+            </div>
+            </div>
           </div>
         </div>
       </div>
@@ -902,8 +947,8 @@ body.dark-mode .pd-foot td{background:#232b2e;}
     <section class="panel" id="panel-savings">
       <div class="section-head">
         <div>
-          <h2>Contractor Welfare Fund</h2>
-          <div class="sub">Deposits, withdrawals, and help transfers — full history and individual statements.</div>
+          <h2 id="savHeadTitle">Contractor Welfare Fund</h2>
+          <div class="sub" id="savHeadSub">Deposits, withdrawals, and help transfers — full history and individual statements.</div>
         </div>
         <div class="toolbar no-print">
           <button class="btn btn-ghost" onclick="saveDB(true); toast('Saved to Google Drive.');">💾 Save to Drive</button>
@@ -928,7 +973,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
         <div class="stat-box"><div class="label">Other methods</div><div class="value" id="savMethOther">0</div></div>
       </div>
 
-      <div class="card no-print" style="margin-bottom:14px;padding:12px;">
+      <div class="card no-print" id="savPeriodCard" style="margin-bottom:14px;padding:12px;">
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
           <div>
             <strong style="font-size:.9rem;">Period summary</strong>
@@ -945,9 +990,9 @@ body.dark-mode .pd-foot td{background:#232b2e;}
         <div id="savPeriodSummaryText" style="margin-top:10px;font-size:.85rem;line-height:1.5;color:var(--ink-soft);"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:16px;align-items:start;" class="sav-main-layout">
+      <div style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start;" class="sav-main-layout">
         <!-- Quick entry SIDE -->
-        <div class="card no-print" id="savQuickFormCard" style="position:sticky;top:12px;">
+        <div class="card no-print" id="savQuickFormCard">
           <h3 style="margin-bottom:10px;">Quick entry</h3>
           <div style="display:flex;gap:6px;margin-bottom:12px;">
             <button type="button" class="btn btn-sm" id="savTypeDeposit" style="flex:1;" onclick="setSavFormType('deposit')">Deposit</button>
@@ -979,7 +1024,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
             </select>
           </div>
           <div class="field" id="savCashOutField" style="display:none;">
-            <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-weight:600;"><input type="checkbox" id="savFormCashOut" style="margin-top:4px;"> <span>Cash Out <small style="display:block;font-weight:400;color:var(--ink-soft);">This amount was cashed out from the online account, so the fund totals count it as <b>Cash</b> (not Bkash/Nagad/Rocket/Bank). The contractor's statement stays the same and shows “Cash out” in the remark.</small></span></label>
+            <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-weight:600;"><input type="checkbox" id="savFormCashOut" style="margin-top:4px;width:auto;flex:0 0 auto;"> <span>Cash Out <small style="display:block;font-weight:400;color:var(--ink-soft);">This amount was cashed out from the online account, so the fund totals count it as <b>Cash</b> (not Bkash/Nagad/Rocket/Bank). The contractor's statement stays the same and shows “Cash out” in the remark.</small></span></label>
           </div>
           <div class="field"><label>Note</label><input id="savFormNote" class="sav-enter" placeholder="Optional"></div>
           <div id="savFormBalanceHint" style="font-size:.8rem;color:var(--ink-soft);margin:8px 0;"></div>
@@ -991,6 +1036,17 @@ body.dark-mode .pd-foot td{background:#232b2e;}
 
         <!-- History + Balances STACKED -->
         <div>
+          <div id="savRecentWrap" style="display:none;">
+            <div class="card" style="padding:16px;margin-bottom:14px;">
+              <h3 style="margin:0 0 10px;font-size:1rem;">Today</h3>
+              <div id="savTodaySummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;"><h3 style="margin:0;font-size:1rem;">Recent transactions</h3><button type="button" class="btn btn-ghost btn-sm" onclick="savGo('history')">View all →</button></div>
+              <div id="savRecentList"></div>
+            </div>
+          </div>
+          <div id="savHistWrap" style="display:none;">
           <h3 style="margin:0 0 8px;font-size:1rem;">Transaction history</h3>
           <div class="toolbar no-print" style="margin-bottom:10px;flex-wrap:wrap;">
             <div class="search-bar"><input id="savSearch" placeholder="Search name, ID, address, note, txn…" oninput="renderSavings()"></div>
@@ -1037,6 +1093,8 @@ body.dark-mode .pd-foot td{background:#232b2e;}
             </div>
             <p id="savTxnEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No transactions yet.</p>
           </div>
+          </div><!-- /savHistWrap -->
+          <div id="savLedgerWrap" style="display:none;">
 
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px;">
             <h3 style="margin:0;font-size:1rem;">Contractor balances</h3>
@@ -1080,6 +1138,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
             </div>
             <p id="savBalEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No welfare fund balances yet.</p>
           </div>
+          </div><!-- /savLedgerWrap -->
         </div>
       </div>
       <style>
@@ -2940,9 +2999,114 @@ function updateAnnPreview(){ const b=document.getElementById('annBody'), p=docum
 function accTab(name){
   ['Entries','Welfare','Info'].forEach(t=>{ const on = t.toLowerCase()===name; const pane=document.getElementById('accPane'+t), btn=document.getElementById('accTab'+t); if(pane) pane.style.display = on?'block':'none'; if(btn) btn.classList.toggle('on',on); });
   if(name!=='entries') renderAccountExtras();
+  try{ accStickyHeadUpdate(); }catch(e){}
 }
 function accSetWa(i){ const c=DB.contacts.find(x=>x.id===currentAccountId); if(!c) return; c.waIdx=i; saveDB(); renderAccountExtras(); toast('Saved: this number is used first for WhatsApp.'); }
-function accNewWelfare(){ const id=currentAccountId; showTab('savings'); const el=document.getElementById('savFormContact'); if(el){ el.value=id; el.dispatchEvent(new Event('change')); el.focus(); } }
+function accNewWelfare(){ const id=currentAccountId; showTab('savings','entry'); const el=document.getElementById('savFormContact'); if(el){ el.value=id; el.dispatchEvent(new Event('change')); el.focus(); } }
+/* Floating column header for long entry tables: shows under the top bar once the real header has scrolled away */
+function accStickyHeadUpdate(){
+  const box = document.getElementById('entriesStickHead'); if(!box) return;
+  const view = document.getElementById('accPaneEntries'), wrap = document.querySelector('#accPaneEntries .table-wrap');
+  if(!view || !wrap || view.offsetParent === null){ box.style.display='none'; return; }
+  const th = wrap.querySelector('thead'); if(!th) return;
+  const tb = document.querySelector('header.topbar'); const off = tb ? Math.max(0, tb.getBoundingClientRect().bottom) : 0;
+  const hr = th.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  if(!(hr.bottom < off + 2 && wr.bottom > off + hr.height + 40)){ box.style.display='none'; return; }
+  const orig = th.querySelectorAll('th'), cl = box.querySelectorAll('th'), tbl = box.firstChild;
+  orig.forEach((o,i)=>{ if(cl[i]) cl[i].style.width = o.getBoundingClientRect().width + 'px'; });
+  tbl.style.width = th.closest('table').getBoundingClientRect().width + 'px';
+  tbl.style.marginLeft = (-wrap.scrollLeft) + 'px';
+  box.style.left = wr.left + 'px'; box.style.width = wr.width + 'px'; box.style.top = off + 'px'; box.style.display = 'block';
+}
+function accStickyHeadInit(){
+  const wrap = document.querySelector('#accPaneEntries .table-wrap'); if(!wrap) return;
+  let box = document.getElementById('entriesStickHead');
+  if(!box){
+    box = document.createElement('div'); box.id = 'entriesStickHead'; box.className = 'table-wrap no-print';
+    box.innerHTML = '<table><thead></thead></table>'; document.body.appendChild(box);
+    window.addEventListener('scroll', accStickyHeadUpdate, {passive:true}); window.addEventListener('resize', accStickyHeadUpdate);
+    wrap.addEventListener('scroll', accStickyHeadUpdate, {passive:true});
+  }
+  box.querySelector('thead').innerHTML = wrap.querySelector('thead').innerHTML;
+  accStickyHeadUpdate();
+}
+/* ---------- Per-contractor Analysis card (right side of the account page) ---------- */
+let aiMode = 'monthly';
+function aiUnit(){ return aiMode==='weekly' ? 'week' : aiMode==='monthly' ? 'month' : 'year'; }
+function aiBase(){ const el = document.getElementById('aiAsOf'); const v = el ? el.value : ''; const d = v ? anDate(v) : new Date(); const o = isNaN(d) ? new Date() : d; o.setHours(12,0,0,0); return o; }
+function aiKey(iso){
+  if(!iso) return null; const d = anDate(iso); if(isNaN(d)) return null;
+  if(aiMode==='yearly') return String(d.getFullYear());
+  if(aiMode==='monthly') return String(iso).slice(0,7);
+  return localISODate(anMonday(d));
+}
+function aiBuckets(n){
+  const out = [], now = aiBase();
+  for(let i=n-1;i>=0;i--){
+    if(aiMode==='yearly'){ const y = now.getFullYear()-i; out.push({key:String(y), label:String(y), full:String(y)}); }
+    else if(aiMode==='monthly'){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1, 12); out.push({key:localISODate(d).slice(0,7), label:AN_MN[d.getMonth()]+' '+String(d.getFullYear()).slice(2), full:AN_MN[d.getMonth()]+' '+d.getFullYear()}); }
+    else { const d = new Date(now); d.setDate(d.getDate() - i*7); const m = anMonday(d); out.push({key:localISODate(m), label:m.getDate()+' '+AN_MN[m.getMonth()], full:'Week of '+m.getDate()+' '+AN_MN[m.getMonth()]+' '+m.getFullYear()}); }
+  }
+  return out;
+}
+function aiSetMode(m){ aiMode = m; const sel = document.getElementById('aiCount'); if(sel) sel.dataset.mode = ''; aiRender(); }
+function aiFillCount(){
+  const sel = document.getElementById('aiCount'); if(!sel || sel.dataset.mode===aiMode) return;
+  sel.innerHTML = AN_COUNTS[aiMode].map(n=>`<option value="${n}"${n===AN_DEFAULT[aiMode]?' selected':''}>${n} ${aiUnit()}s</option>`).join('');
+  sel.dataset.mode = aiMode;
+}
+function aiCompute(){
+  const c = DB.contacts.find(x=>x.id===currentAccountId), acc = DB.accounts[currentAccountId]; if(!c || !acc) return null;
+  aiFillCount(); const n = Number(document.getElementById('aiCount').value) || AN_DEFAULT[aiMode];
+  const B = aiBuckets(n), idx = {}; B.forEach((b,i)=> idx[b.key] = i);
+  const per = B.map(()=>({amt:0,cnt:0})); let last = '';
+  acc.entries.forEach(e=>{ if(!e.date) return; if(String(e.date) > last) last = String(e.date); const k = aiKey(e.date); if(k!==null && (k in idx)){ const p = per[idx[k]]; p.amt += Number(e.amount)||0; p.cnt++; } });
+  const today = new Date(); today.setHours(12,0,0,0);
+  const perLabel = (B[B.length-1].key === aiKey(localISODate(new Date()))) ? ('this ' + aiUnit()) : ('in ' + B[B.length-1].full);
+  return {c, acc, B, per, perLabel, cur:per[per.length-1], prev:per[per.length-2] || {amt:0,cnt:0}, last, days: last ? Math.max(0, Math.round((today - anDate(last))/86400000)) : null, st: contactStatus(c)};
+}
+function aiDelta(cur, prev, short){
+  const p = anPct(cur, prev); if(p===0) return '<span class="s">no change</span>'; if(p===null) return '<span class="s">new activity</span>';
+  return `<span class="an-delta ${p>0?'up':'down'}">${p>0?'▲':'▼'} ${Math.abs(p)}%</span>${short?' <span class="s">vs last</span>':''}`;
+}
+function aiRender(){
+  const body = document.getElementById('accInsBody'); if(!body) return;
+  document.querySelectorAll('#aiModeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.m===aiMode));
+  const D = aiCompute(); if(!D){ body.innerHTML = ''; return; } window.__aiLast = D;
+  const st = body.scrollTop, u = aiUnit(), n = D.B.length;
+  const pc = {green:'pill-green', yellow:'pill-yellow', red:'pill-red'}[D.st] || 'pill-gray';
+  const kpi = (l,v,sub)=>`<div class="ai-kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
+  const step = Math.max(1, Math.ceil(n/8));
+  const labs = D.B.map((b,i)=> ((n-1-i)%step===0) ? (aiMode==='monthly' && n<=12 ? b.label.slice(0,3) : b.label) : '');
+  const rows = D.B.map((b,i)=>({b, p:D.per[i], pv:D.per[i-1] || null})).reverse();
+  const totC = D.per.reduce((s,x)=>s+x.cnt,0), totA = D.per.reduce((s,x)=>s+x.amt,0);
+  const trs = rows.map(({b,p,pv})=>`<tr${p.cnt?` class="ai-go" onclick="aiJump('${b.key}')" title="Jump to these memos in the table"`:''}><td>${escapeHtml(b.label)}</td><td>${p.cnt}</td><td class="mono">${fmtMoney(p.amt)}</td><td>${pv ? aiDelta(p.amt, pv.amt) : '<span class="s">—</span>'}</td></tr>`).join('');
+  const lat = D.acc.entries.map((e,i)=>({e,i})).filter(x=>x.e.date).sort((a,b)=>String(b.e.date).localeCompare(String(a.e.date)) || b.i-a.i).slice(0,8);
+  const latHtml = lat.length ? lat.map(({e,i})=>`<div class="drow" style="cursor:pointer;" onclick="flashEntryRow(${i})" title="Find this memo in the table"><div style="flex:1;min-width:0;"><b class="mono">${escapeHtml(String(e.memo||'—'))}</b><div class="dk-s">${escapeHtml(fmtDate(e.date))} · ${escapeHtml(e.inCharge||'—')}</div></div><b class="mono">${fmtMoney(e.amount)}</b></div>`).join('') : '<div class="dk-s">No entries yet.</div>';
+  body.innerHTML = `<div class="ai-kpis">
+      ${kpi('Memos '+D.perLabel, D.cur.cnt, aiDelta(D.cur.cnt, D.prev.cnt, true))}
+      ${kpi('Amount '+D.perLabel, '৳ '+fmtMoney(D.cur.amt), aiDelta(D.cur.amt, D.prev.amt, true))}
+      ${kpi('Last memo', D.last ? escapeHtml(fmtDate(D.last)) : '—', D.last ? (D.days===0 ? 'today' : D.days+' days ago') : 'no memo yet')}
+      ${kpi('Status', `<span class="pill ${pc}">● ${AN_GROUP_NAME[D.st]||'—'}</span>`, 'Rank #' + (D.c.ranking || '—'))}
+    </div>
+    <div class="ai-h">Amount per ${u}</div>${dashBars(D.per.map(x=>x.amt), labs, 300, 140)}
+    <div class="ai-h" style="margin-top:12px;">Every ${u}</div>
+    <table class="ai-tbl"><thead><tr><th>Period</th><th>Memos</th><th>Amount</th><th>Change</th></tr></thead><tbody>${trs}<tr><td><b>Total</b></td><td><b>${totC}</b></td><td class="mono"><b>${fmtMoney(totA)}</b></td><td></td></tr></tbody></table>
+    <div class="ai-h">Latest memos</div>${latHtml}`;
+  body.scrollTop = st;
+}
+function aiJump(key){ const acc = DB.accounts[currentAccountId]; if(!acc) return; const i = acc.entries.findIndex(e=>aiKey(e.date)===key); if(i>=0) flashEntryRow(i); }
+function aiRows(D){ return D.B.map((b,i)=>[b.full, D.per[i].cnt, D.per[i].amt, i===0 ? '—' : anDeltaPlain(D.per[i].amt, D.per[i-1].amt)]).reverse(); }
+function aiPrint(){
+  const D = window.__aiLast || aiCompute(); if(!D) return;
+  const tr = aiRows(D).map(r=>`<tr>${r.map(c=>`<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('');
+  enterPrintMode(`<div class="pr-head"><h2>${escapeHtml(D.c.name)} — ${aiMode} analysis</h2></div><div class="pr-meta">ID ${escapeHtml(D.c.id)} · ${escapeHtml(AN_GROUP_NAME[D.st]||'')} · Rank #${escapeHtml(String(D.c.ranking||'—'))} · Printed: ${new Date().toLocaleString()}</div><table><thead><tr><th>Period</th><th>Memos</th><th>Amount</th><th>Change</th></tr></thead><tbody>${tr}</tbody></table>`, 'Contractor Analysis');
+}
+function aiExcel(){
+  const D = window.__aiLast || aiCompute(); if(!D) return;
+  exportTableAsExcel('contractor-' + D.c.id + '-analysis-' + aiMode + '.xls', ['Period','Memos','Amount','Change vs previous'], aiRows(D), []);
+  toast('Excel file downloaded.');
+}
 function renderAccountExtras(){
   const c = DB.contacts.find(x=>x.id===currentAccountId); if(!c) return;
   const q=id=>document.getElementById(id); if(!q('accAvatar')) return;
@@ -2957,10 +3121,8 @@ function renderAccountExtras(){
   const nums = getContactMobiles(c), wi = waNumberIndex(c);
   q('accMobile').textContent = nums.join(', ');
   q('accWaCard').innerHTML = nums.length ? nums.map((n,i)=>`<div class="drow"><div style="flex:1;min-width:0;"><b class="mono">${escapeHtml(n)}</b><div class="dk-s">Number ${i+1}</div></div>${i===wi?'<span class="pill pill-green">● Used first</span>':`<button class="btn btn-ghost btn-sm" onclick="accSetWa(${i})">Use first</button>`}<button class="icon-btn" onclick="openWhatsAppToContact('${escapeHtml(c.id)}',null,${i})">WA</button></div>`).join('') : '<div class="dk-s">No mobile number yet. Use “Edit Contractor Info”.</div>';
-  const months={}; acc.entries.forEach(e=>{ const m=String(e.date||'').slice(0,7); if(m) months[m]=(months[m]||0)+(Number(e.amount)||0); });
-  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const lab=[], val=[]; const now=new Date();
-  for(let k=5;k>=0;k--){ const d=new Date(now.getFullYear(), now.getMonth()-k, 1); lab.push(MN[d.getMonth()]); val.push(months[d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')]||0); }
-  q('accMonthChart').innerHTML = val.some(v=>v>0) ? dashBars(val,lab,300,150) : '<div class="dk-s">No entries in the last 6 months.</div>';
+  aiRender();
+  try{ const sd = document.querySelector('.acc-side'); if(sd) sd.classList.toggle('acc-long', acc.entries.length > 12); }catch(e){}
   // welfare pane
   const tx = DB.savings.transactions.filter(t=>t.contactId===c.id || t.toContactId===c.id).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,8);
   const tp = t=> t.type==='deposit' ? '<span class="pill pill-green">Deposit</span>' : t.type==='withdraw' ? '<span class="pill pill-red">Withdraw</span>' : '<span class="pill pill-yellow">Help</span>';
@@ -3469,11 +3631,27 @@ function anOpenDetail(id){
 }
 function closeAnDetail(){ document.getElementById('anDetailOverlay').classList.remove('open'); }
 
-function showTab(tab){
-  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+let savView = 'entry';
+function toggleNavGroup(id){ const g = document.getElementById('grp-'+id); if(g) g.classList.toggle('open'); }
+function applySavView(){
+  const v = savView;
+  const show = (id,on)=>{ const e = document.getElementById(id); if(e) e.style.display = on ? '' : 'none'; };
+  show('savQuickFormCard', v==='entry'); show('savHistWrap', v==='history'); show('savPeriodCard', v==='history'); show('savLedgerWrap', v==='ledger'); show('savRecentWrap', v==='entry');
+  const g = document.querySelector('.sav-main-layout'); if(g) g.style.gridTemplateColumns = v==='entry' ? 'minmax(320px,540px) minmax(0,1fr)' : '1fr';
+  const T = { entry:['Welfare Fund — New Transaction','Record a deposit, withdrawal or help transfer with full details.'],
+              history:['Welfare Fund — Transaction History','Every transaction is added here automatically, with full details.'],
+              ledger:['Welfare Fund — Accounts Ledger','Each contractor\'s balance, deposits, withdrawals and individual statement.'] }[v];
+  const h = document.getElementById('savHeadTitle'), s2 = document.getElementById('savHeadSub');
+  if(h && T) h.textContent = T[0]; if(s2 && T) s2.textContent = T[1];
+}
+function showTab(tab, view){
+  if(tab==='savings' && view) savView = view;
+  document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab && (!b.dataset.view || b.dataset.view===savView)));
+  document.querySelectorAll('.nav-group').forEach(g=>{ const a = !!g.querySelector('button.active'); g.classList.toggle('has-active', a); if(a) g.classList.add('open'); });
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   updateBinBadge();
+  try{ accStickyHeadUpdate(); }catch(e){}
   if(tab==='dashboard') renderDashboard();
   if(tab==='analysis'){ if(!document.getElementById('anCount').options.length) fillAnCount(); fillAnSections(); renderAnalysis(); }
   if(tab==='recycle') renderRecycleBin();
@@ -3481,7 +3659,7 @@ function showTab(tab){
   if(tab==='summary') renderSummary();
   if(tab==='accounts') renderAccountsTab();
   if(tab==='reports') renderReports();
-  if(tab==='savings') renderSavings();
+  if(tab==='savings'){ applySavView(); renderSavings(); }
   if(tab==='announce') renderAnnouncements();
   if(tab==='settings') renderSettings();
   if(tab==='backup'){ renderSnapshotList(); }
@@ -4413,6 +4591,7 @@ function renderEntries(){
   tbody.innerHTML = '';
   acc.entries.forEach((e,idx)=> tbody.appendChild(buildRowElement(e, idx)));
   refreshDuplicatesAndTotals();
+  try{ accStickyHeadInit(); }catch(e){ console.warn('sticky head', e); }
 }
 
 function refreshDuplicatesAndTotals(){
@@ -6065,7 +6244,7 @@ function resetSavForm(){
 }
 
 function openSavingsTxnModal(){
-  showTab('savings');
+  showTab('savings','entry');
   resetSavForm();
   fillSavContactList();
   setTimeout(()=> document.getElementById('savFormContact').focus(), 50);
@@ -6222,8 +6401,21 @@ function savTypePill(type){
   return '<span class="pill pill-yellow">Help</span>';
 }
 
+function renderSavRecent(){
+  const box = document.getElementById('savRecentList'), td = document.getElementById('savTodaySummary'); if(!box || !td || !DB) return;
+  const all = ((DB.savings||{}).transactions||[]).map((t,i)=>({t,i}));
+  const nm = id=>{ const c=DB.contacts.find(x=>x.id===id); return c ? c.name : String(id||'—'); };
+  const today = localISODate(); let dep=0, wd=0, n=0;
+  all.forEach(({t})=>{ if(t.date===today){ n++; const a=Number(t.amount)||0; if(t.type==='deposit') dep+=a; else if(t.type==='withdraw') wd+=a; } });
+  const mini=(l,v,col)=>`<div style="padding:10px 12px;border-radius:12px;background:rgba(128,128,128,.1);"><div class="dk-s">${l}</div><div style="font-weight:700;font-size:1.05rem;${col?'color:'+col+';':''}">${v}</div></div>`;
+  td.innerHTML = mini('Entries today',n) + mini('Deposit',fmtMoney(dep),'#17794f') + mini('Withdraw',fmtMoney(wd),'#b3311c');
+  const rows = all.sort((a,b)=> String(b.t.date).localeCompare(String(a.t.date)) || b.i-a.i).slice(0,8);
+  const pill = t=> t.type==='deposit' ? '<span class="pill pill-green">Deposit</span>' : t.type==='withdraw' ? '<span class="pill pill-red">Withdraw</span>' : '<span class="pill pill-yellow">Help</span>';
+  box.innerHTML = rows.length ? rows.map(({t})=>`<div class="drow">${pill(t)}<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:.88rem;">${escapeHtml(nm(t.contactId))}${t.type==='help'&&t.toContactId?' → '+escapeHtml(nm(t.toContactId)):''}</div><div class="dk-s">${escapeHtml(fmtDate(t.date))} · ${escapeHtml(normalizeSavMethod(t.method)||'—')}${t.note?' · '+escapeHtml(t.note):''}</div></div><b class="mono">${t.type==='withdraw'?'−':''}${fmtMoney(t.amount)}</b></div>`).join('') : '<div class="dk-s" style="padding:10px 0;">No transactions yet.</div>';
+}
 function renderSavings(){
   ensureSavings();
+  try{ renderSavRecent(); }catch(e){ console.warn('renderSavRecent', e); }
   fillSavContactList();
   if(!document.getElementById('savFormDate').value){
     document.getElementById('savFormDate').value = localISODate();
