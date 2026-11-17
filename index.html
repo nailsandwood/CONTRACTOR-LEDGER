@@ -477,6 +477,10 @@ nav.tabs .nav-sub button{padding:9px 12px;font-size:.84rem;}
 nav.tabs .nav-sub .ic{width:16px;height:16px;}
 body.side-collapsed .nav-parent .chev{display:none;}
 body.side-collapsed .nav-sub>div{margin-left:0;padding-left:0;border-left:0;}
+.trk-tbl{width:100%;border-collapse:collapse;font-size:.86rem;} .trk-tbl th{font-size:.68rem;color:var(--ink-soft);text-align:center;padding:8px 6px;} .trk-tbl td{text-align:center;padding:8px 6px;border-top:1px solid rgba(128,128,128,.18);} .trk-tbl th:first-child,.trk-tbl td:first-child{text-align:left;} .trk-tbl th:last-child,.trk-tbl td:last-child{text-align:right;white-space:nowrap;} #trkBody tr{cursor:pointer;} #trkBody tr:hover,#trkBody tr.sel{background:rgba(128,128,128,.09);} .trk-tbl .d{display:block;font-size:.66rem;font-weight:400;color:var(--ink-soft);}
+.trk-fr td{border-top:0 !important;padding:2px 4px 8px !important;} .trk-fr select,.trk-fr input{width:100%;min-width:62px;font-size:.72rem;padding:4px 5px;} .trk-fr td:first-child input{min-width:120px;}
+.trk-det td{text-align:left;} .trk-det td:last-child{text-align:right;}
+.trk-g{color:#17794f;font-weight:700;} .trk-a{color:#854F0B;font-weight:700;} .trk-r{color:#a32d2d;font-weight:700;} .trk-b{color:#185FA5;font-weight:700;} .trk-m{color:#9aa8a1;} .trk-late{background:#FAEEDA;border-radius:8px;display:inline-block;padding:2px 8px;} .trk-due{background:#FCEBEB;border-radius:8px;display:inline-block;padding:2px 10px;}
 .side-toggle{border:0;cursor:pointer;} .side-toggle:hover{filter:brightness(1.18);}
 .shell{transition:grid-template-columns .25s ease;}
 body.side-collapsed .shell{grid-template-columns:76px 1fr;}
@@ -622,6 +626,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
           <button data-tab="savings" data-view="entry" onclick="showTab('savings','entry')" title="Welfare Fund — New Transaction"><svg class="ic" aria-hidden="true"><use href="#ni-plus"/></svg><span>New Transaction</span></button>
           <button data-tab="savings" data-view="history" onclick="showTab('savings','history')" title="Welfare Fund — Transaction History"><svg class="ic" aria-hidden="true"><use href="#ni-log"/></svg><span>Transaction History</span></button>
           <button data-tab="savings" data-view="ledger" onclick="showTab('savings','ledger')" title="Welfare Fund — Accounts Ledger"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Accounts Ledger</span></button>
+          <button data-tab="savings" data-view="tracker" onclick="showTab('savings','tracker')" title="Welfare Fund — Monthly Tracker"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Monthly Tracker</span></button>
         </div></div>
       </div>
       <button data-tab="analysis" onclick="showTab('analysis')" title="Analysis"><svg class="ic" aria-hidden="true"><use href="#ni-trend"/></svg><span>Analysis</span></button>
@@ -957,7 +962,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
         </div>
       </div>
 
-      <div class="grid-4" style="margin-bottom:12px;">
+      <div class="grid-4" id="savStatTop" style="margin-bottom:12px;">
         <div class="stat-box stat-hero"><div class="label">Total Balance</div><div class="value" id="savTotalBalance">0</div></div>
         <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">All Deposit</div><div class="value" id="savAllDeposit">0</div></div>
         <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">All Withdraw</div><div class="value" id="savAllWithdraw">0</div></div>
@@ -1035,6 +1040,25 @@ body.dark-mode .pd-foot td{background:#232b2e;}
 
         <!-- History + Balances STACKED -->
         <div>
+          <div id="savTrackerWrap" style="display:none;">
+            <div class="grid-4" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px;">
+              <div class="stat-box" style="border-left-color:var(--green-700);"><div class="label">Paid up</div><div class="value" id="trkPaid">0</div></div>
+              <div class="stat-box" style="border-left-color:var(--red-600);"><div class="label">With due</div><div class="value" id="trkDueN">0</div></div>
+              <div class="stat-box"><div class="label">Total due</div><div class="value" id="trkDueAmt">0</div></div>
+            </div>
+            <div class="card no-print" style="padding:12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+              <select class="select-sm" id="trkMonths" onchange="renderTracker()"><option value="4">Last 4 months</option><option value="6" selected>Last 6 months</option><option value="12">Last 12 months</option></select>
+              <select class="select-sm" id="trkSection" onchange="renderTracker()"><option value="">All sections</option></select>
+              <select class="select-sm" id="trkAddress" onchange="renderTracker()"><option value="">All addresses</option></select>
+              <label style="font-size:.8rem;display:flex;align-items:center;gap:6px;">Monthly fee <input class="input-sm" id="trkFee" type="number" min="1" style="width:90px;" onchange="trkSetFee(this.value)"></label>
+              <button type="button" class="btn btn-ghost" onclick="trkExcel()">⇩ Excel</button>
+              <button type="button" class="btn btn-ghost" onclick="trkClearFilters()">Clear filters</button>
+            </div>
+            <div id="trkDetail"></div>
+            <p id="trkCount" class="no-print" style="font-size:.78rem;color:var(--ink-soft);margin:0 2px 6px;"></p>
+            <div class="card" style="padding:6px 12px;overflow-x:auto;"><table class="trk-tbl"><thead id="trkHead"><tr id="trkHeadRow"></tr><tr id="trkFiltRow" class="trk-fr"></tr></thead><tbody id="trkBody"></tbody></table><p id="trkEmpty" style="display:none;font-size:.82rem;color:var(--ink-soft);padding:14px;">No contractors match.</p></div>
+            <p style="font-size:.74rem;color:var(--ink-soft);margin:8px 2px 0;">Each deposit pays the oldest unpaid month first. If it covers an earlier month, that month shows as late. Extra money goes to the following months as advance. Only deposits count.</p>
+          </div>
           <div id="savRecentWrap" style="display:none;">
             <div class="card" style="padding:16px;margin-bottom:14px;">
               <h3 style="margin:0 0 10px;font-size:1rem;">Today</h3>
@@ -3000,7 +3024,7 @@ function accTab(name){
   if(name!=='entries') renderAccountExtras();
   try{ accStickyHeadUpdate(); }catch(e){}
 }
-function accSetWa(i){ const c=DB.contacts.find(x=>x.id===currentAccountId); if(!c) return; c.waIdx=i; saveDB(); renderAccountExtras(); toast('Saved: this number is used first for WhatsApp.'); }
+function accSetWa(i){ const c=DB.contacts.find(x=>x.id===currentAccountId); if(!c) return; c.waIdx=i; c.waSet=true; saveDB(); renderAccountExtras(); toast('Saved: this number is used first for WhatsApp.'); }
 function accNewWelfare(){ const id=currentAccountId; showTab('savings','entry'); const el=document.getElementById('savFormContact'); if(el){ el.value=id; el.dispatchEvent(new Event('change')); el.focus(); } }
 /* Floating column header for long entry tables: shows under the top bar once the real header has scrolled away */
 function accStickyHeadUpdate(){
@@ -3119,7 +3143,7 @@ function renderAccountExtras(){
   q('accWelDep').textContent = '৳ ' + fmtMoney(eff.deposited); q('accWelBal').textContent = '৳ ' + fmtMoney(eff.balance);
   const nums = getContactMobiles(c), wi = waNumberIndex(c);
   q('accMobile').textContent = nums.join(', ');
-  q('accWaCard').innerHTML = nums.length ? nums.map((n,i)=>`<div class="drow"><div style="flex:1;min-width:0;"><b class="mono">${escapeHtml(n)}</b><div class="dk-s">Number ${i+1}</div></div>${i===wi?'<span class="pill pill-green">● Used first</span>':`<button class="btn btn-ghost btn-sm" onclick="accSetWa(${i})">Use first</button>`}<button class="icon-btn" onclick="openWhatsAppToContact('${escapeHtml(c.id)}',null,${i})">WA</button></div>`).join('') : '<div class="dk-s">No mobile number yet. Use “Edit Contractor Info”.</div>';
+  q('accWaCard').innerHTML = nums.length ? nums.map((n,i)=>`<div class="drow"><div style="flex:1;min-width:0;"><b class="mono">${escapeHtml(n)}</b><div class="dk-s">Number ${i+1}</div></div>${i===wi?(waConfirmed(c)?'<span class="pill pill-green">● Used first</span>':`<button type="button" class="pill pill-green" style="border:0;cursor:pointer;" title="Tap to confirm that this number has WhatsApp" onclick="accSetWa(${i})">● Tap to confirm</button>`):`<button class="btn btn-ghost btn-sm" onclick="accSetWa(${i})">Use first</button>`}<button class="icon-btn" onclick="openWhatsAppToContact('${escapeHtml(c.id)}',null,${i})">WA</button></div>`).join('') : '<div class="dk-s">No mobile number yet. Use “Edit Contractor Info”.</div>';
   aiRender();
   try{ const sd = document.querySelector('.acc-side'); if(sd) sd.classList.toggle('acc-long', acc.entries.length > 12); }catch(e){}
   // welfare pane
@@ -3635,10 +3659,11 @@ function toggleNavGroup(id){ const g = document.getElementById('grp-'+id); if(g)
 function applySavView(){
   const v = savView;
   const show = (id,on)=>{ const e = document.getElementById(id); if(e) e.style.display = on ? '' : 'none'; };
-  show('savQuickFormCard', v==='entry'); show('savHistWrap', v==='history'); show('savPeriodCard', v==='history'); show('savLedgerWrap', v==='ledger'); show('savRecentWrap', v==='entry');
+  show('savQuickFormCard', v==='entry'); show('savHistWrap', v==='history'); show('savPeriodCard', v==='history'); show('savLedgerWrap', v==='ledger'); show('savRecentWrap', v==='entry'); show('savTrackerWrap', v==='tracker'); show('savStatTop', v!=='tracker'); show('savMethodStats', v!=='tracker');
   const g = document.querySelector('.sav-main-layout'); if(g) g.style.gridTemplateColumns = v==='entry' ? 'minmax(320px,540px) minmax(0,1fr)' : '1fr';
   const T = { entry:['Welfare Fund — New Transaction','Record a deposit, withdrawal or help transfer with full details.'],
               history:['Welfare Fund — Transaction History','Every transaction is added here automatically, with full details.'],
+              tracker:['Welfare Fund — Monthly Tracker','Monthly fee status of every contractor, with late and advance payments matched to the right month.'],
               ledger:['Welfare Fund — Accounts Ledger','Each contractor\'s balance, deposits, withdrawals and individual statement.'] }[v];
   const h = document.getElementById('savHeadTitle'), s2 = document.getElementById('savHeadSub');
   if(h && T) h.textContent = T[0]; if(s2 && T) s2.textContent = T[1];
@@ -3769,6 +3794,8 @@ function waNumberIndex(c){
   const i = Number(c && c.waIdx) || 0;
   return (i >= 0 && i < n) ? i : 0;
 }
+/** True once the user has picked/confirmed which number has WhatsApp (explicit pick, or an older saved non-default pick). */
+function waConfirmed(c){ return !!(c && (c.waSet === true || Number(c.waIdx) > 0)); }
 function waMobile(c){
   const list = getContactMobiles(c);
   return list[waNumberIndex(c)] || '';
@@ -3899,7 +3926,9 @@ function saveContactModal(){
       }catch(e){ console.warn('rename carry-over', e); }
       if(currentAccountId === oldId) currentAccountId = idInput;
     }
+    const waChanged = (Number(c.waIdx)||0) !== waIdx;
     Object.assign(c, {name, mobile, mobiles, address, nid, waIdx});
+    if(waChanged) c.waSet = true;
     toast('Contractor updated.');
     saveDB(true); closeContactModal(); renderSummary(); renderAccountsTab();
     return;
@@ -4223,6 +4252,10 @@ function showWaTryNext(contactId, text, idx){
   if(!c) return;
   const list = getContactMobiles(c);
   if(list.length < 2) return;
+  if(waConfirmed(c)){                       // the WhatsApp number is already chosen: no question to ask
+    const old = document.getElementById('waOfferBar'); if(old) old.style.display = 'none';
+    return;
+  }
   let bar = document.getElementById('waOfferBar');
   if(!bar){
     bar = document.createElement('div');
@@ -4240,14 +4273,14 @@ function showWaTryNext(contactId, text, idx){
   nextBtn.textContent = 'Try next number (' + list[nextIdx] + ')';
   nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;';
   nextBtn.onclick = ()=>{
-    c.waIdx = nextIdx; saveDB();          // remember: this number is used first next time
-    openWhatsAppToContact(contactId, text, nextIdx);
+    openWhatsAppToContact(contactId, text, nextIdx);   // just try it; it is saved only after "This number worked"
+
   };
   const okBtn = document.createElement('button');
   okBtn.textContent = 'This number worked ✓';
   okBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
   okBtn.onclick = ()=>{
-    c.waIdx = idx; saveDB();
+    c.waIdx = idx; c.waSet = true; saveDB();
     bar.style.display = 'none';
     toast('Saved: ' + list[idx] + ' will be used first for ' + c.name + '.');
   };
@@ -5492,7 +5525,7 @@ function runAnnounceQueue(queue, body, index){
   };
   const otherNums = getContactMobiles(c);
   let otherBtn = null;
-  if(otherNums.length > 1){
+  if(otherNums.length > 1 && !waConfirmed(c)){
     otherBtn = document.createElement('button');
     otherBtn.textContent = 'No WhatsApp? Try next number';
     otherBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
@@ -6412,9 +6445,171 @@ function renderSavRecent(){
   const pill = t=> t.type==='deposit' ? '<span class="pill pill-green">Deposit</span>' : t.type==='withdraw' ? '<span class="pill pill-red">Withdraw</span>' : '<span class="pill pill-yellow">Help</span>';
   box.innerHTML = rows.length ? rows.map(({t})=>`<div class="drow">${pill(t)}<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:.88rem;">${escapeHtml(nm(t.contactId))}${t.type==='help'&&t.toContactId?' → '+escapeHtml(nm(t.toContactId)):''}</div><div class="dk-s">${escapeHtml(fmtDate(t.date))} · ${escapeHtml(normalizeSavMethod(t.method)||'—')}${t.note?' · '+escapeHtml(t.note):''}</div></div><b class="mono">${t.type==='withdraw'?'−':''}${fmtMoney(t.amount)}</b></div>`).join('') : '<div class="dk-s" style="padding:10px 0;">No transactions yet.</div>';
 }
+/* ---------- Welfare Fund: Monthly Tracker ---------- */
+let trkSel = '';
+function trkFee(){ const f = Number((DB.savings||{}).monthlyFee); return f > 0 ? f : 1000; }
+function trkSetFee(v){ if(!requireEditor('Change the monthly fee')){ renderTracker(); return; } ensureSavings(); DB.savings.monthlyFee = Math.max(1, Number(v)||1000); saveDB(); renderTracker(); }
+function trkMk(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function trkAdd(k,n){ return trkMk(new Date(+k.slice(0,4), +k.slice(5,7)-1+n, 1, 12)); }
+function trkLbl(k){ return AN_MN[+k.slice(5,7)-1] + ' ' + k.slice(2,4); }
+function trkEnd(k){ return localISODate(new Date(+k.slice(0,4), +k.slice(5,7), 0, 12)); }
+function trkShort(iso){ const d = anDate(iso); return d.getDate() + ' ' + AN_MN[d.getMonth()]; }
+function trkCalc(c, fee, nowKey){
+  const deps = DB.savings.transactions.filter(t=>t.type==='deposit' && t.contactId===c.id && t.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)) || String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  if(!deps.length) return null;
+  const start = String(deps[0].date).slice(0,7), M = [], D = [];
+  const mon = i=>{ while(M.length <= i) M.push({key:trkAdd(start,M.length), paid:0, parts:[]}); return M[i]; };
+  let i = 0, rem = fee;
+  deps.forEach(t=>{ let amt = Number(t.amount)||0; const cov = []; while(amt > 0){ const m = mon(i), take = Math.min(amt, rem); m.paid += take; m.parts.push({t, amt:take}); cov.push({key:m.key, amt:take}); amt -= take; rem -= take; if(rem <= 0){ i++; rem = fee; } } D.push({t, cov}); });
+  const idxNow = (+nowKey.slice(0,4) - +start.slice(0,4))*12 + (+nowKey.slice(5,7) - +start.slice(5,7));
+  if(idxNow >= 0) mon(idxNow);
+  let due = 0, adv = 0, full = 0;
+  M.forEach(m=>{
+    m.date = m.parts.length ? m.parts[m.parts.length-1].t.date : '';
+    if(m.key > nowKey){ m.st = 'adv'; adv += m.paid; }
+    else if(m.paid >= fee){ m.st = (m.date <= trkEnd(m.key)) ? 'ok' : 'late'; if(m.st==='late') m.late = Math.round((anDate(m.date) - anDate(trkEnd(m.key)))/86400000); }
+    else { m.st = m.paid > 0 ? 'part' : 'due'; due += fee - m.paid; }
+    if(m.paid >= fee) full++;
+  });
+  return {start, M, D, due, adv, full};
+}
+function trkBal(r, fee){ if(r.due > 0) return ['trk-r', 'Due ' + fmtMoney(r.due)]; if(r.adv > 0) return ['trk-b', r.adv % fee === 0 ? 'Adv +' + (r.adv/fee) + ' mo' : 'Adv ' + fmtMoney(r.adv)]; return ['trk-g', 'Paid up']; }
+function trkCell(m){
+  if(!m) return '<span class="trk-m">–</span>';
+  if(m.st==='ok') return `<span class="trk-g">✓</span><span class="d">${trkShort(m.date)}</span>`;
+  if(m.st==='late') return `<span class="trk-late"><span class="trk-a">✓</span><span class="d" style="color:#854F0B;">${trkShort(m.date)} · late</span></span>`;
+  if(m.st==='adv') return `<span class="trk-b">adv</span><span class="d">${trkShort(m.date)}</span>`;
+  if(m.st==='part') return `<span class="trk-a">½</span><span class="d">${fmtMoney(m.paid)} paid</span>`;
+  return '<span class="trk-due"><span class="trk-r">✗</span><span class="d" style="color:#a32d2d;">due</span></span>';
+}
+function trkYearAgg(r, y, fee, nowKey){
+  const ms = r.M.filter(m=>m.key.slice(0,4)===String(y) && m.key<=nowKey); if(!ms.length) return null;
+  let P = 0, L = 0, due = 0; ms.forEach(m=>{ if(m.paid >= fee){ P++; if(m.st==='late') L++; } due += Math.max(0, fee - m.paid); });
+  return {T:ms.length, P, L, due};
+}
+function trkYearCell(a){
+  if(!a) return '<span class="trk-m">–</span>';
+  if(a.due > 0) return `<span class="trk-due"><span class="trk-r">✗</span><span class="d" style="color:#a32d2d;">${a.P}/${a.T} · due ${fmtMoney(a.due)}</span></span>`;
+  if(a.L > 0) return `<span class="trk-late"><span class="trk-a">✓</span><span class="d" style="color:#854F0B;">${a.P}/${a.T} · ${a.L} late</span></span>`;
+  return `<span class="trk-g">✓</span><span class="d">${a.P}/${a.T}</span>`;
+}
+function trkFillFilters(){
+  const tx = DB.savings.transactions.filter(t=>t.type==='deposit' && t.date);
+  const nowY = new Date().getFullYear(), minY = tx.length ? Math.min(...tx.map(t=>+String(t.date).slice(0,4))) : nowY;
+  const per = document.getElementById('trkMonths'), cur = per.value;
+  const opts = [['4','Last 4 months'],['6','Last 6 months'],['12','Last 12 months']];
+  for(let y=nowY;y>=minY;y--) opts.push(['y:'+y, 'Year '+y]);
+  opts.push(['yearly','Yearly summary']);
+  const sig = opts.map(o=>o[0]).join(',');
+  if(per.dataset.sig !== sig){ per.innerHTML = opts.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join(''); per.dataset.sig = sig; per.value = opts.some(o=>o[0]===cur) ? cur : '6'; }
+  const ids = new Set(tx.map(t=>t.contactId)), cs = DB.contacts.filter(c=>ids.has(c.id));
+  [['trkSection','nid','All sections'],['trkAddress','address','All addresses']].forEach(([id,f,all])=>{
+    const el = document.getElementById(id), v = el.value, vals = [...new Set(cs.map(c=>String(c[f]||'').trim()).filter(Boolean))].sort();
+    const sig2 = vals.join('|'); if(el.dataset.sig !== sig2){ el.innerHTML = `<option value="">${all}</option>` + vals.map(x=>`<option>${escapeHtml(x)}</option>`).join(''); el.dataset.sig = sig2; el.value = vals.includes(v) ? v : ''; }
+  });
+}
+function trkBuildFilterRow(keys, yearly){
+  const qv = (document.getElementById('trkSearch')||{}).value || '', fv = (document.getElementById('trkFilter')||{}).value || 'all';
+  const opt = yearly ? [['','All'],['paid','✓ paid'],['late','✓ late'],['due','✗ due'],['none','–']] : [['','All'],['ok','✓'],['late','✓ late'],['part','½'],['due','✗ due'],['adv','adv'],['none','–']];
+  const sel = k=>`<td><select class="select-sm" data-k="${k}" title="Filter this ${yearly?'year':'month'}" onchange="renderTracker()">${opt.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('')}</select></td>`;
+  document.getElementById('trkFiltRow').innerHTML = '<td><input class="input-sm" id="trkSearch" placeholder="Name or ID…" oninput="renderTracker()"></td>' + keys.map(sel).join('') + '<td><select class="select-sm" id="trkFilter" onchange="renderTracker()"><option value="all">All</option><option value="paid">Paid up</option><option value="due">With due</option><option value="adv">Advance</option></select></td>';
+  document.getElementById('trkSearch').value = qv; document.getElementById('trkFilter').value = fv;
+}
+function trkClearFilters(){
+  const set = (id,v)=>{ const e = document.getElementById(id); if(e) e.value = v; };
+  set('trkSearch',''); set('trkFilter','all'); set('trkSection',''); set('trkAddress','');
+  document.querySelectorAll('#trkFiltRow select[data-k]').forEach(e=>e.value = '');
+  renderTracker();
+}
+function renderTracker(){
+  const body = document.getElementById('trkBody'); if(!body || !DB) return;
+  ensureSavings(); trkFillFilters();
+  const fee = trkFee(), nowKey = trkMk(new Date()), nowY = +nowKey.slice(0,4);
+  const feeEl = document.getElementById('trkFee'); if(feeEl && document.activeElement !== feeEl) feeEl.value = fee;
+  const per = document.getElementById('trkMonths').value, yearly = per === 'yearly', keys = [];
+  if(yearly){ const minY = Math.min(nowY, ...DB.savings.transactions.filter(t=>t.type==='deposit' && t.date).map(t=>+String(t.date).slice(0,4))); for(let y=Math.max(minY, nowY-5); y<=nowY; y++) keys.push(String(y)); }
+  else if(per.startsWith('y:')){ for(let m=1;m<=12;m++) keys.push(per.slice(2) + '-' + String(m).padStart(2,'0')); }
+  else { for(let i=(+per||6)-1;i>=0;i--) keys.push(trkAdd(nowKey,-i)); }
+  const sig = (yearly ? 'Y' : 'M') + keys.join(',');
+  if(window.__trkSig !== sig){ window.__trkSig = sig; trkBuildFilterRow(keys, yearly); }
+  const gv = id=>{ const e = document.getElementById(id); return e ? e.value : ''; };
+  const q = gv('trkSearch').trim().toLowerCase(), flt = gv('trkFilter') || 'all';
+  const colF = [...document.querySelectorAll('#trkFiltRow select[data-k]')].filter(e=>e.value).map(e=>[e.dataset.k, e.value]);
+  const sec = document.getElementById('trkSection').value, adr = document.getElementById('trkAddress').value;
+  let rows = [];
+  DB.contacts.forEach(c=>{ if(c.died) return; if(sec && String(c.nid||'').trim()!==sec) return; if(adr && String(c.address||'').trim()!==adr) return; const r = trkCalc(c, fee, nowKey); if(r) rows.push({c, r}); });
+  const nPaid = rows.filter(x=>x.r.due===0).length, allN = rows.length;
+  document.getElementById('trkPaid').textContent = nPaid; document.getElementById('trkDueN').textContent = rows.length - nPaid;
+  document.getElementById('trkDueAmt').textContent = fmtMoney(rows.reduce((s,x)=>s+x.r.due, 0));
+  rows = rows.filter(({c,r})=> (!q || String(c.name||'').toLowerCase().includes(q) || String(c.id).toLowerCase().includes(q)) && (flt==='all' || (flt==='paid' && r.due===0 && r.adv===0) || (flt==='due' && r.due>0) || (flt==='adv' && r.adv>0)));
+  if(colF.length) rows = rows.filter(({r})=> colF.every(([k,v])=>{
+    if(yearly){ const a = trkYearAgg(r,k,fee,nowKey); return v==='none' ? !a : !!a && (v==='paid' ? a.due===0 && a.L===0 : v==='late' ? a.L>0 : a.due>0); }
+    const m = r.M.find(x=>x.key===k); return (m ? m.st : 'none') === v; }));
+  rows.sort((a,b)=> b.r.due - a.r.due || String(a.c.name||'').localeCompare(String(b.c.name||'')));
+  window.__trk = {rows, keys, fee, yearly, nowKey};
+  document.getElementById('trkHeadRow').innerHTML = '<th>Contractor</th>' + keys.map(k=>`<th>${yearly ? k : trkLbl(k)}</th>`).join('') + '<th>Balance</th>';
+  body.innerHTML = rows.map(({c,r})=>{ const [bc,bt] = trkBal(r, fee); return `<tr class="${trkSel===String(c.id)?'sel':''}" onclick="trkOpen('${escapeHtml(String(c.id))}')"><td><b>${escapeHtml(c.name||'')}</b><span class="d">ID ${escapeHtml(String(c.id))}</span></td>${keys.map(k=>`<td>${yearly ? trkYearCell(trkYearAgg(r,k,fee,nowKey)) : trkCell(r.M.find(m=>m.key===k))}</td>`).join('')}<td class="${bc}">${bt}</td></tr>`; }).join('');
+  document.getElementById('trkEmpty').style.display = rows.length ? 'none' : '';
+  document.getElementById('trkCount').textContent = 'Showing ' + rows.length + ' of ' + allN + ' contractors';
+  renderTrkDetail();
+}
+function trkOpen(id){ trkSel = (trkSel === String(id)) ? '' : String(id); renderTracker(); if(trkSel){ const d = document.getElementById('trkDetail'); if(d) d.scrollIntoView({behavior:'smooth', block:'nearest'}); } }
+function renderTrkDetail(){
+  const box = document.getElementById('trkDetail'); if(!box) return;
+  const c = trkSel ? DB.contacts.find(x=>String(x.id)===trkSel) : null, fee = trkFee(), nowKey = trkMk(new Date());
+  const r = c ? trkCalc(c, fee, nowKey) : null; if(!r){ box.innerHTML = ''; return; }
+  const [bc,bt] = trkBal(r, fee), paidTill = r.full ? trkLbl(trkAdd(r.start, r.full-1)) : '—';
+  const gv = id=>{ const e = document.getElementById(id); return e ? e.value : ''; };
+  const pv = {mode:gv('trkStMode')||'month', m:gv('trkStMonth')||nowKey, y:gv('trkStYear')||nowKey.slice(0,4)}, ys = [];
+  for(let y=+nowKey.slice(0,4); y>=+r.start.slice(0,4); y--) ys.push(y);
+  const stTxt = m=> m.st==='ok' ? '<span class="trk-g">On time</span>' : m.st==='late' ? `<span class="trk-a">Late ${m.late} day${m.late===1?'':'s'}</span>` : m.st==='part' ? `<span class="trk-a">Part paid (${fmtMoney(m.paid)} of ${fmtMoney(fee)})</span>` : m.st==='adv' ? '<span class="trk-b">Advance</span>' : `<span class="trk-r">Due ${fmtMoney(fee)}</span>`;
+  const dep = p=>`${escapeHtml(p.t.txnId||'—')} · ${escapeHtml(normalizeSavMethod(p.t.method)||'—')} ${fmtMoney(p.amt)}`;
+  const mrows = r.M.map(m=>`<tr${m.st==='late'?' style="background:#FAEEDA;"':''}><td>${trkLbl(m.key)}</td><td>${m.parts.length ? m.parts.map(p=>trkShort(p.t.date)).join('<br>') : '—'}</td><td>${m.parts.length ? m.parts.map(dep).join('<br>') : '—'}</td><td>${stTxt(m)}</td></tr>`).join('');
+  const drows = r.D.slice().reverse().slice(0,12).map(({t,cov})=>{
+    const dk = String(t.date).slice(0,7);
+    const lbl = cov.map(x=> trkLbl(x.key) + (trkEnd(x.key) < t.date ? ' (late)' : x.key > dk ? ' (advance)' : '') + (x.amt < fee ? ` (part ${fmtMoney(x.amt)})` : '')).join(' + ');
+    return `<div class="drow"><div style="flex:1;min-width:0;"><b>${escapeHtml(t.txnId||'—')}</b> · ${escapeHtml(fmtDate(t.date))} · ${escapeHtml(normalizeSavMethod(t.method)||'—')}${t.note ? ' · ' + escapeHtml(t.note) : ''}<div class="dk-s">Covers: ${escapeHtml(lbl)}</div></div><b class="mono">${fmtMoney(t.amount)}</b></div>`; }).join('');
+  box.innerHTML = `<div class="card" style="padding:14px;margin-bottom:12px;border:1.5px solid rgba(128,128,128,.35);">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;"><b style="font-size:1rem;">${escapeHtml(c.name||'')}</b><span class="dk-s">ID ${escapeHtml(String(c.id))}${c.address ? ' · ' + escapeHtml(c.address) : ''}</span><button type="button" class="btn btn-ghost btn-sm" onclick="trkOpen('${escapeHtml(String(c.id))}')">Close</button></div>
+    <div class="dk-s" style="margin:2px 0 8px;">Monthly ${fmtMoney(fee)} · Paid till ${paidTill} · Balance: <span class="${bc}">${bt}</span></div>
+    <div class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;"><b style="font-size:.8rem;">Statement</b><select class="select-sm" id="trkStMode" onchange="trkStToggle()"><option value="month"${pv.mode==='month'?' selected':''}>Monthly</option><option value="year"${pv.mode==='year'?' selected':''}>Yearly</option></select><input class="input-sm" type="month" id="trkStMonth" value="${pv.m}"${pv.mode==='year'?' style="display:none;"':''}><select class="select-sm" id="trkStYear"${pv.mode==='month'?' style="display:none;"':''}>${ys.map(y=>`<option${String(y)===pv.y?' selected':''}>${y}</option>`).join('')}</select><button type="button" class="btn btn-accent btn-sm" onclick="trkStatement()">Print / PDF</button></div>
+    <div style="overflow-x:auto;"><table class="trk-tbl trk-det"><thead><tr><th style="text-align:left;">Month</th><th style="text-align:left;">Paid on</th><th style="text-align:left;">Deposit</th><th style="text-align:right;">Status</th></tr></thead><tbody>${mrows}</tbody></table></div>
+    <div class="ai-h" style="margin-top:12px;">Deposits</div>${drows}</div>`;
+}
+function trkExcel(){
+  const T = window.__trk; if(!T) return;
+  const cellTxt = (r,k)=>{ if(T.yearly){ const a = trkYearAgg(r,k,T.fee,T.nowKey); return a ? a.P + '/' + a.T + (a.due ? ' due ' + a.due : '') : '–'; } const m = r.M.find(x=>x.key===k); return !m ? '–' : m.st==='ok' ? 'Paid ' + trkShort(m.date) : m.st==='late' ? 'Late ' + trkShort(m.date) : m.st==='part' ? 'Part ' + m.paid : m.st==='adv' ? 'Advance' : 'Due'; };
+  exportTableAsExcel('welfare-' + (T.yearly ? 'yearly' : 'monthly') + '-tracker.xls', ['Contractor','ID',...T.keys.map(k=>T.yearly ? k : trkLbl(k)),'Balance'], T.rows.map(({c,r})=>[c.name, c.id, ...T.keys.map(k=>cellTxt(r,k)), trkBal(r,T.fee)[1]]), []);
+  toast('Excel file downloaded.');
+}
+function trkStToggle(){ const y = document.getElementById('trkStMode').value==='year'; document.getElementById('trkStMonth').style.display = y ? 'none' : ''; document.getElementById('trkStYear').style.display = y ? '' : 'none'; }
+function trkStatement(){
+  const c = DB.contacts.find(x=>String(x.id)===trkSel); if(!c) return;
+  const fee = trkFee(), nowKey = trkMk(new Date()), r = trkCalc(c, fee, nowKey); if(!r) return;
+  const mode = document.getElementById('trkStMode').value;
+  const val = mode==='month' ? (document.getElementById('trkStMonth').value || nowKey) : document.getElementById('trkStYear').value;
+  const inP = k => mode==='month' ? k===val : k.slice(0,4)===val;
+  const MS = r.M.filter(m=>inP(m.key) && (m.key<=nowKey || m.paid>0));
+  if(!MS.length){ toast('No monthly fee months for this contractor in that period.'); return; }
+  const MF = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const period = mode==='month' ? MF[+val.slice(5,7)-1] + ' ' + val.slice(0,4) : 'Year ' + val;
+  const st = m=> m.st==='ok' ? 'On time' : m.st==='late' ? 'Late ' + m.late + ' day' + (m.late===1?'':'s') : m.st==='part' ? 'Part paid ' + fmtMoney(m.paid) + ' of ' + fmtMoney(fee) : m.st==='adv' ? 'Advance' : 'Due ' + fmtMoney(fee);
+  const past = MS.filter(m=>m.key<=nowKey), paidN = past.filter(m=>m.paid>=fee).length, lateN = past.filter(m=>m.st==='late').length;
+  const dueAmt = past.reduce((s,m)=>s+Math.max(0,fee-m.paid),0), advAmt = MS.filter(m=>m.key>nowKey).reduce((s,m)=>s+m.paid,0);
+  const recv = r.D.filter(({t})=>inP(String(t.date).slice(0,7))), recvTot = recv.reduce((s,x)=>s+(Number(x.t.amount)||0),0);
+  const mrows = MS.map(m=>`<tr><td>${trkLbl(m.key)}</td><td>${m.parts.length ? m.parts.map(p=>escapeHtml(fmtDate(p.t.date))).join('<br>') : '—'}</td><td>${m.parts.length ? m.parts.map(p=>escapeHtml((p.t.txnId||'—') + ' · ' + (normalizeSavMethod(p.t.method)||'—') + ' · ' + fmtMoney(p.amt))).join('<br>') : '—'}</td><td>${st(m)}</td></tr>`).join('');
+  const drows = recv.map(({t,cov})=>`<tr><td>${escapeHtml(fmtDate(t.date))}</td><td>${escapeHtml(t.txnId||'—')}</td><td>${escapeHtml(normalizeSavMethod(t.method)||'—')}</td><td>${fmtMoney(t.amount)}</td><td>${escapeHtml(cov.map(x=>trkLbl(x.key) + (trkEnd(x.key) < t.date ? ' (late)' : x.key > String(t.date).slice(0,7) ? ' (advance)' : '')).join(' + '))}${t.note ? '<br>' + escapeHtml(t.note) : ''}</td></tr>`).join('') || '<tr><td colspan="5">No deposits received in this period.</td></tr>';
+  enterPrintMode(`<div class="pr-head"><h2>Welfare Fund Statement — ${period}</h2></div><div class="pr-meta">${escapeHtml(c.name||'')} · ID ${escapeHtml(String(c.id))}${c.address ? ' · ' + escapeHtml(c.address) : ''} · Monthly fee ${fmtMoney(fee)} · Printed: ${new Date().toLocaleString()}</div>
+    <p><b>Months:</b> ${MS.length} · <b>Paid:</b> ${paidN}${lateN ? ' (' + lateN + ' late)' : ''} · <b>Due:</b> ${fmtMoney(dueAmt)}${advAmt ? ' · <b>Advance:</b> ' + fmtMoney(advAmt) : ''} · <b>Deposits received:</b> ${fmtMoney(recvTot)}</p>
+    <table><thead><tr><th>Month</th><th>Paid on</th><th>Deposit</th><th>Status</th></tr></thead><tbody>${mrows}</tbody></table>
+    <h3 style="margin:16px 0 6px;">Deposits received in this period</h3>
+    <table><thead><tr><th>Date</th><th>Txn ID</th><th>Method</th><th>Amount</th><th>Covers</th></tr></thead><tbody>${drows}</tbody></table>
+    <p style="margin-top:12px;"><b>Overall balance now:</b> ${trkBal(r,fee)[1]}</p>`, 'Welfare Fund Statement');
+}
 function renderSavings(){
   ensureSavings();
   try{ renderSavRecent(); }catch(e){ console.warn('renderSavRecent', e); }
+  try{ if(savView==='tracker') renderTracker(); }catch(e){ console.warn('renderTracker', e); }
   fillSavContactList();
   if(!document.getElementById('savFormDate').value){
     document.getElementById('savFormDate').value = localISODate();
@@ -7147,7 +7342,7 @@ const AU_LABEL = {date:'Date', memo:'Memo no.', amount:'Amount', inCharge:'In ch
   contactId:'Contractor', toContactId:'Help to', from:'Session start', to:'Session end', meetingDate:'Meeting date'};
 const AU_BOOL = new Set(['died','marked','cashOut']);
 const AU_DATE = new Set(['date','from','to','meetingDate']);
-const AU_SKIP_CONTACT = new Set(['id','totalAmount','ranking','welfareAmount','waIdx','mobile']);
+const AU_SKIP_CONTACT = new Set(['id','totalAmount','ranking','welfareAmount','waIdx','waSet','mobile']);
 let __auditPrev = null, __auditTimer = null;
 
 function auditDeviceId(){
