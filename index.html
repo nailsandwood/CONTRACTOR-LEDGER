@@ -2,6 +2,7 @@
 <html lang="en-GB">
 <head>
 <meta charset="UTF-8">
+<script>(function(){try{if(window.top!==window.self&&/[#&](access_token|error)=/.test(location.hash)){parent.postMessage({nwOauth:true,hash:location.hash.replace(/^#/,"")},location.origin);window.stop();}}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contractor Ledger</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -546,40 +547,13 @@ body.dark-mode .pd-foot td{background:#232b2e;}
     
     <p class="login-sub">Sign in with Google Drive</p>
     
-    <!-- Google Sign-In button will be rendered here -->
-    <style>
-      .g_id_signin{cursor:pointer;}
-      .g_id_signin iframe{pointer-events:none;}
-    </style>
-    <div id="g_id_onload"
-         data-client_id="366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com"
-         data-context="signin"
-         data-ux_mode="popup"
-         data-callback="handleGoogleCredential"
-         data-auto_prompt="false">
-    </div>
-    <div class="g_id_signin"
-         data-type="standard"
-         data-shape="rectangular"
-         data-theme="outline"
-         data-text="signin_with"
-         data-size="large"
-         data-logo_alignment="left"
-         data-width="320">
-    </div>
-
-    <button type="button" id="manualSignInBtn" class="btn btn-accent btn-block" style="margin-top:16px;width:100%;padding:12px 16px;font-size:1rem;" onclick="requestGoogleLogin()">
+    <button type="button" id="redirectSignInBtn" class="btn btn-accent btn-block" style="margin-top:16px;width:100%;padding:12px 16px;font-size:1rem;" onclick="requestGoogleLoginRedirect()">
       Sign in with Google Drive
     </button>
     <p style="font-size:.75rem;color:var(--ink-soft);margin-top:8px;text-align:center;">
-      Click the green button, then Allow access to Google Drive.<br>
+      Click the green button, choose your account and press Allow. You come back to this page automatically.<br>
       <span id="loginOriginHint" style="font-size:.7rem;"></span>
     </p>
-
-    <button type="button" id="redirectSignInBtn" class="btn btn-ghost" style="margin-top:10px;width:100%;padding:10px 16px;" onclick="requestGoogleLoginRedirect()">
-      Sign in &mdash; full page (no pop-up window)
-    </button>
-    <p style="font-size:.7rem;color:var(--ink-soft);margin-top:6px;text-align:center;">Use this if the small Google window closes by itself. The page goes to Google and comes back here.</p>
 
     <button type="button" id="offlineBtn" class="btn btn-ghost" style="margin-top:10px;width:100%;padding:10px 16px;" onclick="startOfflineMode()">
       Work Offline (use data saved on this PC)
@@ -635,7 +609,6 @@ body.dark-mode .pd-foot td{background:#232b2e;}
           <button data-tab="savings" data-view="entry" onclick="showTab('savings','entry')" title="Welfare Fund — New Transaction"><svg class="ic" aria-hidden="true"><use href="#ni-plus"/></svg><span>New Transaction</span></button>
           <button data-tab="savings" data-view="history" onclick="showTab('savings','history')" title="Welfare Fund — Transaction History"><svg class="ic" aria-hidden="true"><use href="#ni-log"/></svg><span>Transaction History</span></button>
           <button data-tab="savings" data-view="ledger" onclick="showTab('savings','ledger')" title="Welfare Fund — Accounts Ledger"><svg class="ic" aria-hidden="true"><use href="#ni-list"/></svg><span>Accounts Ledger</span></button>
-          <button data-tab="savings" data-view="tracker" onclick="showTab('savings','tracker')" title="Welfare Fund — Monthly Tracker"><svg class="ic" aria-hidden="true"><use href="#ni-chart"/></svg><span>Monthly Tracker</span></button>
         </div></div>
       </div>
       <button data-tab="analysis" onclick="showTab('analysis')" title="Analysis"><svg class="ic" aria-hidden="true"><use href="#ni-trend"/></svg><span>Analysis</span></button>
@@ -1131,7 +1104,6 @@ body.dark-mode .pd-foot td{background:#232b2e;}
 
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px;">
             <h3 style="margin:0;font-size:1rem;">Contractor balances</h3>
-            <button class="btn btn-accent btn-sm no-print" id="savRemindAllBtn" onclick="welRemindAll()">Send due reminders (0)</button>
             <button class="btn btn-ghost btn-sm no-print" onclick="printSavBalances()">Print balances / PDF</button>
           </div>
           <div class="toolbar no-print" style="margin-bottom:10px;flex-wrap:wrap;">
@@ -1164,7 +1136,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
                     <th>Withdrawn</th>
                     <th>Balance</th>
                     <th>Last Txn</th>
-                    <th>Opening</th><th>Due</th><th class="no-print">Statement</th>
+                    <th class="no-print">Statement</th>
                   </tr>
                 </thead>
                 <tbody id="savBalTbody"></tbody>
@@ -1776,16 +1748,17 @@ async function tryAutoReconnect(fromGesture){
   if(!fromGesture && Date.now() - _lastAutoTry < 25000) return;
   _autoTrying = true; _lastAutoTry = Date.now();
   try{
-    await ensureGoogleScripts();
-    if(tokenClient){
-      requestTokenSafe({ prompt: '' }, !!fromGesture);
+    const ok = await silentRefreshToken();
+    if(ok){
+      if(offlineMode) await afterGoogleLogin();
+      else { setDriveStatus('Drive: connected'); if(localDirty) persistDBNow(); }
     }
   }catch(e){ console.warn('auto reconnect', e); }
   setTimeout(()=>{ _autoTrying = false; }, 8000);
 }
 // First tap/click after being offline = user gesture -> allowed to open Google's small window if needed
 document.addEventListener('click', ()=>{
-  if(DB && navigator.onLine && (offlineMode || !accessToken)) tryAutoReconnect(true);
+  if(DB && navigator.onLine && (offlineMode || !accessToken)) tryAutoReconnect(false);
 }, true);
 setInterval(()=>{
   if(DB && navigator.onLine && (offlineMode || !accessToken)) tryAutoReconnect(false);
@@ -1799,7 +1772,7 @@ function updateSyncBanner(){
     el.id = 'syncBanner';
     el.className = 'no-print';
     el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:150;background:#8a6d1f;color:#fff;padding:8px 14px;border-radius:8px;font-size:.8rem;box-shadow:0 4px 14px rgba(0,0,0,.35);display:none;cursor:pointer;max-width:92vw;text-align:center;';
-    el.onclick = ()=>{ if(navigator.onLine) tryAutoReconnect(true); else toast('No internet yet. Your data is safe on this PC.'); };
+    el.onclick = ()=>{ if(navigator.onLine) reauthFullPage(); else toast('No internet yet. Your data is safe on this PC.'); };
     document.body.appendChild(el);
   }
   const app = document.getElementById('app');
@@ -2008,15 +1981,7 @@ function loginScreenVisible(){
   const el = document.getElementById('loginScreen');
   return !!el && getComputedStyle(el).display !== 'none';
 }
-function requestTokenSafe(opts, fromUser){
-  if(!tokenClient) return false;
-  const now = Date.now();
-  if(fromUser){ if(now - _tokenReqAt < 3000) return false; }                       // double-click protection
-  else if(now - _tokenReqAt < 20000 || loginScreenVisible()) return false;         // background tries never fight the login window
-  _tokenReqAt = now;
-  try{ tokenClient.requestAccessToken(opts); return true; }
-  catch(e){ _tokenReqAt = 0; console.warn('requestAccessToken', e); return false; }
-}
+function requestTokenSafe(){ return false; }   // pop-up sign-in is switched off: full-page sign-in only
 let driveFileModifiedTime = null; // last known Drive file modifiedTime
 let localDirty = false;           // local unsaved / pending changes since last pull
 let drivePollTimer = null;
@@ -2098,41 +2063,53 @@ function scheduleTokenRefresh(){
   }, 30 * 60 * 1000);
 }
 
+function saveTokenForReload(){ try{ sessionStorage.setItem('nw_tok', JSON.stringify({t: accessToken, e: tokenExpiresAt})); }catch(e){} }
+function restoreSavedToken(){
+  try{
+    const o = JSON.parse(sessionStorage.getItem('nw_tok') || 'null');
+    if(o && o.t && o.e > Date.now() + 120000){ accessToken = o.t; tokenObtainedAt = Date.now(); tokenExpiresAt = o.e; driveAuthExpired = false; _silentFailedAt = 0; return true; }
+  }catch(e){}
+  return false;
+}
+/** Renew the Google token in a hidden frame (no pop-up). If Google needs a click, resolves false. */
 function silentRefreshToken(){
   return new Promise((resolve)=>{
-    if(!tokenClient){ resolve(false); return; }
-    const prev = tokenClient.callback;
-    let settled = false;
-    const finish = (ok)=>{
-      if(settled) return;
-      settled = true;
-      tokenClient.callback = prev;
-      resolve(ok);
+    if(!navigator.onLine){ resolve(false); return; }
+    const redirect = location.origin + location.pathname.replace(/index\.html$/i, '');
+    const state = 'sr' + Math.random().toString(36).slice(2);
+    const q = new URLSearchParams({ client_id: GOOGLE_CLIENT_ID, redirect_uri: redirect, response_type: 'token',
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      include_granted_scopes: 'true', prompt: 'none', state: state });
+    if(currentUserEmail) q.set('login_hint', currentUserEmail);
+    const f = document.createElement('iframe');
+    f.style.cssText = 'display:none;width:0;height:0;border:0;';
+    let done = false, timer = null;
+    const fail = ()=>{ _silentFailedAt = Date.now(); setDriveStatus('Drive: tap here to sign in again', 'offline'); finish(false); };
+    const finish = (ok)=>{ if(done) return; done = true; clearTimeout(timer); window.removeEventListener('message', onMsg); try{ f.remove(); }catch(e){} resolve(ok); };
+    const onMsg = (ev)=>{
+      if(ev.origin !== location.origin || !ev.data || ev.data.nwOauth !== true) return;
+      const p = new URLSearchParams(ev.data.hash || '');
+      if(p.get('state') !== state) return;
+      if(!p.get('access_token')){ fail(); return; }
+      accessToken = p.get('access_token'); tokenObtainedAt = Date.now();
+      tokenExpiresAt = Date.now() + ((parseInt(p.get('expires_in') || '3600', 10) || 3600) * 1000) - 60000;
+      driveAuthExpired = false; _silentFailedAt = 0;
+      try{ gapi.client.setToken({access_token: accessToken}); }catch(e){}
+      saveTokenForReload();
+      setDriveStatus('Drive: connected');
+      finish(true);
     };
-    tokenClient.callback = async (tokenResponse)=>{
-      _tokenReqAt = 0;
-      if(tokenResponse && tokenResponse.access_token && !tokenResponse.error){
-        accessToken = tokenResponse.access_token;
-        tokenObtainedAt = Date.now();
-        tokenExpiresAt = Date.now() + ((tokenResponse.expires_in || 3600) * 1000) - 60000;
-        driveAuthExpired = false; _silentFailedAt = 0;
-        try{ gapi.client.setToken({access_token: accessToken}); }catch(e){}
-        setDriveStatus('Drive: connected');
-        finish(true);
-      } else {
-        _silentFailedAt = Date.now();
-        setDriveStatus('Drive: tap anywhere to reconnect', 'offline');
-        finish(false);
-      }
-    };
-    try{
-      if(!requestTokenSafe(currentUserEmail ? {prompt: '', hint: currentUserEmail} : {prompt: ''}, false)){ finish(false); return; }
-      // safety timeout
-      setTimeout(()=>finish(false), 15000);
-    }catch(e){
-      finish(false);
-    }
+    window.addEventListener('message', onMsg);
+    timer = setTimeout(fail, 15000);
+    f.src = 'https://accounts.google.com/o/oauth2/v2/auth?' + q.toString();
+    document.body.appendChild(f);
   });
+}
+/** Tap on the Drive status / yellow banner: keep the work safe on this PC, then sign in on the full Google page */
+async function reauthFullPage(){
+  if(!confirm('Sign in to Google again? The page goes to Google and comes back. Your work is kept safe on this PC and uploads to Drive after you return.')) return;
+  try{ if(DB && !demoMode) await localCacheSetNow(); }catch(e){}
+  requestGoogleLoginRedirect();
 }
 
 let _afterLoginRunning = false;
@@ -2191,35 +2168,7 @@ async function _afterGoogleLoginInner(){
   }
 }
 
-function requestGoogleLogin(){
-  const errEl = document.getElementById('loginError');
-  const setMsg = (t)=>{ if(errEl) errEl.textContent = t; console.log('[login]', t); };
-  try{
-    setMsg('Site: ' + location.origin + ' — starting sign-in…');
-    if(!window.google || !google.accounts || !google.accounts.oauth2){
-      setMsg('Loading Google sign-in…');
-      ensureGoogleScripts()
-        .then(()=> setMsg('Google sign-in ready — click the green button again.'))
-        .catch(()=> setMsg('Google script not loaded. Check internet / adblock, then Ctrl+F5.'));
-      return;
-    }
-    if(!tokenClient){
-      try{ initGis(); }catch(e){ setMsg('Init GIS failed: ' + (e.message||e)); return; }
-    }
-    if(!tokenClient){
-      setMsg('Google client not ready. Wait 2 sec and click again, or Ctrl+F5.');
-      return;
-    }
-    // IMPORTANT: requestAccessToken must run in the same click turn (no await before this)
-    // or Chrome blocks the popup.
-    setMsg('Google window opening… If nothing appears, allow popups for this site.');
-    _loginClickAt = Date.now();
-    if(!requestTokenSafe({ prompt: 'consent' }, true)) return;   // ignore a double click while the window is opening
-  }catch(e){
-    console.error(e);
-    setMsg('Sign-in error: ' + (e.message||e));
-  }
-}
+function requestGoogleLogin(){ requestGoogleLoginRedirect(); }
 // ---- Full-page sign-in (no pop-up window) -------------------------------------------------------
 // Sends the whole tab to Google and comes back to this page with the access token in the URL (#access_token=...).
 // Works even when the small Google window is closed by the browser / an extension / the OS.
@@ -2265,11 +2214,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(errEl) errEl.textContent = 'Sign-in check failed. Please press the full-page sign-in button again.';
     return;
   }
-  sessionStorage.removeItem('nw_logged_in');   // do not start the old "resume" path in parallel
+  sessionStorage.removeItem('nw_logged_in'); sessionStorage.removeItem('nw_tok');   // do not start the old "resume" path in parallel
   accessToken = q.get('access_token');
   tokenObtainedAt = Date.now();
   tokenExpiresAt = Date.now() + ((parseInt(q.get('expires_in') || '3600', 10) || 3600) * 1000) - 60000;
-  driveAuthExpired = false; _silentFailedAt = 0;
+  driveAuthExpired = false; _silentFailedAt = 0; saveTokenForReload();
   if(errEl) errEl.textContent = 'Signed in — loading Drive data…';
   (async ()=>{
     try{
@@ -2298,20 +2247,10 @@ window.addEventListener('focus', ()=>{
 
 function reconnectDrive(){
   if(!navigator.onLine){ toast('No internet. Working offline on this PC.'); return; }
-  if(offlineMode || !accessToken){
-    if(!window.google || !tokenClient){
-      ensureGoogleScripts().then(()=>toast('Google sign-in ready. Tap the Drive status again.')).catch(()=>toast('Could not load Google sign-in. Check internet.'));
-      return;
-    }
-    requestGoogleLogin(); return;
-  }
-  if(!tokenClient){ toast('Google client not ready.'); return; }
+  if(offlineMode || !accessToken){ reauthFullPage(); return; }
   toast('Checking Google Drive…');
   silentRefreshToken().then(async ok=>{
-    if(!ok){
-      requestTokenSafe({prompt: 'consent'}, true);
-      return;
-    }
+    if(!ok){ reauthFullPage(); return; }
     await pullDriveIfNewer({toast:true, force:false});
     setDriveStatus('Drive: connected');
   });
@@ -2370,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           }catch(e){ console.warn('resume failed', e); }
           if(!resumed && errEl) errEl.textContent = 'Reconnecting to Google Drive…';
           setTimeout(()=>{
-            silentRefreshToken().then(async ok=>{
+            (restoreSavedToken() ? Promise.resolve(true) : silentRefreshToken()).then(async ok=>{
               if(ok){
                 try{
                   if(!resumed && errEl) errEl.textContent = 'Loading your data…';
@@ -2382,16 +2321,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
                     setDriveStatus('Drive: tap to reconnect', 'offline');
                   } else {
                     if(errEl) errEl.textContent = 'Reconnect failed. Please sign in again.';
-                    sessionStorage.removeItem('nw_logged_in');
+                    sessionStorage.removeItem('nw_logged_in'); sessionStorage.removeItem('nw_tok');
                   }
                 }
               } else if(resumed){
                 // Google wants a click before giving a new token: keep working, reconnect on the next tap
                 setDriveStatus('Drive: tap to reconnect', 'offline');
-                toast('Working from the copy saved on this PC. Tap anywhere to reconnect to Google Drive.');
+                toast('Working from the copy saved on this PC. Tap the Drive status to sign in again.');
               } else {
                 if(errEl) errEl.textContent = 'Session expired. Please sign in again.';
-                sessionStorage.removeItem('nw_logged_in');
+                sessionStorage.removeItem('nw_logged_in'); sessionStorage.removeItem('nw_tok');
               }
             });
           }, 500);
@@ -2547,7 +2486,7 @@ async function pullDriveIfNewer(opts){
     return true;
   }catch(e){
     console.warn('pullDriveIfNewer', e);
-    setDriveStatus(driveAuthExpired ? 'Drive: tap anywhere to reconnect' : 'Drive: cannot check updates — tap status to re-login', 'offline');
+    setDriveStatus(driveAuthExpired ? 'Drive: tap here to sign in again' : 'Drive: cannot check updates — tap status to re-login', 'offline');
     return false;
   }
 }
@@ -2778,7 +2717,7 @@ async function persistDBNow(opts){
     driveSaveFailing = true;
     cacheLocal(true);
     updateSavedIndicator(false, {offline:true});
-    setDriveStatus(!navigator.onLine ? 'Offline — working on this PC' : (driveAuthExpired ? 'Drive: tap anywhere to reconnect' : 'Drive: not synced — tap status to re-login'), 'offline');
+    setDriveStatus(!navigator.onLine ? 'Offline — working on this PC' : (driveAuthExpired ? 'Drive: tap here to sign in again' : 'Drive: not synced — tap status to re-login'), 'offline');
     isSyncing = false;
     return false;
   }
@@ -2927,7 +2866,7 @@ async function doLogout(){
   // If some changes could not be uploaded, keep the copy so nothing is lost.
   if(fullySynced) await clearLocalCache();
   offlineMode = false;
-  sessionStorage.removeItem('nw_logged_in');
+  sessionStorage.removeItem('nw_logged_in'); sessionStorage.removeItem('nw_tok');
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginError').textContent = fullySynced ? '' : 'Logged out. Some changes are kept on this PC and will upload next time you sign in.';
@@ -6951,14 +6890,10 @@ function renderSavingsBalances(){
       <td class="mono">${fmtMoney(r.withdrawn + r.helpOut)}</td>
       <td class="mono" style="font-weight:700;color:${r.balance>=0?'#0f8a34':'#b3311c'}">${fmtMoney(r.balance)}<div class="bal-bar"><i style="width:${Math.min(100,Math.round(Math.max(r.balance,0)/Math.max(...rows.map(x=>x.balance),1)*100))}%"></i></div></td>
       <td class="mono">${r.lastDate ? fmtDate(r.lastDate) : '—'}</td>
-      <td>${wc.open}</td>
-      <td>${wc.due}</td>
-      <td class="no-print"><button class="btn btn-accent btn-sm" onclick="openSavStatement('${r.c.id}')">Statement</button>${wc.remind ? ` <button class="btn btn-ghost btn-sm" onclick="welRemind('${r.c.id}')">Remind</button>` : ''}</td>
+      <td class="no-print"><button class="btn btn-accent btn-sm" onclick="openSavStatement('${r.c.id}')">Statement</button></td>
     </tr>`;
     }).join('');
   }
-  const rq = rows.filter(r=>{ const d = welDueList(r.c), rm = (DB.savings.reminders||{})[String(r.c.id)]; return d && d.rows.length && waMobile(r.c) && !(rm && rm.ok && rm.month===d.nowKey); }).map(r=>r.c).sort((a,b)=>(a.ranking||1e9)-(b.ranking||1e9));
-  window.__remindQueue = rq; const rb = document.getElementById('savRemindAllBtn'); if(rb) rb.textContent = 'Send due reminders (' + rq.length + ')';
   updateSavPeriodSummary();
 }
 
@@ -7019,15 +6954,14 @@ function printSavBalances(){
     <td>${r.c.ranking||'—'}</td>
     <td>${fmtMoney(r.deposited+r.helpIn)}</td><td>${fmtMoney(r.withdrawn+r.helpOut)}</td>
     <td>${fmtMoney(r.balance)}</td><td>${r.lastDate?fmtDate(r.lastDate):''}</td>
-    <td>${welOpeningTxt(welDueList(r.c))}</td><td>${(()=>{ const d = welDueList(r.c); return d && d.rows.length ? '<b>' + fmtMoney(d.total) + '</b><br>' + d.rows.map(x=>trkLbl(x.key) + ' ' + fmtMoney(x.due)).join('<br>') : '—'; })()}</td>
   </tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Welfare Fund</h2></div>
     <div class="pr-meta" style="font-size:12px;">Balances report · Printed: ${new Date().toLocaleString()}<br>
     Total deposited: <strong>${fmtMoney(totalDep)}</strong> · Total withdrawn: <strong>${fmtMoney(totalWd)}</strong> · Sum of balances: <strong>${fmtMoney(totalBal)}</strong></div>
     <table style="font-size:12px;"><thead><tr>
       <th>#</th><th>ID</th><th>Name</th><th>Address</th><th>Section</th><th>Rank</th>
-      <th>Deposited</th><th>Withdrawn</th><th>Balance</th><th>Last Txn</th><th>Opening</th><th>Due</th>
-    </tr></thead><tbody>${body||'<tr><td colspan="12">No data</td></tr>'}</tbody></table>`;
+      <th>Deposited</th><th>Withdrawn</th><th>Balance</th><th>Last Txn</th>
+    </tr></thead><tbody>${body||'<tr><td colspan="10">No data</td></tr>'}</tbody></table>`;
   enterPrintMode(html, 'Contractor Welfare Fund');
 }
 
@@ -7142,7 +7076,6 @@ function renderSavStatementBody(){
       <div><strong>${escapeHtml(c.name)}</strong> · ID <span class="mono">${escapeHtml(c.id)}</span>
       · ${escapeHtml(c.nid||'—')} · ${escapeHtml(formatMobilesDisplay(c)||'—')}</div>
       <div style="color:var(--ink-soft);margin-top:4px;">${escapeHtml(c.address||'')}</div>
-      <div style="margin-top:4px;">Account opened: <strong>${escapeHtml(welOpeningTxt(welDueList(c)))}</strong></div>
     </div>
     <div class="stmt-kpis">
       <div class="stat-box"><div class="label">Opening balance</div><div class="value">${fmtMoney(data.opening||0)}</div></div>
@@ -7155,7 +7088,6 @@ function renderSavStatementBody(){
       <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="8">No transactions in this period.</td></tr>'}</tbody>
     </table></div>
-    ${welDueHtml(c)}
     </div>
     <div style="flex:1 1 auto;min-height:48px;"></div>
     <div style="padding-top:16px;padding-bottom:8px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);page-break-inside:avoid;">
@@ -7184,13 +7116,11 @@ function printSavStatement(){
     <div class="pr-meta" style="font-size:12px;line-height:1.55;">
       Name: <strong>${escapeHtml(c.name)}</strong> · ID: ${escapeHtml(c.id)} · Section: ${escapeHtml(c.nid||'—')}<br>
       Mobile: ${escapeHtml(formatMobilesDisplay(c)||'—')} · Address: ${escapeHtml(c.address||'—')}<br>
-      Account opened: <strong>${escapeHtml(welOpeningTxt(welDueList(c)))}</strong><br>
       Period: ${from||'…'} → ${to||'…'} · Printed: ${new Date().toLocaleString()}<br>
       Total In: <strong>${fmtMoney(data.totalIn)}</strong> · Total Out: <strong>${fmtMoney(data.totalOut)}</strong> · Closing: <strong>${fmtMoney(data.closing)}</strong>
     </div>
     <table style="font-size:12px;"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
     <tbody>${rows||'<tr><td colspan="8">No transactions.</td></tr>'}</tbody></table>
-    ${welDueHtml(c)}
     </div>
     <div style="flex:1 1 auto;"></div>
     <div style="padding-top:20px;padding-bottom:12px;page-break-inside:avoid;display:flex;justify-content:space-between;font-size:12px;">

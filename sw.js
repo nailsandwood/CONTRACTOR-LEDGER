@@ -1,5 +1,5 @@
 // Contractor Ledger service worker: lets the page open without internet.
-const CACHE = 'nw-ledger-v1';
+const CACHE = 'nw-ledger-v2';
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html'])).catch(()=>{}));
   self.skipWaiting();
