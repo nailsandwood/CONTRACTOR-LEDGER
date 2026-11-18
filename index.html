@@ -576,6 +576,11 @@ body.dark-mode .pd-foot td{background:#232b2e;}
       <span id="loginOriginHint" style="font-size:.7rem;"></span>
     </p>
 
+    <button type="button" id="redirectSignInBtn" class="btn btn-ghost" style="margin-top:10px;width:100%;padding:10px 16px;" onclick="requestGoogleLoginRedirect()">
+      Sign in &mdash; full page (no pop-up window)
+    </button>
+    <p style="font-size:.7rem;color:var(--ink-soft);margin-top:6px;text-align:center;">Use this if the small Google window closes by itself. The page goes to Google and comes back here.</p>
+
     <button type="button" id="offlineBtn" class="btn btn-ghost" style="margin-top:10px;width:100%;padding:10px 16px;" onclick="startOfflineMode()">
       Work Offline (use data saved on this PC)
     </button>
@@ -1652,6 +1657,7 @@ let tokenObtainedAt = 0;
 let tokenExpiresAt = 0;        // when the current Google access token stops working
 let driveAuthExpired = false;  // true when Drive rejected our token and a silent renew failed
 let _silentFailedAt = 0;
+let _loginClickAt = 0;        // when the green button was last pressed (shown in the popup_closed message)
 let _lastGestureTry = 0, _gestureRefreshing = false;
 
 /** Today's date as YYYY-MM-DD in THIS computer's local time (toISOString() uses UTC and is a day behind after midnight in Bangladesh) */
@@ -2073,7 +2079,8 @@ function initGis(){
       if(type === 'popup_failed_to_open'){
         msg = 'Browser blocked the Google window. Click the pop-up icon at the right end of the address bar, choose \u201cAlways allow pop-ups\u201d, then click the green button again.';
       } else if(type === 'popup_closed'){
-        msg = 'Google window was closed before sign-in finished. Click the green button once, choose your account in the small window and press Allow (do not close it).';
+        const secs = _loginClickAt ? Math.round((Date.now() - _loginClickAt) / 100) / 10 : null;
+        msg = 'Google window was closed before sign-in finished' + (secs !== null ? ' (' + secs + ' sec after the click)' : '') + '. Click the green button once, choose your account in the small window and press Allow (do not close it). If it keeps closing, use the \u201cSign in \u2014 full page\u201d button below.';
       } else {
         msg = 'Google sign-in problem: ' + ((err && (err.message || err.type)) || 'unknown') + '. Click the green button to try again.';
       }
@@ -2206,12 +2213,75 @@ function requestGoogleLogin(){
     // IMPORTANT: requestAccessToken must run in the same click turn (no await before this)
     // or Chrome blocks the popup.
     setMsg('Google window opening… If nothing appears, allow popups for this site.');
+    _loginClickAt = Date.now();
     if(!requestTokenSafe({ prompt: 'consent' }, true)) return;   // ignore a double click while the window is opening
   }catch(e){
     console.error(e);
     setMsg('Sign-in error: ' + (e.message||e));
   }
 }
+// ---- Full-page sign-in (no pop-up window) -------------------------------------------------------
+// Sends the whole tab to Google and comes back to this page with the access token in the URL (#access_token=...).
+// Works even when the small Google window is closed by the browser / an extension / the OS.
+function requestGoogleLoginRedirect(){
+  const errEl = document.getElementById('loginError');
+  try{
+    if(!navigator.onLine){ if(errEl) errEl.textContent = 'No internet — tap "Work Offline" to continue.'; return; }
+    const redirect = location.origin + location.pathname.replace(/index\.html$/i, '');
+    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem('nw_oauth_state', state);
+    sessionStorage.setItem('nw_oauth_redirect', redirect);
+    const q = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: redirect,
+      response_type: 'token',
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      include_granted_scopes: 'true',
+      prompt: 'select_account',
+      state: state
+    });
+    if(errEl) errEl.textContent = 'Going to Google… (you will come back to this page automatically)';
+    location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q.toString();
+  }catch(e){
+    if(errEl) errEl.textContent = 'Full-page sign-in error: ' + (e.message || e);
+  }
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const raw = (location.hash || '').replace(/^#/, '');
+  if(!raw || !/(^|&)(access_token|error)=/.test(raw)) return;      // normal page load
+  const q = new URLSearchParams(raw);
+  try{ history.replaceState(null, document.title, location.pathname + location.search); }catch(e){}   // keep the token out of the address bar / history
+  const errEl = document.getElementById('loginError');
+  const expected = sessionStorage.getItem('nw_oauth_state');
+  sessionStorage.removeItem('nw_oauth_state');
+  if(q.get('error')){
+    const code = q.get('error');
+    let msg = 'Google said: ' + code + (q.get('error_description') ? ' — ' + q.get('error_description') : '') + '.';
+    if(code === 'access_denied') msg += ' Press Allow on the Google page (and make sure this Google account is a Test user).';
+    if(errEl) errEl.textContent = msg;
+    return;
+  }
+  if(!expected || q.get('state') !== expected){
+    if(errEl) errEl.textContent = 'Sign-in check failed. Please press the full-page sign-in button again.';
+    return;
+  }
+  sessionStorage.removeItem('nw_logged_in');   // do not start the old "resume" path in parallel
+  accessToken = q.get('access_token');
+  tokenObtainedAt = Date.now();
+  tokenExpiresAt = Date.now() + ((parseInt(q.get('expires_in') || '3600', 10) || 3600) * 1000) - 60000;
+  driveAuthExpired = false; _silentFailedAt = 0;
+  if(errEl) errEl.textContent = 'Signed in — loading Drive data…';
+  (async ()=>{
+    try{
+      await initGapi();
+      gapi.client.setToken({access_token: accessToken});
+      scheduleTokenRefresh();
+      await afterGoogleLogin();
+    }catch(e){
+      if(errEl) errEl.textContent = 'Could not finish sign-in: ' + (e && e.message || e);
+    }
+  })();
+});
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && accessToken){
     if(tokenObtainedAt){
