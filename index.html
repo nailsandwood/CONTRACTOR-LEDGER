@@ -1050,6 +1050,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
               <select class="select-sm" id="trkMonths" onchange="renderTracker()"><option value="4">Last 4 months</option><option value="6" selected>Last 6 months</option><option value="12">Last 12 months</option></select>
               <select class="select-sm" id="trkSection" onchange="renderTracker()"><option value="">All sections</option></select>
               <select class="select-sm" id="trkAddress" onchange="renderTracker()"><option value="">All addresses</option></select>
+              <select class="select-sm" id="trkSort" onchange="renderTracker()" title="Sort the grid"><option value="all">Sort: All (due first)</option><option value="id">ID</option><option value="name">Name</option><option value="rank">Rank</option><option value="address">Address</option><option value="section">Section</option><option value="monthly">Monthly (received this month)</option><option value="yearly">Yearly (received this year)</option><option value="due">Due</option><option value="paid">Paid (total)</option><option value="advance">Advance</option></select>
               <label style="font-size:.8rem;display:flex;align-items:center;gap:6px;">Monthly fee <input class="input-sm" id="trkFee" type="number" min="1" style="width:90px;" onchange="trkSetFee(this.value)"></label>
               <button type="button" class="btn btn-ghost" onclick="trkExcel()">⇩ Excel</button>
               <button type="button" class="btn btn-ghost" onclick="trkClearFilters()">Clear filters</button>
@@ -1121,6 +1122,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
 
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px;">
             <h3 style="margin:0;font-size:1rem;">Contractor balances</h3>
+            <button class="btn btn-accent btn-sm no-print" id="savRemindAllBtn" onclick="welRemindAll()">Send due reminders (0)</button>
             <button class="btn btn-ghost btn-sm no-print" onclick="printSavBalances()">Print balances / PDF</button>
           </div>
           <div class="toolbar no-print" style="margin-bottom:10px;flex-wrap:wrap;">
@@ -1153,7 +1155,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
                     <th>Withdrawn</th>
                     <th>Balance</th>
                     <th>Last Txn</th>
-                    <th class="no-print">Statement</th>
+                    <th>Opening</th><th>Due</th><th class="no-print">Statement</th>
                   </tr>
                 </thead>
                 <tbody id="savBalTbody"></tbody>
@@ -1183,6 +1185,7 @@ body.dark-mode .pd-foot td{background:#232b2e;}
         <div class="toolbar no-print">
           <button class="btn btn-ghost" onclick="saveDB(true); toast('Saved to Google Drive.');">Save to Drive</button>
           <button class="btn btn-accent" onclick="startAnnounceSend()">Send WhatsApp</button>
+          <span class="no-print" style="display:inline-flex;gap:6px;align-items:center;"><select class="select-sm" id="annAutoTpl" onchange="annSetAutoTpl(this.value)" title="Message used by Auto-send and reminders"></select><button class="btn btn-ghost" onclick="annAutoNoAccount()" title="Queue WhatsApp, in rank order, for every contractor who has no welfare account yet">Auto-send: no welfare account</button></span>
         </div>
       </div>
 
@@ -4470,7 +4473,16 @@ function renderContractorLookup(){
   const q = (document.getElementById('contractorLookupSearch').value||'').toLowerCase().trim();
   const wrap = document.getElementById('contractorLookupResults');
   if(!q){ wrap.style.display='none'; wrap.innerHTML=''; window.__lookupMatches=[]; lookupHighlightIdx=-1; return; }
-  const matches = DB.contacts.filter(c=> [c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid,c.address].join(' ').toLowerCase().includes(q));
+  const qd = q.replace(/\D/g,'');
+  const mobs = c=>[c.mobile, ...(c.mobiles||[])].map(x=>String(x||'').replace(/\D/g,'')).filter(Boolean);
+  const score = c=>{ const id = String(c.id).toLowerCase(), m = mobs(c);
+    if(id === q) return 0;
+    if(qd.length >= 7 && m.some(x=>x === qd || x.endsWith(qd))) return 1;
+    if(id.startsWith(q)) return 2;
+    if(qd.length >= 3 && m.some(x=>x.includes(qd))) return 3;
+    if(String(c.name||'').toLowerCase().startsWith(q)) return 4;
+    return 5; };
+  const matches = DB.contacts.filter(c=> [c.id,c.name,c.mobile,formatMobilesDisplay(c),c.nid,c.address].join(' ').toLowerCase().includes(q)).map(c=>({c, k:score(c)})).sort((a,b)=>a.k-b.k).map(x=>x.c);
   window.__lookupMatches = matches;
   wrap.style.display = 'block';
   if(!matches.length){ wrap.innerHTML = '<div class="gs-empty">No contractor matches.</div>'; lookupHighlightIdx=-1; return; }
@@ -5279,14 +5291,34 @@ function annIsSent(id){
   ensureAnnouncements();
   return !!(DB.announcements.sent && DB.announcements.sent[String(id)]);
 }
-function annMarkSent(id, save){
+function annMarkSkipped(id, num){
+  ensureAnnouncements(); DB.announcements.skipped = DB.announcements.skipped || {};
+  DB.announcements.skipped[String(id)] = { at:new Date().toISOString(), num:num||'' };
+  saveDB(true);
+}
+function annSetAutoTpl(v){ ensureAnnouncements(); DB.announcements.autoTpl = Number(v)||0; saveDB(true); }
+function annAutoNoAccount(){
+  ensureAnnouncements();
+  const i = Number(DB.announcements.autoTpl ?? 7), t = DB.announcements.templates[i];
+  if(!t || !String(t.body||'').trim()){ toast('The chosen template is empty.'); return; }
+  const hasDep = new Set(DB.savings.transactions.filter(x=>x.type==='deposit').map(x=>String(x.contactId)));
+  DB.announcements.invite = DB.announcements.invite || {};
+  const queue = rankedContacts().filter(c=>!c.died && !hasDep.has(String(c.id)) && waMobile(c) && !(DB.announcements.invite[String(c.id)] && DB.announcements.invite[String(c.id)].ok));
+  if(!queue.length){ toast('Everyone without a welfare account already has this message (or has no mobile).'); return; }
+  if(!confirm(queue.length + ' contractors have no welfare account yet (rank order). WhatsApp opens one chat at a time with Template ' + (i+1) + ' ready. Press Send in WhatsApp, then Next. Start?')) return;
+  const mark = (c,ph,ok)=>{ DB.announcements.invite[String(c.id)] = {ok, at:new Date().toISOString(), num:ph, tpl:i}; };
+  runAnnounceQueue(queue, t.body, 0, { onSent:(c,ph)=>{ mark(c,ph,true); annMarkSent(c.id, true, ph); }, onSkip:(c,ph)=>{ mark(c,ph,false); annMarkSkipped(c.id, ph); } });
+}
+function annMarkSent(id, save, num){
   ensureAnnouncements();
   const k = String(id);
   const prev = DB.announcements.sent[k] || { times: 0 };
   DB.announcements.sent[k] = {
     at: new Date().toISOString(),
-    times: (prev.times||0) + 1
+    times: (prev.times||0) + 1,
+    num: num || ''
   };
+  if(DB.announcements.skipped) delete DB.announcements.skipped[k];
   if(save) saveDB(true);
 }
 function annMarkSelectedSent(){
@@ -5433,6 +5465,9 @@ function filteredAnnounceContacts(){
 
 function renderAnnounceRecipients(){
   ensureAnnouncements();
+  const at = document.getElementById('annAutoTpl');
+  if(at && at.options.length !== DB.announcements.templates.length){ at.innerHTML = DB.announcements.templates.map((t,i)=>`<option value="${i}">Auto: Template ${i+1}</option>`).join(''); }
+  if(at) at.value = String(DB.announcements.autoTpl ?? 7);
   const list = filteredAnnounceContacts();
   const tbody = document.getElementById('annRecipientTbody');
   if(!tbody) return;
@@ -5446,7 +5481,8 @@ function renderAnnounceRecipients(){
     const id = String(c.id);
     const checked = __annSelected.has(id) ? 'checked' : '';
     const sent = annIsSent(id);
-    const sentAt = sent && DB.announcements.sent[id] ? (DB.announcements.sent[id].at||'').slice(0,10) : '';
+    const rec = sent ? DB.announcements.sent[id] : null, sk = (!sent && (DB.announcements.skipped||{})[id]) || null;
+    const stamp = x=> x ? welStamp(x.at) + (x.num ? ' · ' + welLocal(x.num) : '') : '';
     return `<tr>
       <td class="no-print"><input type="checkbox" ${checked} onchange="annToggle('${id}', this.checked)"></td>
       <td class="mono">${escapeHtml(c.id)}</td>
@@ -5456,7 +5492,7 @@ function renderAnnounceRecipients(){
       <td style="font-size:.75rem;">${escapeHtml(c.address||'—')}</td>
       <td class="mono">${c.ranking||'—'}</td>
       <td class="mono">${fmtMoney(c.totalAmount)}</td>
-      <td style="font-size:.72rem;${sent?'color:#0f8a34;font-weight:600;':'color:var(--ink-soft);'}">${sent ? ('Sent' + (sentAt?(' · '+sentAt):'')) : '—'}</td>
+      <td style="font-size:.72rem;${sent?'color:#0f8a34;font-weight:600;':sk?'color:#b3311c;font-weight:700;':'color:var(--ink-soft);'}">${sent ? 'Sent · ' + stamp(rec) : sk ? 'Not sent · ' + stamp(sk) : '—'}</td>
     </tr>`;
   }).join('');
   document.getElementById('annSelCount').textContent = __annSelected.size + ' selected';
@@ -5488,18 +5524,19 @@ function startAnnounceSend(){
   runAnnounceQueue(queue, body, 0);
 }
 
-function runAnnounceQueue(queue, body, index){
+function runAnnounceQueue(queue, body, index, hooks){
   if(index >= queue.length){
     toast('Finished: ' + queue.length + ' WhatsApp chat(s) processed.');
     return;
   }
   const c = queue[index];
+  const msg = typeof body === 'function' ? body(c) : body;
   const phone = normalizeBdMobile(waMobile(c));
   if(!phone){
     if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
     return;
   }
-  const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(body);
+  const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
   const w = window.open(url, 'contractor_ledger_whatsapp');
   try{ if(w) w.focus(); }catch(e){}
   let bar = document.getElementById('waOfferBar');
@@ -5519,9 +5556,10 @@ function runAnnounceQueue(queue, body, index){
   nextBtn.textContent = index+1 < queue.length ? ('Next (' + (index+2) + '/' + queue.length + ')') : 'Done';
   nextBtn.style.cssText = 'background:#fff;color:#128C7E;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;';
   nextBtn.onclick = ()=>{
-    annMarkSent(c.id, true);
-    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
-    else { bar.style.display = 'none'; toast('All chats processed. Sent log updated.'); renderAnnounceRecipients(); }
+    const ph = normalizeBdMobile(waMobile(c));
+    if(hooks && hooks.onSent) hooks.onSent(c, ph); else annMarkSent(c.id, true, ph);
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1, hooks);
+    else { bar.style.display = 'none'; toast('All chats processed. Sent log updated.'); renderAnnounceRecipients(); if(hooks && hooks.onDone) hooks.onDone(); }
   };
   const otherNums = getContactMobiles(c);
   let otherBtn = null;
@@ -5532,7 +5570,7 @@ function runAnnounceQueue(queue, body, index){
     otherBtn.onclick = ()=>{
       c.waIdx = (waNumberIndex(c) + 1) % otherNums.length; saveDB();
       const ph = normalizeBdMobile(otherNums[c.waIdx]);
-      window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(body), 'contractor_ledger_whatsapp');
+      window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg), 'contractor_ledger_whatsapp');
       otherBtn.textContent = 'Opened ' + otherNums[c.waIdx] + ' — tap again for next';
     };
   }
@@ -5540,9 +5578,10 @@ function runAnnounceQueue(queue, body, index){
   skipBtn.textContent = 'Skip';
   skipBtn.style.cssText = 'background:transparent;border:1px solid #fff;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;';
   skipBtn.onclick = ()=>{
-    // skip = do not mark sent
-    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1);
-    else { bar.style.display = 'none'; renderAnnounceRecipients(); }
+    const ph = normalizeBdMobile(waMobile(c));
+    if(hooks && hooks.onSkip) hooks.onSkip(c, ph); else annMarkSkipped(c.id, ph);
+    if(index+1 < queue.length) runAnnounceQueue(queue, body, index+1, hooks);
+    else { bar.style.display = 'none'; renderAnnounceRecipients(); if(hooks && hooks.onDone) hooks.onDone(); }
   };
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '×';
@@ -6451,7 +6490,7 @@ function trkFee(){ const f = Number((DB.savings||{}).monthlyFee); return f > 0 ?
 function trkSetFee(v){ if(!requireEditor('Change the monthly fee')){ renderTracker(); return; } ensureSavings(); DB.savings.monthlyFee = Math.max(1, Number(v)||1000); saveDB(); renderTracker(); }
 function trkMk(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
 function trkAdd(k,n){ return trkMk(new Date(+k.slice(0,4), +k.slice(5,7)-1+n, 1, 12)); }
-function trkLbl(k){ return AN_MN[+k.slice(5,7)-1] + ' ' + k.slice(2,4); }
+function trkLbl(k){ return AN_MN[+k.slice(5,7)-1] + ' ' + k.slice(0,4); }
 function trkEnd(k){ return localISODate(new Date(+k.slice(0,4), +k.slice(5,7), 0, 12)); }
 function trkShort(iso){ const d = anDate(iso); return d.getDate() + ' ' + AN_MN[d.getMonth()]; }
 function trkCalc(c, fee, nowKey){
@@ -6517,7 +6556,7 @@ function trkBuildFilterRow(keys, yearly){
 }
 function trkClearFilters(){
   const set = (id,v)=>{ const e = document.getElementById(id); if(e) e.value = v; };
-  set('trkSearch',''); set('trkFilter','all'); set('trkSection',''); set('trkAddress','');
+  set('trkSearch',''); set('trkFilter','all'); set('trkSort','all'); set('trkSection',''); set('trkAddress','');
   document.querySelectorAll('#trkFiltRow select[data-k]').forEach(e=>e.value = '');
   renderTracker();
 }
@@ -6545,7 +6584,14 @@ function renderTracker(){
   if(colF.length) rows = rows.filter(({r})=> colF.every(([k,v])=>{
     if(yearly){ const a = trkYearAgg(r,k,fee,nowKey); return v==='none' ? !a : !!a && (v==='paid' ? a.due===0 && a.L===0 : v==='late' ? a.L>0 : a.due>0); }
     const m = r.M.find(x=>x.key===k); return (m ? m.st : 'none') === v; }));
-  rows.sort((a,b)=> b.r.due - a.r.due || String(a.c.name||'').localeCompare(String(b.c.name||'')));
+  const so = document.getElementById('trkSort').value, nm = x=>String(x.c.name||''), byName = (a,b)=>nm(a).localeCompare(nm(b));
+  const cmpS = f=>(a,b)=>String(f(a)||'').localeCompare(String(f(b)||''), undefined, {numeric:true}) || byName(a,b);
+  const recv = (x,test)=>x.r.D.filter(d=>test(String(d.t.date))).reduce((t,d)=>t+(Number(d.t.amount)||0),0);
+  rows.sort(so==='id' ? cmpS(x=>x.c.id) : so==='name' ? byName : so==='rank' ? (a,b)=>(a.c.ranking||1e9)-(b.c.ranking||1e9) : so==='address' ? cmpS(x=>x.c.address) : so==='section' ? cmpS(x=>x.c.nid)
+    : so==='monthly' ? (a,b)=>recv(b,d=>d.slice(0,7)===nowKey) - recv(a,d=>d.slice(0,7)===nowKey) || byName(a,b)
+    : so==='yearly' ? (a,b)=>recv(b,d=>d.slice(0,4)===String(nowY)) - recv(a,d=>d.slice(0,4)===String(nowY)) || byName(a,b)
+    : so==='paid' ? (a,b)=>recv(b,()=>true) - recv(a,()=>true) || byName(a,b) : so==='advance' ? (a,b)=>b.r.adv - a.r.adv || byName(a,b)
+    : (a,b)=>b.r.due - a.r.due || byName(a,b));
   window.__trk = {rows, keys, fee, yearly, nowKey};
   document.getElementById('trkHeadRow').innerHTML = '<th>Contractor</th>' + keys.map(k=>`<th>${yearly ? k : trkLbl(k)}</th>`).join('') + '<th>Balance</th>';
   body.innerHTML = rows.map(({c,r})=>{ const [bc,bt] = trkBal(r, fee); return `<tr class="${trkSel===String(c.id)?'sel':''}" onclick="trkOpen('${escapeHtml(String(c.id))}')"><td><b>${escapeHtml(c.name||'')}</b><span class="d">ID ${escapeHtml(String(c.id))}</span></td>${keys.map(k=>`<td>${yearly ? trkYearCell(trkYearAgg(r,k,fee,nowKey)) : trkCell(r.M.find(m=>m.key===k))}</td>`).join('')}<td class="${bc}">${bt}</td></tr>`; }).join('');
@@ -6696,6 +6742,56 @@ function renderSavings(){
   renderSavingsBalances();
 }
 
+/* ---------- Welfare: opening date, due details and Bangla WhatsApp reminders ---------- */
+const BN_M = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+function toBn(x){ return String(x).replace(/[0-9]/g, d=>'০১২৩৪৫৬৭৮৯'[d]); }
+function welBnMoney(n){ return toBn(Number(n).toLocaleString('en-US')); }
+function welBnDate(iso){ const d = anDate(iso); return toBn(d.getDate()) + ' ' + BN_M[d.getMonth()] + ' ' + toBn(d.getFullYear()); }
+function welLocal(num){ return String(num||'').replace(/^880/, '0'); }
+function welStamp(iso){ try{ return new Date(iso).toLocaleString('en-GB', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); }catch(e){ return String(iso||'').slice(0,10); } }
+function welDueList(c){
+  ensureSavings(); const fee = trkFee(), nowKey = trkMk(new Date()), r = trkCalc(c, fee, nowKey); if(!r) return null;
+  const rows = r.M.filter(m=>m.key<=nowKey && m.paid<fee).map(m=>({key:m.key, due:fee-m.paid, part:m.paid>0, end:trkEnd(m.key)}));
+  return {r, fee, nowKey, rows, total:rows.reduce((t,x)=>t+x.due,0), opening:r.D[0].t.date};
+}
+function welOpeningTxt(d){ return d ? fmtDate(d.opening) + ' (' + trkLbl(String(d.opening).slice(0,7)) + ')' : '—'; }
+function welDueHtml(c){
+  const d = welDueList(c); if(!d || !d.rows.length) return '';
+  return `<h3 style="margin:14px 0 6px;font-size:.95rem;">Due details</h3><div class="table-wrap"><table><thead><tr><th>Month</th><th>Month end</th><th>Fee</th><th>Paid</th><th>Due</th></tr></thead><tbody>${d.rows.map(x=>`<tr><td>${trkLbl(x.key)}</td><td>${fmtDate(x.end)}</td><td>${fmtMoney(d.fee)}</td><td>${fmtMoney(d.fee - x.due)}</td><td><b>${fmtMoney(x.due)}</b></td></tr>`).join('')}<tr><td colspan="4"><b>Total due</b></td><td><b>${fmtMoney(d.total)}</b></td></tr></tbody></table></div>`;
+}
+function welReminderText(c){
+  const d = welDueList(c); if(!d || !d.rows.length) return '';
+  ensureAnnouncements();
+  const ti = Number(DB.announcements.autoTpl ?? 7), tpl = DB.announcements.templates[ti];
+  const pay = tpl && tpl.body ? String(tpl.body).replace(/^\s*আসসালামু আলাইকুম[।.]?\s*/, '').trim() : '';
+  const list = d.rows.map((x,i)=> toBn(i+1) + ') ' + BN_M[+x.key.slice(5,7)-1] + ' ' + toBn(x.key.slice(0,4)) + ' (শেষ তারিখ: ' + welBnDate(x.end) + ') — ' + welBnMoney(x.due) + ' টাকা' + (x.part ? ' (আংশিক বাকি)' : '')).join('\n');
+  const cur = d.rows.some(x=>x.key===d.nowKey) ? 'চলতি মাসের (' + BN_M[+d.nowKey.slice(5,7)-1] + ' ' + toBn(d.nowKey.slice(0,4)) + ') ' : '';
+  return 'আসসালামু আলাইকুম।\nপ্রিয় ' + c.name + ' (ID: ' + c.id + '),\n' + cur + 'ওয়েলফেয়ার ফান্ডের মাসিক ' + welBnMoney(d.fee) + ' টাকা জমা দেওয়ার সময় হয়েছে। আপনার বকেয়ার বিবরণ:\n' + list + '\n\nমোট বকেয়া: ' + welBnMoney(d.total) + ' টাকা\nআজকের তারিখ: ' + welBnDate(localISODate(new Date())) + (pay ? '\n\n' + pay : '\n\nধন্যবাদ।');
+}
+function welMarkReminder(c, phone, ok){
+  ensureSavings(); DB.savings.reminders = DB.savings.reminders || {};
+  DB.savings.reminders[String(c.id)] = {ok, at:new Date().toISOString(), num:phone, month:trkMk(new Date())}; saveDB(true);
+}
+const WEL_HOOKS = { onSent:(c,ph)=>welMarkReminder(c,ph,true), onSkip:(c,ph)=>welMarkReminder(c,ph,false), onDone:()=>{ try{ renderSavingsBalances(); }catch(e){} } };
+function welRemind(id){
+  const c = DB.contacts.find(x=>String(x.id)===String(id)); if(!c) return;
+  if(!waMobile(c)){ toast('This contractor has no mobile number.'); return; }
+  if(!welReminderText(c)){ toast('Nothing is due for this contractor.'); return; }
+  runAnnounceQueue([c], x=>welReminderText(x), 0, WEL_HOOKS);
+}
+function welRemindAll(){
+  const q = window.__remindQueue || []; if(!q.length){ toast('No pending reminders for the current filter.'); return; }
+  if(!confirm(q.length + ' contractors with welfare due (rank order). WhatsApp opens one chat at a time with the Bangla reminder ready. Press Send in WhatsApp, then Next. Start?')) return;
+  runAnnounceQueue(q, x=>welReminderText(x), 0, WEL_HOOKS);
+}
+function welLedgerCells(c){
+  const d = welDueList(c); if(!d) return {open:'—', due:'—'};
+  const open = fmtDate(d.opening) + `<div style="font-size:.7rem;color:var(--ink-soft);">${trkLbl(String(d.opening).slice(0,7))}</div>`;
+  if(!d.rows.length) return {open, due:'<span class="trk-g">Paid up</span>', remind:false};
+  const rm = (DB.savings.reminders||{})[String(c.id)];
+  const st = rm && rm.month===d.nowKey ? (rm.ok ? `<div style="font-size:.7rem;color:#0f8a34;font-weight:600;">Reminder sent · ${welStamp(rm.at)}${rm.num ? ' · ' + welLocal(rm.num) : ''}</div>` : '<div style="font-size:.7rem;color:#b3311c;font-weight:700;">Reminder not sent</div>') : '<div style="font-size:.7rem;color:var(--ink-soft);">No reminder yet</div>';
+  return {open, due:`<span class="trk-r">${fmtMoney(d.total)}</span><div style="font-size:.7rem;">${d.rows.map(x=>trkLbl(x.key) + (x.part ? ' (part)' : '') + ' · ' + fmtMoney(x.due)).join('<br>')}</div>` + st, remind:!!waMobile(c)};
+}
 function renderSavingsBalances(){
   const q = (document.getElementById('savBalSearch').value||'').toLowerCase().trim();
   const sort = document.getElementById('savBalSort').value;
@@ -6743,6 +6839,7 @@ function renderSavingsBalances(){
     empty.style.display = 'none';
     tbody.innerHTML = rows.map(r=>{
       const addrLine = r.c.address ? `<div style="font-size:.72rem;color:var(--ink-soft);">${escapeHtml(r.c.address)}</div>` : '';
+      const wc = welLedgerCells(r.c);
       return `<tr>
       <td><div class="who-cell">${avatarHtml(r.c,32)}<div><b>${escapeHtml(r.c.name)}</b><small>ID ${escapeHtml(String(r.c.id))}${r.c.address?' · '+escapeHtml(r.c.address):''}</small></div></div></td>
       <td><span class="pill pill-gray">${escapeHtml(r.c.nid||'—')}</span></td>
@@ -6751,10 +6848,14 @@ function renderSavingsBalances(){
       <td class="mono">${fmtMoney(r.withdrawn + r.helpOut)}</td>
       <td class="mono" style="font-weight:700;color:${r.balance>=0?'#0f8a34':'#b3311c'}">${fmtMoney(r.balance)}<div class="bal-bar"><i style="width:${Math.min(100,Math.round(Math.max(r.balance,0)/Math.max(...rows.map(x=>x.balance),1)*100))}%"></i></div></td>
       <td class="mono">${r.lastDate ? fmtDate(r.lastDate) : '—'}</td>
-      <td class="no-print"><button class="btn btn-accent btn-sm" onclick="openSavStatement('${r.c.id}')">Statement</button></td>
+      <td>${wc.open}</td>
+      <td>${wc.due}</td>
+      <td class="no-print"><button class="btn btn-accent btn-sm" onclick="openSavStatement('${r.c.id}')">Statement</button>${wc.remind ? ` <button class="btn btn-ghost btn-sm" onclick="welRemind('${r.c.id}')">Remind</button>` : ''}</td>
     </tr>`;
     }).join('');
   }
+  const rq = rows.filter(r=>{ const d = welDueList(r.c), rm = (DB.savings.reminders||{})[String(r.c.id)]; return d && d.rows.length && waMobile(r.c) && !(rm && rm.ok && rm.month===d.nowKey); }).map(r=>r.c).sort((a,b)=>(a.ranking||1e9)-(b.ranking||1e9));
+  window.__remindQueue = rq; const rb = document.getElementById('savRemindAllBtn'); if(rb) rb.textContent = 'Send due reminders (' + rq.length + ')';
   updateSavPeriodSummary();
 }
 
@@ -6815,14 +6916,15 @@ function printSavBalances(){
     <td>${r.c.ranking||'—'}</td>
     <td>${fmtMoney(r.deposited+r.helpIn)}</td><td>${fmtMoney(r.withdrawn+r.helpOut)}</td>
     <td>${fmtMoney(r.balance)}</td><td>${r.lastDate?fmtDate(r.lastDate):''}</td>
+    <td>${welOpeningTxt(welDueList(r.c))}</td><td>${(()=>{ const d = welDueList(r.c); return d && d.rows.length ? '<b>' + fmtMoney(d.total) + '</b><br>' + d.rows.map(x=>trkLbl(x.key) + ' ' + fmtMoney(x.due)).join('<br>') : '—'; })()}</td>
   </tr>`).join('');
   const html = `<div class="pr-head"><h2>Contractor Welfare Fund</h2></div>
     <div class="pr-meta" style="font-size:12px;">Balances report · Printed: ${new Date().toLocaleString()}<br>
     Total deposited: <strong>${fmtMoney(totalDep)}</strong> · Total withdrawn: <strong>${fmtMoney(totalWd)}</strong> · Sum of balances: <strong>${fmtMoney(totalBal)}</strong></div>
     <table style="font-size:12px;"><thead><tr>
       <th>#</th><th>ID</th><th>Name</th><th>Address</th><th>Section</th><th>Rank</th>
-      <th>Deposited</th><th>Withdrawn</th><th>Balance</th><th>Last Txn</th>
-    </tr></thead><tbody>${body||'<tr><td colspan="10">No data</td></tr>'}</tbody></table>`;
+      <th>Deposited</th><th>Withdrawn</th><th>Balance</th><th>Last Txn</th><th>Opening</th><th>Due</th>
+    </tr></thead><tbody>${body||'<tr><td colspan="12">No data</td></tr>'}</tbody></table>`;
   enterPrintMode(html, 'Contractor Welfare Fund');
 }
 
@@ -6937,6 +7039,7 @@ function renderSavStatementBody(){
       <div><strong>${escapeHtml(c.name)}</strong> · ID <span class="mono">${escapeHtml(c.id)}</span>
       · ${escapeHtml(c.nid||'—')} · ${escapeHtml(formatMobilesDisplay(c)||'—')}</div>
       <div style="color:var(--ink-soft);margin-top:4px;">${escapeHtml(c.address||'')}</div>
+      <div style="margin-top:4px;">Account opened: <strong>${escapeHtml(welOpeningTxt(welDueList(c)))}</strong></div>
     </div>
     <div class="stmt-kpis">
       <div class="stat-box"><div class="label">Opening balance</div><div class="value">${fmtMoney(data.opening||0)}</div></div>
@@ -6949,6 +7052,7 @@ function renderSavStatementBody(){
       <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In (+)</th><th>Out (−)</th><th>Balance</th><th>Note</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="8">No transactions in this period.</td></tr>'}</tbody>
     </table></div>
+    ${welDueHtml(c)}
     </div>
     <div style="flex:1 1 auto;min-height:48px;"></div>
     <div style="padding-top:16px;padding-bottom:8px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);page-break-inside:avoid;">
@@ -6977,11 +7081,13 @@ function printSavStatement(){
     <div class="pr-meta" style="font-size:12px;line-height:1.55;">
       Name: <strong>${escapeHtml(c.name)}</strong> · ID: ${escapeHtml(c.id)} · Section: ${escapeHtml(c.nid||'—')}<br>
       Mobile: ${escapeHtml(formatMobilesDisplay(c)||'—')} · Address: ${escapeHtml(c.address||'—')}<br>
+      Account opened: <strong>${escapeHtml(welOpeningTxt(welDueList(c)))}</strong><br>
       Period: ${from||'…'} → ${to||'…'} · Printed: ${new Date().toLocaleString()}<br>
       Total In: <strong>${fmtMoney(data.totalIn)}</strong> · Total Out: <strong>${fmtMoney(data.totalOut)}</strong> · Closing: <strong>${fmtMoney(data.closing)}</strong>
     </div>
     <table style="font-size:12px;"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Method</th><th>In</th><th>Out</th><th>Balance</th><th>Note</th></tr></thead>
     <tbody>${rows||'<tr><td colspan="8">No transactions.</td></tr>'}</tbody></table>
+    ${welDueHtml(c)}
     </div>
     <div style="flex:1 1 auto;"></div>
     <div style="padding-top:20px;padding-bottom:12px;page-break-inside:avoid;display:flex;justify-content:space-between;font-size:12px;">
