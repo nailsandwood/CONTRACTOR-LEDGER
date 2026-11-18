@@ -547,6 +547,10 @@ body.dark-mode .pd-foot td{background:#232b2e;}
     <p class="login-sub">Sign in with Google Drive</p>
     
     <!-- Google Sign-In button will be rendered here -->
+    <style>
+      .g_id_signin{cursor:pointer;}
+      .g_id_signin iframe{pointer-events:none;}
+    </style>
     <div id="g_id_onload"
          data-client_id="366335578042-11ghtvg0upmchkjc7ke17kj2htpd3nc7.apps.googleusercontent.com"
          data-context="signin"
@@ -1762,12 +1766,13 @@ let driveSaveFailing = false;
 async function tryAutoReconnect(fromGesture){
   if(!DB || demoMode || !navigator.onLine || _autoTrying) return;
   if(!(offlineMode || !accessToken)) return;
+  if(loginScreenVisible()) return;   // on the login screen only the green button may open Google's window
   if(!fromGesture && Date.now() - _lastAutoTry < 25000) return;
   _autoTrying = true; _lastAutoTry = Date.now();
   try{
     await ensureGoogleScripts();
     if(tokenClient){
-      tokenClient.requestAccessToken({ prompt: fromGesture ? '' : '' });
+      requestTokenSafe({ prompt: '' }, !!fromGesture);
     }
   }catch(e){ console.warn('auto reconnect', e); }
   setTimeout(()=>{ _autoTrying = false; }, 8000);
@@ -1990,6 +1995,22 @@ function handleGoogleCredential(response){
 }
 
 let tokenClient = null;
+/* --- Popup guard: Google allows ONE sign-in window at a time. A second requestAccessToken() while the first
+   window is still open closes the first one and shows "Popup window closed". So we send one request at a time. --- */
+let _tokenReqAt = 0;
+function loginScreenVisible(){
+  const el = document.getElementById('loginScreen');
+  return !!el && getComputedStyle(el).display !== 'none';
+}
+function requestTokenSafe(opts, fromUser){
+  if(!tokenClient) return false;
+  const now = Date.now();
+  if(fromUser){ if(now - _tokenReqAt < 3000) return false; }                       // double-click protection
+  else if(now - _tokenReqAt < 20000 || loginScreenVisible()) return false;         // background tries never fight the login window
+  _tokenReqAt = now;
+  try{ tokenClient.requestAccessToken(opts); return true; }
+  catch(e){ _tokenReqAt = 0; console.warn('requestAccessToken', e); return false; }
+}
 let driveFileModifiedTime = null; // last known Drive file modifiedTime
 let localDirty = false;           // local unsaved / pending changes since last pull
 let drivePollTimer = null;
@@ -2003,6 +2024,7 @@ function initGis(){
     client_id: GOOGLE_CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
     callback: async (tokenResponse)=>{
+      _tokenReqAt = 0;   // this request is finished
       const errEl = document.getElementById('loginError');
       if(!tokenResponse || tokenResponse.error){
         const code = (tokenResponse && tokenResponse.error) || 'unknown';
@@ -2043,9 +2065,19 @@ function initGis(){
       await afterGoogleLogin();
     },
     error_callback: (err)=>{
+      _tokenReqAt = 0;   // allow a fresh try right away
       const errEl = document.getElementById('loginError');
-      const msg = (err && (err.message || err.type || String(err))) || 'popup error';
-      if(errEl) errEl.textContent = 'Sign-in popup issue: ' + msg + ' — allow popups for this site, then try again.';
+      if(!errEl || !loginScreenVisible()) return;   // background renew problems are handled by the Drive status bar, not shown here
+      const type = (err && err.type) || '';
+      let msg;
+      if(type === 'popup_failed_to_open'){
+        msg = 'Browser blocked the Google window. Click the pop-up icon at the right end of the address bar, choose \u201cAlways allow pop-ups\u201d, then click the green button again.';
+      } else if(type === 'popup_closed'){
+        msg = 'Google window was closed before sign-in finished. Click the green button once, choose your account in the small window and press Allow (do not close it).';
+      } else {
+        msg = 'Google sign-in problem: ' + ((err && (err.message || err.type)) || 'unknown') + '. Click the green button to try again.';
+      }
+      errEl.textContent = msg;
     }
   });
   gisLoaded = true;
@@ -2071,6 +2103,7 @@ function silentRefreshToken(){
       resolve(ok);
     };
     tokenClient.callback = async (tokenResponse)=>{
+      _tokenReqAt = 0;
       if(tokenResponse && tokenResponse.access_token && !tokenResponse.error){
         accessToken = tokenResponse.access_token;
         tokenObtainedAt = Date.now();
@@ -2086,7 +2119,7 @@ function silentRefreshToken(){
       }
     };
     try{
-      tokenClient.requestAccessToken(currentUserEmail ? {prompt: '', hint: currentUserEmail} : {prompt: ''});
+      if(!requestTokenSafe(currentUserEmail ? {prompt: '', hint: currentUserEmail} : {prompt: ''}, false)){ finish(false); return; }
       // safety timeout
       setTimeout(()=>finish(false), 15000);
     }catch(e){
@@ -2173,7 +2206,7 @@ function requestGoogleLogin(){
     // IMPORTANT: requestAccessToken must run in the same click turn (no await before this)
     // or Chrome blocks the popup.
     setMsg('Google window opening… If nothing appears, allow popups for this site.');
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    if(!requestTokenSafe({ prompt: 'consent' }, true)) return;   // ignore a double click while the window is opening
   }catch(e){
     console.error(e);
     setMsg('Sign-in error: ' + (e.message||e));
@@ -2206,7 +2239,7 @@ function reconnectDrive(){
   toast('Checking Google Drive…');
   silentRefreshToken().then(async ok=>{
     if(!ok){
-      tokenClient.requestAccessToken({prompt: 'consent'});
+      requestTokenSafe({prompt: 'consent'}, true);
       return;
     }
     await pullDriveIfNewer({toast:true, force:false});
