@@ -199,7 +199,7 @@
 
   #printStage{display:none;}
   body.print-mode > *:not(#printStage){display:none !important;}
-  body.print-mode #printStage{display:block !important;padding:20px;}
+  body.print-mode #printStage{display:block !important;padding:20px 20px 0;}
   #printStage .pr-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:3px solid var(--amber-600);padding-bottom:10px;}
   #printStage .pr-head h2{margin:0;color:var(--walnut-900);}
   #printStage .pr-meta{font-size:.8rem;color:var(--ink-soft);margin-bottom:14px;}
@@ -7110,7 +7110,7 @@ function printSavStatement(){
     <td>${escapeHtml(normalizeSavMethod(l.method))}</td><td>${l.inn?fmtMoney(l.inn):'—'}</td>
     <td>${l.out?fmtMoney(l.out):'—'}</td><td>${fmtMoney(l.bal)}</td><td>${escapeHtml(l.note||'')}</td>
   </tr>`).join('');
-  const html = `<div style="display:flex;flex-direction:column;min-height:225mm;">
+  const html = `<div style="display:flex;flex-direction:column;min-height:263mm;">
     <div>
     <div class="pr-head"><h2>Contractor Welfare Fund Statement</h2></div>
     <div class="pr-meta" style="font-size:12px;line-height:1.55;">
